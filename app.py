@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import psycopg2
-import os
 import time
 from datetime import date
 
@@ -94,7 +93,6 @@ with col_user:
             st.rerun()
 
 # --- VARIABLE PARA EL FORMULARIO DE GOOGLE ---
-# Aquí iría el link al Form de Pólizas si existiera uno separado, o el mismo de clientes
 URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" 
 
 # --- FUNCIONES DE BASE DE DATOS ---
@@ -152,7 +150,6 @@ with tab1:
 
 # ---------------- PESTAÑA 2: PÓLIZAS (SOLO VISUALIZACIÓN) ----------------
 with tab2:
-    # Header y Botón de refresco alineados
     col_pol_header, col_pol_btn = st.columns([4, 1])
     
     with col_pol_header:
@@ -160,23 +157,23 @@ with tab2:
         st.caption("Los datos se cargan automáticamente desde el Formulario Oficial.")
     
     with col_pol_btn:
-        st.write("") # Espaciador para alinear verticalmente
+        st.write("") 
         if st.button("🔄 Refrescar Pólizas"):
             st.rerun()
 
-    # QUERY DE VISUALIZACIÓN
-    # Eliminado 'numero_poliza' de la vista si ya no existe en la BD
+    # QUERY SQL
+    # Seleccionamos archivo_url pero le damos un alias "link_doc" para usarlo en la configuración
     sql_view_polizas = """
         SELECT 
             c.nombre_completo as "Cliente", 
             s.aseguradora, 
             s.ramo,
             TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vencimiento",
-            s."premio_UYU" as "Premio $",
-            s."premio_USD" as "Premio U$S",
+            s."premio_UYU", 
+            s."premio_USD", 
             s.corredor,
             s.agente,
-            CASE WHEN s.archivo_url IS NOT NULL THEN '✅ SÍ' ELSE '❌ NO' END as "PDF" 
+            s.archivo_url as "link_doc"
         FROM seguros s 
         JOIN clientes c ON s.cliente_id = c.id 
         ORDER BY s.id DESC
@@ -187,7 +184,32 @@ with tab2:
     if df_polizas.empty:
         st.info("Aún no hay pólizas cargadas en el sistema.")
     else:
-        st.dataframe(df_polizas, use_container_width=True, hide_index=True)
+        # CONFIGURACIÓN DE COLUMNAS (Formato Moneda y Link)
+        st.dataframe(
+            df_polizas, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "link_doc": st.column_config.LinkColumn(
+                    "Documento",
+                    display_text="📄 Ver Póliza", # Texto del botón
+                    help="Clic para abrir el PDF",
+                    width="small"
+                ),
+                "premio_UYU": st.column_config.NumberColumn(
+                    "Premio $",
+                    format="$ %.2f"
+                ),
+                "premio_USD": st.column_config.NumberColumn(
+                    "Premio U$S",
+                    format="U$S %.2f"
+                ),
+                "aseguradora": st.column_config.TextColumn("Aseguradora"),
+                "ramo": st.column_config.TextColumn("Ramo"),
+                "corredor": st.column_config.TextColumn("Corredor"),
+                "agente": st.column_config.TextColumn("Agente")
+            }
+        )
 
 # ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
 with tab3:
