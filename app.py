@@ -1,204 +1,184 @@
 import streamlit as st
 import pandas as pd
-import os
+import gspread
+from google.oauth2.service_account import Credentials
 import time
 
-# ==========================================
-# 1. CONFIGURACIÓN VISUAL Y CSS
-# ==========================================
+# --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Gestión de Cartera - EDF", layout="wide")
 
-st.markdown("""
-    <style>
-        /* 1. Zoom general al 90% */
-        div[data-testid="stAppViewContainer"] {
-            zoom: 0.90;
-        }
-        div[data-testid="stSidebar"] {
-            zoom: 0.90;
-        }
-
-        /* 2. Achicar el Título Principal (H1) */
-        h1 {
-            font-size: 1.8rem !important; /* Más pequeño */
-            padding-top: 0rem !important;
-            margin-bottom: 0rem !important;
-        }
-
-        /* 3. Ajustar espacio superior para que el logo y título queden pegados arriba */
-        .block-container {
-            padding-top: 2rem !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 # ==========================================
-# 2. CONFIGURACIÓN DE ARCHIVOS
+# 1. CONFIGURACIÓN EXACTA DE TUS COLUMNAS
 # ==========================================
-ARCHIVO_EXCEL = "datos.xlsx"   # Asegúrate de que este archivo esté en la carpeta
-CARPETA_PDFS = "pdfs"          # Carpeta para guardar pdfs
+# IMPORTANTE: Copia el nombre EXACTO de la celda J1 de tu Excel aquí abajo
+COLUMNA_ID_POLIZA = "Matrícula / Dato Referencia / Sub categoría de producto" 
+# (Si el nombre en tu excel es más largo, pégalo tal cual arriba entre las comillas)
 
-# Asegurarse que la carpeta de PDFs exista
-if not os.path.exists(CARPETA_PDFS):
-    os.makedirs(CARPETA_PDFS)
+COLUMNA_PDF = "Adjunto (póliza)"
+COLUMNA_EJECUTIVO = "Ejecutivo"
+COLUMNA_ASEGURADORA = "Aseguradora" # (Asegúrate que esta columna exista, si no, avísame)
+NOMBRE_HOJA_CALCULO = "Clientes DEF Seguros"
+NOMBRE_PESTANA = "Respuestas de formulario 2"
 
-# Nombres exactos de tus columnas (basado en tu foto anterior)
-COL_ID = "Matrícula / Dato Referencia / Sub categoría de producto"
-COL_PDF = "Adjunto (póliza)"
-COL_EJECUTIVO = "Ejecutivo"
-COL_CORREDOR = "Corredor"
+# --- CONEXIÓN A GOOGLE SHEETS ---
+@st.cache_resource
+def conectar_google_sheets():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    # Recuerda tener tu archivo 'credentials.json' en la misma carpeta
+    credentials = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+    gc = gspread.authorize(credentials)
+    return gc
 
-# ==========================================
-# 3. FUNCIONES DE CARGA Y GUARDADO
-# ==========================================
-def cargar_datos():
+# --- CARGA DE DATOS ---
+def cargar_datos(gc):
     try:
-        df = pd.read_excel(ARCHIVO_EXCEL)
-        # Convertimos a string para evitar errores
-        df[COL_EJECUTIVO] = df[COL_EJECUTIVO].astype(str)
-        df[COL_CORREDOR] = df[COL_CORREDOR].astype(str)
-        
-        if COL_PDF not in df.columns:
-            df[COL_PDF] = ""
-        else:
-            df[COL_PDF] = df[COL_PDF].fillna("").astype(str)
-            
-        return df
+        sh = gc.open(NOMBRE_HOJA_CALCULO)
+        worksheet = sh.worksheet(NOMBRE_PESTANA)
+        data = worksheet.get_all_records()
+        df = pd.DataFrame(data)
+        return df, worksheet
     except Exception as e:
-        st.error(f"⚠️ No encontré el archivo '{ARCHIVO_EXCEL}' en la carpeta.")
-        return pd.DataFrame()
+        st.error(f"Error cargando el Excel. Verifica el nombre: {e}")
+        return pd.DataFrame(), None
 
-def guardar_excel(df):
-    df.to_excel(ARCHIVO_EXCEL, index=False)
+# --- FUNCIÓN SIMULADA DE SUBIDA ---
+def subir_archivo_a_drive(archivo_bytes, nombre_archivo):
+    # AQUÍ VA TU LÓGICA REAL DE DRIVE. 
+    # Por ahora devolvemos un link simulado para probar que guarda en el Excel.
+    time.sleep(1)
+    return f"https://drive.google.com/open?id=ARCHIVO_SUBIDO_{nombre_archivo}"
 
 # ==========================================
-# 4. INTERFAZ PRINCIPAL
+#              INTERFAZ PRINCIPAL
 # ==========================================
+
 def main():
+    st.title("📂 Gestión de Cartera - Grupo EDF")
     
-    # --- ENCABEZADO (LOGO + TÍTULO ACHICADO) ---
-    col_logo, col_titulo = st.columns([1, 6])
-    
-    with col_logo:
-        # AQUÍ VA TU LOGO. Si tienes el archivo 'logo.png' ponlo en la carpeta
-        # Si no tienes imagen, comenta esta línea. 'width=120' lo hace pequeño.
-        try:
-            st.image("logo.png", width=120) 
-        except:
-            st.write("📷 (Logo)") # Texto si no hay imagen
+    gc = conectar_google_sheets()
+    df, worksheet = cargar_datos(gc)
 
-    with col_titulo:
-        # Usamos markdown para un título más controlado y alineado verticalmente
-        st.markdown("# Gestión de Cartera - Grupo EDF")
-
-    # Separador sutil
-    st.markdown("---")
-
-    # --- CARGA DE DATOS ---
-    df = cargar_datos()
     if df.empty:
         st.stop()
 
-    # --- BOTÓN DE ALTA (OCULTO EN EXPANDER) ---
-    # Aquí escondemos el botón rojo dentro del menú desplegable
-    with st.expander("➕ ALTA DE NUEVO CLIENTE (Abrir Formulario)"):
-        st.info("💡 Para ingresar un nuevo cliente, utilice el formulario oficial. Los datos se sincronizarán automáticamente.")
-        
-        # Usamos columnas para que el botón no ocupe todo el ancho (Alineado a la Izquierda)
-        c_btn, c_vacia = st.columns([1, 4]) 
-        with c_btn:
-            # Pon aquí el link real de tu Google Form
-            LINK_FORMULARIO = "https://docs.google.com/forms/d/e/TU_ID_DE_FORMULARIO/viewform"
-            st.link_button("🚀 Abrir Formulario", LINK_FORMULARIO, type="primary")
-
-    # --- FILTROS ---
-    st.subheader("🔍 Buscador de Pólizas")
-    
+    # --- SECCIÓN A: FILTROS ---
+    st.markdown("### 🔍 Buscador y Filtros")
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        lista_ejec = ["Todos"] + sorted(list(set(df[COL_EJECUTIVO])))
-        filtro_ejecutivo = st.selectbox("Ejecutivo", lista_ejec)
+        # Filtro Ejecutivo
+        if COLUMNA_EJECUTIVO in df.columns:
+            lista = ["Todos"] + sorted(list(set(df[COLUMNA_EJECUTIVO].astype(str))))
+            filtro_ejecutivo = st.selectbox("Ejecutivo", lista)
+        else:
+            st.warning(f"No encuentro la columna '{COLUMNA_EJECUTIVO}'")
+            filtro_ejecutivo = "Todos"
 
     with col2:
-        lista_corr = ["Todos"] + sorted(list(set(df[COL_CORREDOR])))
-        filtro_corredor = st.selectbox("Corredor", lista_corr)
-
-    with col3:
+        # Filtro Estado (PDF)
         estado_opciones = ["Todos", "Falta PDF", "Con PDF"]
         filtro_estado = st.selectbox("Estado Documentación", estado_opciones)
 
-    with col4:
+    with col3:
+         # Buscador de texto
         busqueda = st.text_input("Buscar (Matrícula, Cliente...)")
 
     # --- LÓGICA DE FILTRADO ---
     df_filtrado = df.copy()
 
     if filtro_ejecutivo != "Todos":
-        df_filtrado = df_filtrado[df_filtrado[COL_EJECUTIVO] == filtro_ejecutivo]
+        df_filtrado = df_filtrado[df_filtrado[COLUMNA_EJECUTIVO] == filtro_ejecutivo]
 
-    if filtro_corredor != "Todos":
-        df_filtrado = df_filtrado[df_filtrado[COL_CORREDOR] == filtro_corredor]
-
-    if filtro_estado == "Falta PDF":
-        df_filtrado = df_filtrado[df_filtrado[COL_PDF] == ""]
-    elif filtro_estado == "Con PDF":
-        df_filtrado = df_filtrado[df_filtrado[COL_PDF] != ""]
+    # Filtrar por PDF vacio o lleno
+    if COLUMNA_PDF in df.columns:
+        if filtro_estado == "Falta PDF":
+            # Filtra celdas vacías
+            df_filtrado = df_filtrado[df_filtrado[COLUMNA_PDF].eq("")]
+        elif filtro_estado == "Con PDF":
+            # Filtra celdas con texto
+            df_filtrado = df_filtrado[df_filtrado[COLUMNA_PDF].ne("")]
     
     if busqueda:
         df_filtrado = df_filtrado[
             df_filtrado.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         ]
 
-    # --- MOSTRAR TABLA ---
-    st.write(f"Mostrando **{len(df_filtrado)}** registros.")
+    # --- SECCIÓN B: TABLA DE RESULTADOS ---
+    st.divider()
+    st.info(f"Mostrando {len(df_filtrado)} registros.")
     
-    # Seleccionamos columnas visuales
-    cols_posibles = [COL_ID, "Inicio de Vigencia", COL_EJECUTIVO, COL_CORREDOR, COL_PDF]
-    cols_finales = [c for c in cols_posibles if c in df_filtrado.columns]
+    # Mostramos columnas clave (Ajusta 'Cliente' si tu columna se llama diferente, ej: 'Nombre Completo')
+    cols_a_mostrar = [COLUMNA_ID_POLIZA, COLUMNA_EJECUTIVO, "Inicio de Vigencia", COLUMNA_PDF]
+    
+    # Intentamos mostrar solo las columnas que existen
+    cols_validas = [c for c in cols_a_mostrar if c in df_filtrado.columns]
+    
+    st.dataframe(
+        df_filtrado[cols_validas], 
+        use_container_width=True, 
+        hide_index=True
+    )
 
-    st.dataframe(df_filtrado[cols_finales], use_container_width=True, hide_index=True)
+    # --- SECCIÓN C: GESTIÓN DE CARGA ---
+    st.divider()
+    st.subheader("📎 Vincular PDF a una Póliza")
 
-    # --- SECCIÓN CARGA DE PDF ---
-    st.markdown("---")
-    st.subheader("📎 Vincular PDF a Póliza")
+    c_upload1, c_upload2 = st.columns([1, 1])
 
-    c1, c2 = st.columns([1, 1])
-
-    with c1:
-        if COL_ID in df_filtrado.columns:
-            opciones = df_filtrado[COL_ID].astype(str).tolist()
-            seleccion = st.selectbox("Seleccione Matrícula para adjuntar:", opciones)
+    with c_upload1:
+        # Usamos la columna "Matrícula..." para identificar la póliza en el dropdown
+        if COLUMNA_ID_POLIZA in df_filtrado.columns:
+            # Creamos una lista de las matrículas filtradas
+            opciones_polizas = df_filtrado[COLUMNA_ID_POLIZA].astype(str).tolist()
+            seleccion_usuario = st.selectbox("Seleccione Matrícula / Póliza:", opciones_polizas)
         else:
-            seleccion = None
+            st.error(f"Revisa la variable COLUMNA_ID_POLIZA al inicio del código.")
+            seleccion_usuario = None
+    
+    with c_upload2:
+        archivo_subido = st.file_uploader("Subir PDF", type=['pdf'])
 
-    with c2:
-        archivo = st.file_uploader("Subir PDF", type=['pdf'])
+    # --- BOTÓN DE GUARDADO ---
+    if st.button("💾 Guardar y Actualizar Sheet", type="primary"):
+        if archivo_subido is not None and seleccion_usuario:
+            
+            with st.spinner("Actualizando Google Sheets..."):
+                try:
+                    # 1. Subir archivo (simulado)
+                    link_generado = subir_archivo_a_drive(archivo_subido, archivo_subido.name)
+                    
+                    # 2. Buscar la fila en Sheets usando FIND
+                    # Buscamos la matrícula exacta en la hoja
+                    celda_encontrada = worksheet.find(seleccion_usuario)
+                    
+                    if celda_encontrada:
+                        fila = celda_encontrada.row
+                        
+                        # 3. Buscar la columna 'Adjunto (póliza)' dinámicamente
+                        try:
+                            # Busca en la fila 1 (encabezados) en qué número de columna está "Adjunto (póliza)"
+                            col_pdf_obj = worksheet.find(COLUMNA_PDF)
+                            col_pdf_index = col_pdf_obj.col
+                            
+                            # 4. Escribir el Link
+                            worksheet.update_cell(fila, col_pdf_index, link_generado)
+                            
+                            st.success(f"✅ ¡Listo! Póliza '{seleccion_usuario}' actualizada con el PDF.")
+                            time.sleep(1.5)
+                            st.rerun()
+                            
+                        except gspread.exceptions.CellNotFound:
+                            st.error(f"No encontré la columna '{COLUMNA_PDF}' en los encabezados del Excel.")
+                    else:
+                        st.error(f"No encontré la matrícula '{seleccion_usuario}' en la hoja.")
 
-    if st.button("💾 Guardar y Actualizar", type="primary"):
-        if archivo and seleccion:
-            # Guardamos el archivo
-            nombre_archivo = f"{seleccion}_{archivo.name}"
-            ruta_completa = os.path.join(CARPETA_PDFS, nombre_archivo)
-            
-            with open(ruta_completa, "wb") as f:
-                f.write(archivo.getbuffer())
-            
-            # Actualizamos Excel
-            indice = df[df[COL_ID].astype(str) == str(seleccion)].index
-            
-            if not indice.empty:
-                # Escribimos 'OK' o la ruta
-                df.loc[indice, COL_PDF] = "✅ PDF Cargado" # O puedes poner ruta_completa
-                guardar_excel(df)
-                
-                st.success(f"¡Listo! PDF vinculado a {seleccion}.")
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("Error al localizar la póliza en la base de datos.")
+                except Exception as e:
+                    st.error(f"Error: {e}")
         else:
-            st.warning("⚠️ Faltan datos (Selección o Archivo).")
+            st.warning("Selecciona una póliza y sube un archivo.")
 
 if __name__ == "__main__":
     main()
