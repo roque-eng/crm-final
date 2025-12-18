@@ -62,7 +62,7 @@ if not st.session_state['logueado']:
 # ⚙️ SISTEMA INTERNO
 # ==========================================
 
-# --- BARRA SUPERIOR (ESTÉTICA AJUSTADA) ---
+# --- BARRA SUPERIOR ---
 col_logo, col_titulo, col_user = st.columns([2, 6, 2])
 
 with col_logo:
@@ -99,7 +99,6 @@ URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQv
 # --- FUNCIONES DE BASE DE DATOS ---
 def get_db_connection():
     try:
-        # Asegúrate de tener esto configurado en .streamlit/secrets.toml
         url_conexion = st.secrets["DB_URL"]
         conn = psycopg2.connect(url_conexion)
         return conn
@@ -133,11 +132,13 @@ def leer_datos(query):
         st.error(f"Error leyendo datos: {e}")
         return pd.DataFrame()
 
-def guardar_archivo(archivo_pdf, numero_poliza):
+# AJUSTE: Ahora usamos el ID del cliente para nombrar el archivo, ya que no hay nro de póliza
+def guardar_archivo(archivo_pdf, cliente_id):
     carpeta = "documentos_polizas"
     if not os.path.exists(carpeta):
         os.makedirs(carpeta)
-    nombre_archivo = f"POLIZA_{numero_poliza}_{archivo_pdf.name}"
+    # Nombre del archivo: DOC_ClienteID_NombreOriginal
+    nombre_archivo = f"DOC_Cliente{cliente_id}_{archivo_pdf.name}"
     ruta_completa = os.path.join(carpeta, nombre_archivo)
     with open(ruta_completa, "wb") as f:
         f.write(archivo_pdf.getbuffer())
@@ -152,7 +153,6 @@ with tab1:
     
     with st.expander("➕ ALTA DE NUEVO CLIENTE (Abrir Formulario)", expanded=True):
         st.write("Por seguridad y para evitar errores de conexión, el formulario se abrirá en una ventana nueva.")
-        
         c1, c2, c3 = st.columns([1, 2, 1])
         with c2:
             st.link_button("🚀 Abrir Formulario de Alta de Cliente", URL_GOOGLE_FORM, type="primary", use_container_width=True)
@@ -177,7 +177,7 @@ with tab1:
 
 # ---------------- PESTAÑA 2: PÓLIZAS ----------------
 with tab2:
-    # Cargar lista de clientes para el desplegable
+    # Cargar lista de clientes
     df_lista_clientes = leer_datos("SELECT id, nombre_completo FROM clientes ORDER BY nombre_completo")
     opciones_clientes = {row['nombre_completo']: row['id'] for index, row in df_lista_clientes.iterrows()} if not df_lista_clientes.empty else {}
 
@@ -191,7 +191,7 @@ with tab2:
                 nombre_seleccionado = st.selectbox("Cliente", options=list(opciones_clientes.keys()))
                 aseguradora = st.selectbox("Aseguradora", ["Sancor", "BSE", "Mapfre", "Porto", "HDI", "SBI", "Barbus", "Berkley", "SURA", "Otras"])
             with c2:
-                nro_poliza = st.text_input("Número de Póliza")
+                # YA NO SE PIDE NUMERO DE POLIZA
                 ramo = st.text_input("Ramo (Ej: Automotor)")
             with c3:
                 ejecutivo = st.text_input("Ejecutivo / Vendedor")
@@ -203,7 +203,6 @@ with tab2:
             with c5:
                 vigencia_hasta = st.date_input("Vence", value=date.today().replace(year=date.today().year + 1))
             with c6:
-                # OJO: Usamos las comillas en la SQL query más abajo para respetar mayúsculas si es necesario
                 premio_uyu = st.number_input("Premio $ (UYU)", min_value=0.0, format="%.2f")
             with c7:
                 premio_usd = st.number_input("Premio U$S (USD)", min_value=0.0, format="%.2f")
@@ -220,21 +219,22 @@ with tab2:
             submitted_poliza = st.form_submit_button("💾 Guardar Póliza", use_container_width=True)
 
             if submitted_poliza:
-                if nombre_seleccionado and nro_poliza:
+                # Validación simplificada (ya no validamos nro_poliza)
+                if nombre_seleccionado:
                     cliente_id = opciones_clientes[nombre_seleccionado]
                     ruta_guardada = None
                     
                     if archivo_pdf is not None:
-                        ruta_guardada = guardar_archivo(archivo_pdf, nro_poliza)
+                        # Pasamos el cliente_id para nombrar el archivo
+                        ruta_guardada = guardar_archivo(archivo_pdf, cliente_id)
                     
-                    # QUERY ACTUALIZADA PARA LAS NUEVAS COLUMNAS
-                    # Nota: Usamos comillas dobles en "premio_UYU" y "premio_USD" porque DBeaver las creó con mayúsculas
+                    # QUERY ACTUALIZADA: Eliminado 'numero_poliza'
                     sql_pol = """INSERT INTO seguros 
-                                (cliente_id, aseguradora, ramo, numero_poliza, vigencia_desde, vigencia_hasta, 
+                                (cliente_id, aseguradora, ramo, vigencia_desde, vigencia_hasta, 
                                  "premio_UYU", "premio_USD", corredor, agente, ejecutivo, archivo_url) 
-                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
                     
-                    datos = (cliente_id, aseguradora, ramo, nro_poliza, vigencia_desde, vigencia_hasta, 
+                    datos = (cliente_id, aseguradora, ramo, vigencia_desde, vigencia_hasta, 
                              premio_uyu, premio_usd, corredor, agente, ejecutivo, ruta_guardada)
                     
                     if ejecutar_consulta(sql_pol, datos):
@@ -242,7 +242,7 @@ with tab2:
                         time.sleep(1)
                         st.rerun()
                 else:
-                    st.error("Faltan datos obligatorios (Cliente o Número Póliza).")
+                    st.error("Debe seleccionar un cliente.")
 
     st.divider()
     
@@ -254,12 +254,11 @@ with tab2:
         if st.button("🔄 Refrescar Pólizas"):
             st.rerun()
 
-    # QUERY DE VISUALIZACIÓN ACTUALIZADA
+    # QUERY DE VISUALIZACIÓN ACTUALIZADA: Eliminado 'numero_poliza'
     sql_view_polizas = """
         SELECT 
             c.nombre_completo as "Cliente", 
             s.aseguradora, 
-            s.numero_poliza, 
             s.ramo,
             TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vencimiento",
             s."premio_UYU" as "Premio $",
@@ -278,8 +277,8 @@ with tab2:
 # ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
 with tab3:
     st.header("🔔 Vencimientos (Próximos 30 días)")
-    # Mantenemos esta query simple, solo revisa vigencia
-    sql_venc = """SELECT c.nombre_completo, c.celular, s.aseguradora, s.numero_poliza, s.vigencia_hasta 
+    # Query actualizada: Eliminado 'numero_poliza'
+    sql_venc = """SELECT c.nombre_completo, c.celular, s.aseguradora, s.vigencia_hasta 
                   FROM seguros s JOIN clientes c ON s.cliente_id = c.id 
                   WHERE s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '30 days') 
                   ORDER BY s.vigencia_hasta ASC"""
