@@ -5,16 +5,16 @@ import os
 import time
 from datetime import date
 
-# 1. Configuración de página (CON EL NUEVO TÍTULO)
+# 1. Configuración de página
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
 # ==========================================
 # 🔐 GESTIÓN DE USUARIOS
 # ==========================================
 USUARIOS = {
-    "RDF": "claveRockuda.4428",
-    "AB": "claveABentancor2025",
-    "GR": "claveGRobaina2025"
+    "RDF": "Rockuda.4428",
+    "AB": "ABentancor2025",
+    "GR": "GRobaina2025"
 }
 
 def verificar_login(usuario, contrasena):
@@ -57,34 +57,44 @@ if not st.session_state['logueado']:
 # ⚙️ SISTEMA INTERNO
 # ==========================================
 
-# --- BARRA SUPERIOR (DISEÑO MEJORADO) ---
-# Columnas ajustadas para dar espacio al logo
-col_logo, col_titulo, col_user = st.columns([1.5, 6.5, 2])
+# --- BARRA SUPERIOR (ESTÉTICA AJUSTADA) ---
+# Usamos columnas simétricas [2, 6, 2] para que el centro sea realmente el centro
+col_logo, col_titulo, col_user = st.columns([2, 6, 2])
 
 with col_logo:
-    # Espaciado para bajar el logo y centrarlo visualmente
-    st.write("") 
-    st.write("") 
     try:
-        # Logo más grande (220px)
-        st.image("logo.png", width=220) 
+        # Ajuste de tamaño: Lo bajamos a 140 para que sea sutil pero visible
+        st.image("logo.png", width=140) 
     except:
         st.write("🛡️")
 
 with col_titulo:
-    # Título con HTML para controlar márgenes y alineación
+    # AJUSTES VISUALES:
+    # margin-top: 35px -> Empuja el texto hacia abajo para alinearlo a la base del logo.
+    # text-align: center -> Centra el texto en su columna.
     st.markdown("""
-        <h1 style='text-align: left; margin-top: 15px; margin-bottom: 0px; padding-bottom: 0px;'>
+        <h1 style='
+            text-align: center; 
+            margin-top: 35px; 
+            margin-bottom: 0px; 
+            padding-bottom: 0px;
+            font-size: 3rem;'>
             Gestión de Cartera - Grupo EDF
         </h1>
     """, unsafe_allow_html=True)
 
 with col_user:
-    st.write("") # Espaciador para alinear el usuario
-    st.write(f"👤 **{st.session_state['usuario_actual']}**")
-    if st.button("Cerrar Sesión"):
-        st.session_state['logueado'] = False
-        st.rerun()
+    # Alineamos el usuario un poco más abajo para acompañar el diseño
+    st.markdown("<div style='margin-top: 35px;'></div>", unsafe_allow_html=True)
+    
+    # Usamos columnas internas para que el botón quede prolijo al lado del nombre
+    c_user_text, c_user_btn = st.columns([2, 1])
+    with c_user_text:
+        st.write(f"👤 **{st.session_state['usuario_actual']}**")
+    with c_user_btn:
+        if st.button("Salir"):
+            st.session_state['logueado'] = False
+            st.rerun()
 
 # --- VARIABLE PARA EL FORMULARIO DE GOOGLE ---
 URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" 
@@ -92,7 +102,6 @@ URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQv
 # --- FUNCIONES DE BASE DE DATOS ---
 def get_db_connection():
     try:
-        # Asegúrate de que este 'key' coincida con tu secrets.toml
         url_conexion = st.secrets["DB_URL"]
         conn = psycopg2.connect(url_conexion)
         return conn
