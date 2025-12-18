@@ -4,7 +4,7 @@ import psycopg2
 import os
 import time
 from datetime import date
-import streamlit.components.v1 as components  # <--- NUEVO: Para incrustar el formulario
+# import streamlit.components.v1 as components  <-- Ya no lo necesitamos, pero lo dejo comentado por si acaso
 
 # 1. Configuración de página
 st.set_page_config(page_title="Sistema Seguros", layout="wide", page_icon="🛡️")
@@ -67,8 +67,8 @@ with col_user:
         st.rerun()
 
 # --- VARIABLE PARA EL FORMULARIO DE GOOGLE ---
-# 🛑 ¡¡PEGAR TU LINK AQUÍ ABAJO ENTRE LAS COMILLAS!! 🛑
-URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform?usp=dialog" 
+# Ya tiene tu link puesto correctamente
+URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" 
 
 # --- FUNCIONES DE BASE DE DATOS ---
 def get_db_connection():
@@ -119,17 +119,18 @@ def guardar_archivo(archivo_pdf, numero_poliza):
 # --- PESTAÑAS ---
 tab1, tab2, tab3 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS (CON PDF)", "🔔 VENCIMIENTOS"])
 
-# ---------------- PESTAÑA 1: CLIENTES (MODIFICADA) ----------------
+# ---------------- PESTAÑA 1: CLIENTES (CORREGIDA ✅) ----------------
 with tab1:
-    # 1. SECCIÓN DE INGRESO (GOOGLE FORMS)
+    # 1. SECCIÓN DE INGRESO (SOLUCIÓN BOTÓN EXTERNO)
     st.info("💡 Para ingresar un nuevo cliente, utilice el formulario oficial. Los datos se sincronizarán automáticamente.")
     
-    with st.expander("➕ ALTA DE NUEVO CLIENTE (Abrir Formulario)", expanded=False):
-        if "PEGAR_AQUI" in URL_GOOGLE_FORM:
-            st.error("⚠️ ¡OJO! Falta pegar el link del Google Form en el código (línea 66).")
-        else:
-            # Aquí incrustamos el formulario
-            components.iframe(URL_GOOGLE_FORM, height=800, scrolling=True)
+    with st.expander("➕ ALTA DE NUEVO CLIENTE (Abrir Formulario)", expanded=True):
+        st.write("Por seguridad y para evitar errores de conexión, el formulario se abrirá en una ventana nueva.")
+        
+        # Centramos el botón para que quede elegante
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            st.link_button("🚀 Abrir Formulario de Alta de Cliente", URL_GOOGLE_FORM, type="primary", use_container_width=True)
 
     st.divider()
 
@@ -149,7 +150,7 @@ with tab1:
     st.dataframe(leer_datos(sql_cli), use_container_width=True, hide_index=True)
 
     # Botón manual para refrescar si acaban de cargar un form
-    if st.button("🔄 Actualizar Tabla (Si cargaste un nuevo cliente)"):
+    if st.button("🔄 Actualizar Tabla (Clic aquí después de cargar un cliente)"):
         st.rerun()
 
 # ---------------- PESTAÑA 2: PÓLIZAS ----------------
