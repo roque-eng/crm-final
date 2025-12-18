@@ -135,4 +135,170 @@ def crear_link_wa(celular):
     return f"https://wa.me/{c}"
 
 # --- PESTAÑAS ---
-tab1, tab2, tab3 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS VIG
+tab1, tab2, tab3 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS VIGENTES", "🔔 VENCIMIENTOS"])
+
+# ---------------- PESTAÑA 1: CLIENTES ----------------
+with tab1:
+    st.info("💡 Para ingresar un nuevo cliente, utilice el formulario oficial. Los datos se sincronizarán automáticamente.")
+    
+    with st.expander("➕ ALTA DE NUEVO CLIENTE (Abrir Formulario)", expanded=True):
+        st.write("Por seguridad y para evitar errores de conexión, el formulario se abrirá en una ventana nueva.")
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            st.link_button("🚀 Abrir Formulario de Alta de Cliente", URL_GOOGLE_FORM, type="primary", use_container_width=True)
+
+    st.divider()
+
+    col_header, col_search = st.columns([2, 1])
+    with col_header:
+        st.subheader("🗂️ Cartera de Clientes")
+    with col_search:
+        busqueda = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI")
+
+    sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes ORDER BY id DESC"
+    
+    if busqueda:
+        sql_cli = f"SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes WHERE nombre_completo ILIKE '%%{busqueda}%%' OR documento_identidad ILIKE '%%{busqueda}%%'"
+    
+    st.dataframe(leer_datos(sql_cli), use_container_width=True, hide_index=True)
+
+    if st.button("🔄 Actualizar Tabla Clientes"):
+        st.rerun()
+
+# ---------------- PESTAÑA 2: PÓLIZAS (SOLO VISUALIZACIÓN) ----------------
+with tab2:
+    col_pol_header, col_pol_btn = st.columns([4, 1])
+    with col_pol_header:
+        st.subheader("📂 Pólizas Vigentes")
+        st.caption("Visualización completa de la cartera activa.")
+    with col_pol_btn:
+        st.write("") 
+        if st.button("🔄 Refrescar Pólizas"):
+            st.rerun()
+
+    # QUERY SQL
+    sql_view_polizas = """
+        SELECT 
+            c.nombre_completo as "Cliente", 
+            s.aseguradora, 
+            s.ramo,
+            TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vencimiento",
+            s."premio_UYU", 
+            s."premio_USD", 
+            s.corredor,
+            s.agente,
+            s.archivo_url as "link_doc"
+        FROM seguros s 
+        JOIN clientes c ON s.cliente_id = c.id 
+        ORDER BY s.id DESC
+    """
+    
+    df_polizas = leer_datos(sql_view_polizas)
+    
+    if df_polizas.empty:
+        st.info("Aún no hay pólizas cargadas en el sistema.")
+    else:
+        st.dataframe(
+            df_polizas, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "link_doc": st.column_config.LinkColumn(
+                    "Documento", display_text="📄 Ver Póliza", help="Clic para abrir el PDF", width="small"
+                ),
+                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.2f"),
+                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.2f"),
+                "aseguradora": st.column_config.TextColumn("Aseguradora"),
+                "ramo": st.column_config.TextColumn("Ramo"),
+                "corredor": st.column_config.TextColumn("Corredor"),
+                "agente": st.column_config.TextColumn("Agente")
+            }
+        )
+
+# ---------------- PESTAÑA 3: VENCIMIENTOS (CON WHATSAPP) ----------------
+with tab3:
+    st.header("🔔 Monitor de Vencimientos")
+
+    # 1. CARGA DE OPCIONES
+    df_opciones = leer_datos("SELECT DISTINCT ejecutivo, aseguradora, ramo, agente FROM seguros")
+    
+    lista_ejecutivos = [x for x in df_opciones['ejecutivo'].unique() if x is not None] if not df_opciones.empty else []
+    lista_aseguradoras = [x for x in df_opciones['aseguradora'].unique() if x is not None] if not df_opciones.empty else []
+    lista_ramos = [x for x in df_opciones['ramo'].unique() if x is not None] if not df_opciones.empty else []
+    lista_agentes = [x for x in df_opciones['agente'].unique() if x is not None] if not df_opciones.empty else []
+
+    # 2. FILTROS
+    with st.expander("🔍 Configuración y Filtros", expanded=True):
+        col_dias, _ = st.columns([1, 2])
+        with col_dias:
+            dias_select = st.slider("📅 Ver vencimientos de los próximos:", min_value=15, max_value=180, value=30, step=15, format="%d días")
+        
+        c_f1, c_f2, c_f3, c_f4 = st.columns(4)
+        with c_f1:
+            filtro_ejecutivo = st.multiselect("Ejecutivo", options=lista_ejecutivos)
+        with c_f2:
+            filtro_aseguradora = st.multiselect("Aseguradora", options=lista_aseguradoras)
+        with c_f3:
+            filtro_ramo = st.multiselect("Ramo", options=lista_ramos)
+        with c_f4:
+            filtro_agente = st.multiselect("Agente", options=lista_agentes)
+
+    # 3. QUERY
+    condiciones = [f"s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '{dias_select} days')"]
+    
+    if filtro_ejecutivo:
+        valores = "', '".join(filtro_ejecutivo)
+        condiciones.append(f"s.ejecutivo IN ('{valores}')")
+    if filtro_aseguradora:
+        valores = "', '".join(filtro_aseguradora)
+        condiciones.append(f"s.aseguradora IN ('{valores}')")
+    if filtro_ramo:
+        valores = "', '".join(filtro_ramo)
+        condiciones.append(f"s.ramo IN ('{valores}')")
+    if filtro_agente:
+        valores = "', '".join(filtro_agente)
+        condiciones.append(f"s.agente IN ('{valores}')")
+
+    where_clause = " AND ".join(condiciones)
+    
+    sql_venc = f"""
+        SELECT 
+            c.nombre_completo as "Cliente", 
+            c.celular, 
+            s.aseguradora, 
+            s.ramo,
+            s.ejecutivo,
+            TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vence"
+        FROM seguros s 
+        JOIN clientes c ON s.cliente_id = c.id 
+        WHERE {where_clause}
+        ORDER BY s.vigencia_hasta ASC
+    """
+    
+    df_venc = leer_datos(sql_venc)
+    
+    st.divider()
+    
+    if not df_venc.empty:
+        # LOGICA PARA WHATSAPP
+        df_venc['link_wa'] = df_venc['celular'].apply(crear_link_wa)
+        
+        st.warning(f"⚠️ Se encontraron **{len(df_venc)}** pólizas por vencer.")
+        
+        st.dataframe(
+            df_venc, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                # --- CAMBIO AQUI ---
+                "link_wa": st.column_config.LinkColumn(
+                    "Contacto",        
+                    display_text="📲", # SOLO EL EMOJI
+                    help="Abrir chat de WhatsApp Web",
+                    width="small"
+                ),
+                "celular": st.column_config.TextColumn("Celular") 
+            }
+        )
+    else:
+        st.success("✅ No se encontraron vencimientos con estos criterios. ¡Todo al día!")
