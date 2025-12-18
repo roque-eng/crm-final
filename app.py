@@ -4,10 +4,9 @@ import psycopg2
 import os
 import time
 from datetime import date
-# import streamlit.components.v1 as components  <-- Ya no lo necesitamos, pero lo dejo comentado por si acaso
 
-# 1. Configuración de página
-st.set_page_config(page_title="Sistema Seguros", layout="wide", page_icon="🛡️")
+# 1. Configuración de página (TITULO ACTUALIZADO AQUI)
+st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
 # ==========================================
 # 🔐 GESTIÓN DE USUARIOS
@@ -31,7 +30,10 @@ if 'usuario_actual' not in st.session_state:
 
 # --- PANTALLA DE LOGIN ---
 if not st.session_state['logueado']:
-    st.markdown("<h1 style='text-align: center;'>☁️ CRM Seguros</h1>", unsafe_allow_html=True)
+    # Centramos el logo también en el login si quieres, o dejamos solo el texto
+    col_login_logo, col_login_text = st.columns([1, 4])
+    with col_login_text:
+        st.markdown("<h1 style='text-align: left;'>☁️ CRM Grupo EDF</h1>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
@@ -56,10 +58,21 @@ if not st.session_state['logueado']:
 # ⚙️ SISTEMA INTERNO
 # ==========================================
 
-# --- BARRA SUPERIOR ---
-col_logo, col_user = st.columns([8, 2])
+# --- BARRA SUPERIOR (MODIFICADA CON LOGO) ---
+# Dividimos en 3 columnas: Logo (pequeño) | Título (grande) | Usuario (derecha)
+col_logo, col_titulo, col_user = st.columns([1, 7, 2])
+
 with col_logo:
-    st.title("🛡️ Gestión de Corredor de Seguros")
+    # Intenta mostrar el logo si existe el archivo
+    try:
+        st.image("logo.png", width=80) 
+    except:
+        st.write("🛡️") # Si no encuentra la imagen, pone un emoji
+
+with col_titulo:
+    # Título actualizado
+    st.title("Gestión de Cartera - Grupo EDF")
+
 with col_user:
     st.write(f"👤 **{st.session_state['usuario_actual']}**")
     if st.button("Cerrar Sesión"):
@@ -67,7 +80,6 @@ with col_user:
         st.rerun()
 
 # --- VARIABLE PARA EL FORMULARIO DE GOOGLE ---
-# Ya tiene tu link puesto correctamente
 URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" 
 
 # --- FUNCIONES DE BASE DE DATOS ---
@@ -119,22 +131,18 @@ def guardar_archivo(archivo_pdf, numero_poliza):
 # --- PESTAÑAS ---
 tab1, tab2, tab3 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS (CON PDF)", "🔔 VENCIMIENTOS"])
 
-# ---------------- PESTAÑA 1: CLIENTES (CORREGIDA ✅) ----------------
+# ---------------- PESTAÑA 1: CLIENTES ----------------
 with tab1:
-    # 1. SECCIÓN DE INGRESO (SOLUCIÓN BOTÓN EXTERNO)
     st.info("💡 Para ingresar un nuevo cliente, utilice el formulario oficial. Los datos se sincronizarán automáticamente.")
     
     with st.expander("➕ ALTA DE NUEVO CLIENTE (Abrir Formulario)", expanded=True):
         st.write("Por seguridad y para evitar errores de conexión, el formulario se abrirá en una ventana nueva.")
-        
-        # Centramos el botón para que quede elegante
         c1, c2, c3 = st.columns([1, 2, 1])
         with c2:
             st.link_button("🚀 Abrir Formulario de Alta de Cliente", URL_GOOGLE_FORM, type="primary", use_container_width=True)
 
     st.divider()
 
-    # 2. SECCIÓN DE LISTADO (SOLO LECTURA)
     col_header, col_search = st.columns([2, 1])
     with col_header:
         st.subheader("🗂️ Cartera de Clientes")
@@ -146,10 +154,8 @@ with tab1:
     if busqueda:
         sql_cli = f"SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes WHERE nombre_completo ILIKE '%%{busqueda}%%' OR documento_identidad ILIKE '%%{busqueda}%%'"
     
-    # Mostramos la tabla a ancho completo
     st.dataframe(leer_datos(sql_cli), use_container_width=True, hide_index=True)
 
-    # Botón manual para refrescar si acaban de cargar un form
     if st.button("🔄 Actualizar Tabla (Clic aquí después de cargar un cliente)"):
         st.rerun()
 
