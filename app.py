@@ -4,6 +4,7 @@ import psycopg2
 import os
 import time
 from datetime import date
+import streamlit.components.v1 as components  # <--- NUEVO: Para incrustar el formulario
 
 # 1. Configuración de página
 st.set_page_config(page_title="Sistema Seguros", layout="wide", page_icon="🛡️")
@@ -65,16 +66,18 @@ with col_user:
         st.session_state['logueado'] = False
         st.rerun()
 
-# --- FUNCIONES DE BASE DE DATOS (MODIFICADO PARA USAR SECRETOS) ---
+# --- VARIABLE PARA EL FORMULARIO DE GOOGLE ---
+# 🛑 ¡¡PEGAR TU LINK AQUÍ ABAJO ENTRE LAS COMILLAS!! 🛑
+URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform?usp=dialog" 
+
+# --- FUNCIONES DE BASE DE DATOS ---
 def get_db_connection():
     try:
-        # Aquí es donde ocurre la magia: busca la clave en el "Bolsillo Secreto"
         url_conexion = st.secrets["DB_URL"]
         conn = psycopg2.connect(url_conexion)
         return conn
     except Exception as e:
-        # Si estamos en local y no hay secretos, mostramos un mensaje amigable
-        st.error(f"⚠️ Error de conexión. Si estás en la web, revisa los 'Secrets'. Si estás en local, falta el archivo secrets.toml. Detalle: {e}")
+        st.error(f"⚠️ Error de conexión. Detalle: {e}")
         return None
 
 def ejecutar_consulta(query, params=None):
@@ -116,36 +119,38 @@ def guardar_archivo(archivo_pdf, numero_poliza):
 # --- PESTAÑAS ---
 tab1, tab2, tab3 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS (CON PDF)", "🔔 VENCIMIENTOS"])
 
-# ---------------- PESTAÑA 1: CLIENTES ----------------
+# ---------------- PESTAÑA 1: CLIENTES (MODIFICADA) ----------------
 with tab1:
-    col_form, col_tabla = st.columns([1, 2])
-    with col_form:
-        st.subheader("Nuevo Cliente")
-        with st.form("form_cliente"):
-            nombre = st.text_input("Nombre / Razón Social")
-            doc_id = st.text_input("CI / RUT")
-            email = st.text_input("Email")
-            celular = st.text_input("Celular")
-            domicilio = st.text_area("Domicilio")
-            submitted_cliente = st.form_submit_button("Guardar Cliente")
-            
-            if submitted_cliente:
-                if nombre and doc_id:
-                    sql = "INSERT INTO clientes (nombre_completo, documento_identidad, email, celular, domicilio) VALUES (%s, %s, %s, %s, %s)"
-                    if ejecutar_consulta(sql, (nombre, doc_id, email, celular, domicilio)):
-                        st.success(f"✅ Cliente {nombre} guardado.")
-                        st.rerun()
-                else:
-                    st.warning("Nombre y Documento son obligatorios.")
+    # 1. SECCIÓN DE INGRESO (GOOGLE FORMS)
+    st.info("💡 Para ingresar un nuevo cliente, utilice el formulario oficial. Los datos se sincronizarán automáticamente.")
+    
+    with st.expander("➕ ALTA DE NUEVO CLIENTE (Abrir Formulario)", expanded=False):
+        if "PEGAR_AQUI" in URL_GOOGLE_FORM:
+            st.error("⚠️ ¡OJO! Falta pegar el link del Google Form en el código (línea 66).")
+        else:
+            # Aquí incrustamos el formulario
+            components.iframe(URL_GOOGLE_FORM, height=800, scrolling=True)
 
-    with col_tabla:
-        st.subheader("Cartera de Clientes")
+    st.divider()
+
+    # 2. SECCIÓN DE LISTADO (SOLO LECTURA)
+    col_header, col_search = st.columns([2, 1])
+    with col_header:
+        st.subheader("🗂️ Cartera de Clientes")
+    with col_search:
         busqueda = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI")
-        sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email FROM clientes ORDER BY id DESC"
-        if busqueda:
-            sql_cli = f"SELECT id, nombre_completo, documento_identidad, celular, email FROM clientes WHERE nombre_completo ILIKE '%%{busqueda}%%' OR documento_identidad ILIKE '%%{busqueda}%%'"
-        
-        st.dataframe(leer_datos(sql_cli), use_container_width=True, hide_index=True)
+
+    sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes ORDER BY id DESC"
+    
+    if busqueda:
+        sql_cli = f"SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes WHERE nombre_completo ILIKE '%%{busqueda}%%' OR documento_identidad ILIKE '%%{busqueda}%%'"
+    
+    # Mostramos la tabla a ancho completo
+    st.dataframe(leer_datos(sql_cli), use_container_width=True, hide_index=True)
+
+    # Botón manual para refrescar si acaban de cargar un form
+    if st.button("🔄 Actualizar Tabla (Si cargaste un nuevo cliente)"):
+        st.rerun()
 
 # ---------------- PESTAÑA 2: PÓLIZAS ----------------
 with tab2:
