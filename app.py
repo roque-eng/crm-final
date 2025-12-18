@@ -12,9 +12,15 @@ st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", 
 # 🔐 GESTIÓN DE USUARIOS
 # ==========================================
 USUARIOS = {
-    "RDF": "claveRockuda.4428",
-    "AB": "claveABentancor2025",
-    "GR": "claveGRobaina2025"
+    "RDF": "Rockuda.4428",
+    "AB": "ABentancor2025",
+    "GR": "GRobaina2025"
+    "ER": "ERobaina.2025",
+    "EH": "EHugo2025",
+    "GS": "GSanchez2025"
+    "JM": "JMokosce2025"
+    "PG": "PGagliardi2025"
+
 }
 
 def verificar_login(usuario, contrasena):
