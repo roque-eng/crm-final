@@ -1,9 +1,3 @@
-¡Entendido perfectamente! Aquí tienes el archivo completo, desde la primera línea de importación hasta la última función del monitor de vencimientos.
-
-Este código incluye el Login, el título alineado a la izquierda, la eliminación del logo, la eliminación del cartel informativo y el botón de registro directo.
-
-Python
-
 import streamlit as st
 import pandas as pd
 import psycopg2
