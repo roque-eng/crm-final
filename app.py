@@ -45,8 +45,7 @@ if not st.session_state['logueado']:
         with st.form("login_form"):
             user = st.text_input("Usuario")
             passwd = st.text_input("Contraseña", type="password")
-            submit = st.form_submit_button("Ingresar", use_container_width=True)
-            if submit:
+            if st.form_submit_button("Ingresar", use_container_width=True):
                 if user in USUARIOS and USUARIOS[user] == passwd:
                     st.session_state['logueado'] = True
                     st.session_state['usuario_actual'] = user
@@ -108,7 +107,7 @@ with tab1:
     st.divider()
     col_h, col_s = st.columns([2, 1])
     col_h.subheader("🗂️ Cartera de Clientes")
-    busqueda_cli = col_s.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", key="search_cli")
+    busqueda_cli = col_s.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", key="input_busqueda_clientes")
     sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes"
     if busqueda_cli:
         sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
@@ -120,14 +119,14 @@ with tab1:
 with tab2:
     col_pol_h, col_pol_s = st.columns([2, 1])
     col_pol_h.subheader("📂 Pólizas Vigentes")
-    busqueda_pol = col_pol_s.text_input("🔍 Buscar póliza...", placeholder="Nombre o CI", key="search_pol")
+    busqueda_pol = col_pol_s.text_input("🔍 Buscar póliza...", placeholder="Nombre o CI", key="input_busqueda_polizas")
     
     df_op_pol = leer_datos("SELECT DISTINCT aseguradora, ramo, agente FROM seguros")
     with st.expander("🔍 Filtros Avanzados"):
         c1, c2, c3 = st.columns(3)
-        f_aseg_p = c1.multiselect("Aseguradora", options=df_op_pol["aseguradora"].unique() if not df_op_pol.empty else [])
-        f_ramo_p = c2.multiselect("Ramo", options=df_op_pol["ramo"].unique() if not df_op_pol.empty else [])
-        f_agente_p = c3.multiselect("Agente", options=df_op_pol["agente"].unique() if not df_op_pol.empty else [])
+        f_aseg_p = c1.multiselect("Aseguradora", options=df_op_pol["aseguradora"].unique() if not df_op_pol.empty else [], key="filter_aseg_pol")
+        f_ramo_p = c2.multiselect("Ramo", options=df_op_pol["ramo"].unique() if not df_op_pol.empty else [], key="filter_ramo_pol")
+        f_agente_p = c3.multiselect("Agente", options=df_op_pol["agente"].unique() if not df_op_pol.empty else [], key="filter_agente_pol")
 
     sql_pol = """
         SELECT c.nombre_completo as "Cliente", c.documento_identidad as "CI", s.aseguradora, s.ramo,
@@ -154,23 +153,22 @@ with tab2:
             })
     if st.button("🔄 Refrescar Pólizas"): st.rerun()
 
-# ---------------- PESTAÑA 3: VENCIMIENTOS (Corregida) ----------------
+# ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
 with tab3:
     st.header("🔔 Monitor de Vencimientos")
     df_op_v = leer_datos("SELECT DISTINCT ejecutivo, aseguradora, ramo FROM seguros")
     with st.expander("🔍 Configuración de Alertas", expanded=True):
         col_d, cf1, cf2, cf3 = st.columns([2, 1, 1, 1])
-        dias_s = col_d.slider("📅 Días próximos:", 15, 180, 30, 15)
-        f_ej_v = cf1.multiselect("Ejecutivo", options=df_op_v["ejecutivo"].dropna().unique() if not df_op_v.empty else [])
-        f_as_v = cf2.multiselect("Aseguradora", options=df_op_v["aseguradora"].dropna().unique() if not df_op_v.empty else [])
-        f_rm_v = cf3.multiselect("Ramo", options=df_op_v["ramo"].dropna().unique() if not df_op_v.empty else [])
+        dias_s = col_d.slider("📅 Días próximos:", 15, 180, 30, 15, key="slider_vencimientos")
+        f_ej_v = cf1.multiselect("Ejecutivo", options=df_op_v["ejecutivo"].dropna().unique() if not df_op_v.empty else [], key="filter_ejec_venc")
+        f_as_v = cf2.multiselect("Aseguradora", options=df_op_v["aseguradora"].dropna().unique() if not df_op_v.empty else [], key="filter_aseg_venc")
+        f_rm_v = cf3.multiselect("Ramo", options=df_op_v["ramo"].dropna().unique() if not df_op_v.empty else [], key="filter_ramo_venc")
     
     cond_v = [f"s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '{dias_s} days')"]
     if f_ej_v: cond_v.append(f"s.ejecutivo IN ('" + "','".join(f_ej_v) + "')")
     if f_as_v: cond_v.append(f"s.aseguradora IN ('" + "','".join(f_as_v) + "')")
     if f_rm_v: cond_v.append(f"s.ramo IN ('" + "','".join(f_rm_v) + "')")
     
-    # Corregido: uso de comillas dobles para alias en SQL
     sql_v = f"""
         SELECT c.nombre_completo as "Cliente", c.celular, s.aseguradora, s.ramo, s.ejecutivo, 
                TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vence" 
