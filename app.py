@@ -1,9 +1,3 @@
-Sí, aquí tienes el código total, de punta a punta, sin recortes y listo para funcionar con tu nuevo archivo requirements.txt.
-
-Este bloque incluye el sistema de Login, los buscadores en ambas pestañas, el formato de moneda corregido (separador de miles y sin decimales) y el nuevo tablero de Estadísticas con gráficos de Plotly.
-
-Python
-
 import streamlit as st
 import pandas as pd
 import psycopg2
