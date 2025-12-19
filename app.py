@@ -15,13 +15,18 @@ st.markdown("""
     [data-testid="stMetricValue"] { font-size: 40px; color: #28a745; }
     
     /* Estilo del botón gris oscuro con + azul */
-    div.stButton > button {
+    .btn-registro {
         background-color: #333333 !important;
         color: white !important;
-        border-radius: 5px;
+        padding: 10px 20px;
         border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+        cursor: pointer;
     }
-    .plus-sign { color: #007bff; font-weight: bold; }
+    .plus-blue { color: #007bff; font-weight: bold; font-size: 18px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -72,13 +77,17 @@ tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS VIGENTES", "�
 
 # ---------------- PESTAÑA 1: CLIENTES ----------------
 with tab1:
-    # Fila superior: Botón a la izquierda, buscador a la derecha
-    col_btn, col_spacer, col_search = st.columns([1, 1, 1])
-    with col_btn:
-        st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" style="text-decoration:none;"><button style="background-color:#333333; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;"><span style="color:#007bff; font-weight:bold;">+</span> REGISTRAR NUEVO CLIENTE</button></a>', unsafe_allow_html=True)
+    # Fila superior: Botón Registro (Izquierda), Buscador (Centro), Botón Refrescar (Derecha)
+    col_reg, col_bus, col_ref = st.columns([1.5, 2, 0.5])
     
-    with col_search:
-        busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="search_cli_tab1")
+    with col_reg:
+        st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" class="btn-registro"><span class="plus-blue">+</span> REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
+    
+    with col_bus:
+        busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="search_cli_input")
+    
+    with col_ref:
+        if st.button("🔄 Refrescar Clientes", key="btn_ref_cli"): st.rerun()
 
     st.divider()
     sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes"
@@ -90,9 +99,12 @@ with tab1:
 
 # ---------------- PESTAÑA 2: PÓLIZAS ----------------
 with tab2:
-    col_h, col_s = st.columns([2, 1])
-    col_h.subheader("📂 Pólizas Vigentes")
-    busqueda_pol = col_s.text_input("🔍 Buscar póliza...", placeholder="Nombre o CI", key="search_p_tab2")
+    col_pol_h, col_pol_bus, col_pol_ref = st.columns([1.5, 2, 0.5])
+    with col_pol_h: st.subheader("📂 Pólizas Vigentes")
+    with col_pol_bus:
+        busqueda_pol = st.text_input("🔍 Buscar póliza...", placeholder="Nombre o CI", label_visibility="collapsed", key="search_pol_input")
+    with col_pol_ref:
+        if st.button("🔄 Refrescar Pólizas", key="btn_ref_pol"): st.rerun()
     
     sql_pol = """
         SELECT c.nombre_completo as "Cliente", c.documento_identidad as "CI", s.aseguradora, s.ramo,
@@ -106,14 +118,12 @@ with tab2:
 
     df_p = leer_datos(sql_pol)
     if not df_p.empty:
-        # Formato de miles forzado con separador de miles y sin decimales
         st.dataframe(df_p, use_container_width=True, hide_index=True,
             column_config={
                 "link_doc": st.column_config.LinkColumn("Documento", display_text="📄 Ver Póliza"),
                 "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %,.0f"),
                 "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %,.0f")
             })
-    if st.button("🔄 Refrescar Pólizas"): st.rerun()
 
 # ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
 with tab3:
@@ -126,20 +136,13 @@ with tab3:
 with tab4:
     st.subheader(f"📊 Análisis de Cartera (TC Estimado: ${TC_USD})")
     df_stats = leer_datos('SELECT aseguradora, ramo, "premio_UYU", "premio_USD" FROM seguros')
-    
     if not df_stats.empty:
         df_stats['total_usd'] = df_stats['premio_USD'].fillna(0) + (df_stats['premio_UYU'].fillna(0) / TC_USD)
         st.metric("Cartera Total Estimada", f"U$S {df_stats['total_usd'].sum():,.0f}")
-        
-        st.divider()
         col_g1, col_g2 = st.columns(2)
-        
         with col_g1:
-            df_ramo = df_stats.groupby('ramo')['total_usd'].sum().reset_index()
-            fig_r = px.bar(df_ramo, x='ramo', y='total_usd', title="Primas por Ramo (USD)", labels={'total_usd':'Total USD'}, color='ramo')
+            fig_r = px.bar(df_stats.groupby('ramo')['total_usd'].sum().reset_index(), x='ramo', y='total_usd', title="USD por Ramo", color='ramo')
             st.plotly_chart(fig_r, use_container_width=True)
-            
         with col_g2:
-            df_aseg = df_stats.groupby('aseguradora')['total_usd'].sum().reset_index()
-            fig_a = px.bar(df_aseg, x='aseguradora', y='total_usd', title="Primas por Aseguradora (USD)", labels={'total_usd':'Total USD'}, color='aseguradora')
+            fig_a = px.bar(df_stats.groupby('aseguradora')['total_usd'].sum().reset_index(), x='aseguradora', y='total_usd', title="USD por Aseguradora", color='aseguradora')
             st.plotly_chart(fig_a, use_container_width=True)
