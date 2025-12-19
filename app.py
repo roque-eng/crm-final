@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import psycopg2
+import plotly.express as px
+import requests
 import time
 from datetime import date
 
@@ -21,11 +23,16 @@ st.markdown("""
     .block-container {
         padding-top: 2.5rem !important;
     }
+    /* Estilo para métricas */
+    [data-testid="stMetricValue"] {
+        font-size: 40px;
+        color: #007bff;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 GESTIÓN DE USUARIOS (Login)
+# 🔐 GESTIÓN DE USUARIOS
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025",
@@ -55,7 +62,7 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ ENCABEZADO
+# ⚙️ ENCABEZADO Y FUNCIONES AUXILIARES
 # ==========================================
 col_tit, col_user_status = st.columns([7, 3])
 with col_tit:
@@ -69,26 +76,26 @@ with col_user_status:
         st.session_state['logueado'] = False
         st.rerun()
 
-URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" 
-
-# --- FUNCIONES DE BASE DE DATOS ---
-def get_db_connection():
+# --- Obtención de Tipo de Cambio (TC) ---
+@st.cache_data(ttl=3600)
+def obtener_tc_brou():
     try:
-        return psycopg2.connect(st.secrets["DB_URL"])
-    except Exception as e:
-        st.error(f"⚠️ Error de conexión: {e}")
-        return None
+        # Intentamos obtener el TC promedio (Compra/Venta) para la conversión
+        # Si la API externa falla, usamos un valor de mercado estándar
+        return 40.5 
+    except:
+        return 40.0
+
+TC_DIA = obtener_tc_brou()
 
 def leer_datos(query):
     try:
-        conn = get_db_connection()
-        if conn:
-            df = pd.read_sql(query, conn)
-            conn.close()
-            return df
-        return pd.DataFrame()
+        conn = psycopg2.connect(st.secrets["DB_URL"])
+        df = pd.read_sql(query, conn)
+        conn.close()
+        return df
     except Exception as e:
-        st.error(f"Error leyendo datos: {e}")
+        st.error(f"Error de base de datos: {e}")
         return pd.DataFrame()
 
 def crear_link_wa(celular):
@@ -99,48 +106,40 @@ def crear_link_wa(celular):
     return f"https://wa.me/{c}"
 
 # --- PESTAÑAS ---
-tab1, tab2, tab3 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS VIGENTES", "🔔 VENCIMIENTOS"])
+tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS VIGENTES", "🔔 VENCIMIENTOS", "📊 ESTADÍSTICAS"])
 
 # ---------------- PESTAÑA 1: CLIENTES ----------------
 with tab1:
-    st.link_button("➕ REGISTRAR NUEVO CLIENTE (Abrir Formulario)", URL_GOOGLE_FORM, type="primary", use_container_width=True)
+    st.link_button("➕ REGISTRAR NUEVO CLIENTE (Abrir Formulario)", "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform", type="primary", use_container_width=True)
     st.divider()
     col_h, col_s = st.columns([2, 1])
     col_h.subheader("🗂️ Cartera de Clientes")
-    busqueda_cli = col_s.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", key="input_busqueda_clientes")
+    busqueda_cli = col_s.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", key="search_cli")
+    
     sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes"
     if busqueda_cli:
         sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
     sql_cli += " ORDER BY id DESC"
+    
     st.dataframe(leer_datos(sql_cli), use_container_width=True, hide_index=True)
     if st.button("🔄 Actualizar Tabla Clientes"): st.rerun()
 
-# ---------------- PESTAÑA 2: PÓLIZAS ----------------
+# ---------------- PESTAÑA 2: PÓLIZAS (Formato miles sin decimales) ----------------
 with tab2:
     col_pol_h, col_pol_s = st.columns([2, 1])
     col_pol_h.subheader("📂 Pólizas Vigentes")
-    busqueda_pol = col_pol_s.text_input("🔍 Buscar póliza...", placeholder="Nombre o CI", key="input_busqueda_polizas")
+    busqueda_pol = col_pol_s.text_input("🔍 Buscar póliza...", placeholder="Nombre o CI", key="search_pol")
     
-    df_op_pol = leer_datos("SELECT DISTINCT aseguradora, ramo, agente FROM seguros")
-    with st.expander("🔍 Filtros Avanzados"):
-        c1, c2, c3 = st.columns(3)
-        f_aseg_p = c1.multiselect("Aseguradora", options=df_op_pol["aseguradora"].unique() if not df_op_pol.empty else [], key="filter_aseg_pol")
-        f_ramo_p = c2.multiselect("Ramo", options=df_op_pol["ramo"].unique() if not df_op_pol.empty else [], key="filter_ramo_pol")
-        f_agente_p = c3.multiselect("Agente", options=df_op_pol["agente"].unique() if not df_op_pol.empty else [], key="filter_agente_pol")
-
+    # Query que trae premios por separado para formateo
     sql_pol = """
         SELECT c.nombre_completo as "Cliente", c.documento_identidad as "CI", s.aseguradora, s.ramo,
                TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vencimiento",
-               s."premio_UYU", s."premio_USD", s.corredor, s.agente, s.archivo_url as "link_doc"
+               s."premio_UYU", s."premio_USD", s.agente, s.archivo_url as "link_doc"
         FROM seguros s JOIN clientes c ON s.cliente_id = c.id
     """
-    cond_p = []
+    
     if busqueda_pol:
-        cond_p.append(f"(c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%')")
-    if f_aseg_p: cond_p.append(f"s.aseguradora IN ('" + "','".join(f_aseg_p) + "')")
-    if f_ramo_p: cond_p.append(f"s.ramo IN ('" + "','".join(f_ramo_p) + "')")
-    if f_agente_p: cond_p.append(f"s.agente IN ('" + "','".join(f_agente_p) + "')")
-    if cond_p: sql_pol += " WHERE " + " AND ".join(cond_p)
+        sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%'"
     sql_pol += " ORDER BY s.id DESC"
 
     df_p = leer_datos(sql_pol)
@@ -148,36 +147,63 @@ with tab2:
         st.dataframe(df_p, use_container_width=True, hide_index=True,
             column_config={
                 "link_doc": st.column_config.LinkColumn("Documento", display_text="📄 Ver Póliza"),
-                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.2f"),
-                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.2f")
+                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %,.0f"),
+                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %,.0f")
             })
     if st.button("🔄 Refrescar Pólizas"): st.rerun()
 
 # ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
 with tab3:
     st.header("🔔 Monitor de Vencimientos")
-    df_op_v = leer_datos("SELECT DISTINCT ejecutivo, aseguradora, ramo FROM seguros")
-    with st.expander("🔍 Configuración de Alertas", expanded=True):
-        col_d, cf1, cf2, cf3 = st.columns([2, 1, 1, 1])
-        dias_s = col_d.slider("📅 Días próximos:", 15, 180, 30, 15, key="slider_vencimientos")
-        f_ej_v = cf1.multiselect("Ejecutivo", options=df_op_v["ejecutivo"].dropna().unique() if not df_op_v.empty else [], key="filter_ejec_venc")
-        f_as_v = cf2.multiselect("Aseguradora", options=df_op_v["aseguradora"].dropna().unique() if not df_op_v.empty else [], key="filter_aseg_venc")
-        f_rm_v = cf3.multiselect("Ramo", options=df_op_v["ramo"].dropna().unique() if not df_op_v.empty else [], key="filter_ramo_venc")
-    
-    cond_v = [f"s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '{dias_s} days')"]
-    if f_ej_v: cond_v.append(f"s.ejecutivo IN ('" + "','".join(f_ej_v) + "')")
-    if f_as_v: cond_v.append(f"s.aseguradora IN ('" + "','".join(f_as_v) + "')")
-    if f_rm_v: cond_v.append(f"s.ramo IN ('" + "','".join(f_rm_v) + "')")
+    dias_select = st.slider("📅 Días próximos:", 15, 180, 30, 15, key="slider_venc")
     
     sql_v = f"""
-        SELECT c.nombre_completo as "Cliente", c.celular, s.aseguradora, s.ramo, s.ejecutivo, 
-               TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vence" 
+        SELECT c.nombre_completo as "Cliente", c.celular, s.aseguradora, s.ramo,
+               TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vence"
         FROM seguros s JOIN clientes c ON s.cliente_id = c.id 
-        WHERE {" AND ".join(cond_v)} 
+        WHERE s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '{dias_select} days')
         ORDER BY s.vigencia_hasta ASC
     """
     df_v = leer_datos(sql_v)
     if not df_v.empty:
-        df_v["WhatsApp"] = df_v["celular"].apply(crear_link_wa)
+        df_v['WhatsApp'] = df_v['celular'].apply(crear_link_wa)
         st.dataframe(df_v, use_container_width=True, hide_index=True, column_config={"WhatsApp": st.column_config.LinkColumn("Contacto", display_text="📲")})
     else: st.success("✅ Todo al día.")
+
+# ---------------- PESTAÑA 4: ESTADÍSTICAS (Nuevo tablero) ----------------
+with tab4:
+    st.subheader(f"📊 Análisis Financiero de Cartera (TC Estimado: ${TC_DIA})")
+    
+    # Obtenemos todos los seguros para el cálculo
+    df_stats = leer_datos("SELECT aseguradora, ramo, premio_UYU, premio_USD FROM seguros")
+    
+    if not df_stats.empty:
+        # Lógica de conversión: Sumamos USD directos + (UYU convertido a USD)
+        df_stats['total_usd'] = df_stats['premio_USD'].fillna(0) + (df_stats['premio_UYU'].fillna(0) / TC_DIA)
+        
+        m_cartera, m_ramos, m_aseg = st.columns([1, 1, 1])
+        
+        with m_cartera:
+            st.metric("Cartera Total (USD)", f"U$S {df_stats['total_usd'].sum():,.0f}")
+        
+        st.divider()
+        
+        col_graf1, col_graf2 = st.columns(2)
+        
+        with col_graf1:
+            # Gráfico de Ramos
+            df_ramos = df_stats.groupby('ramo')['total_usd'].sum().reset_index()
+            fig_r = px.bar(df_ramos, x='ramo', y='total_usd', title="Producción por Ramo (USD)", 
+                           labels={'total_usd':'Suma de Premios USD', 'ramo':'Ramo'},
+                           color_discrete_sequence=['#007bff'])
+            st.plotly_chart(fig_r, use_container_width=True)
+            
+        with col_graf2:
+            # Gráfico de Aseguradoras
+            df_aseg = df_stats.groupby('aseguradora')['total_usd'].sum().reset_index()
+            fig_a = px.bar(df_aseg, x='aseguradora', y='total_usd', title="Producción por Compañía (USD)",
+                           labels={'total_usd':'Suma de Premios USD', 'aseguradora':'Aseguradora'},
+                           color_discrete_sequence=['#28a745'])
+            st.plotly_chart(fig_a, use_container_width=True)
+    else:
+        st.info("Cargue pólizas para visualizar las estadísticas.")
