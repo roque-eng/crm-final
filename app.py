@@ -7,28 +7,21 @@ from datetime import date
 # 1. Configuración de página
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS PARA LOGO Y TÍTULO ---
+# --- ESTILOS CSS PERSONALIZADOS ---
 st.markdown("""
     <style>
-    /* Achicar y centrar el logo */
-    [data-testid="stImage"] {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-        width: 140px !important;
-    }
-    /* Ajustar el título principal centrado y arriba */
-    .main-title {
+    /* Estilo para el título alineado a la izquierda */
+    .left-title {
         font-size: 32px !important;
         font-weight: bold;
-        text-align: center;
-        margin-top: -30px;
-        margin-bottom: 10px;
+        text-align: left;
+        margin-top: -20px;
+        margin-bottom: 20px;
         color: #31333F;
     }
-    /* Eliminar espacio superior excesivo */
+    /* Optimización de espacio superior */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 2rem !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -72,27 +65,25 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ ENCABEZADO (Logo y Título)
+# ⚙️ ENCABEZADO (Título a la izquierda y Usuario)
 # ==========================================
 
-try:
-    st.image("logo.png") 
-except:
-    st.markdown("<h2 style='text-align: center;'>🛡️</h2>", unsafe_allow_html=True)
+col_tit, col_user_status = st.columns([7, 3])
 
-st.markdown('<p class="main-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
+with col_tit:
+    st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
 
-# Usuario y Salir (Corregido el error de 'size')
-col_e, col_u = st.columns([8.5, 1.5])
-with col_u:
-    c_t, c_b = st.columns([1.5, 1])
-    c_t.write(f"👤 **{st.session_state['usuario_actual']}**")
-    if c_b.button("Salir"):
+with col_user_status:
+    c_text, c_btn = st.columns([2, 1])
+    c_text.write(f"👤 **{st.session_state['usuario_actual']}**")
+    if c_btn.button("Salir"):
         st.session_state['logueado'] = False
         st.rerun()
 
+# --- URL DEL FORMULARIO ---
 URL_GOOGLE_FORM = "https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" 
 
+# --- FUNCIÓN DE LECTURA DE DATOS ---
 def leer_datos(query):
     try:
         conn = psycopg2.connect(st.secrets["DB_URL"])
@@ -108,7 +99,7 @@ tab1, tab2, tab3 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS VIGENTES", "🔔 VEN
 
 # ---------------- PESTAÑA 1: CLIENTES ----------------
 with tab1:
-    # 1 y 3. Botón directo sin cartel informativo y sin expander
+    # Botón directo al formulario
     st.link_button("➕ REGISTRAR NUEVO CLIENTE (Abrir Formulario)", URL_GOOGLE_FORM, type="primary", use_container_width=True)
 
     st.divider()
@@ -119,34 +110,4 @@ with tab1:
 
     sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes ORDER BY id DESC"
     if busqueda:
-        sql_cli = f"SELECT * FROM clientes WHERE nombre_completo ILIKE '%%{busqueda}%%' OR documento_identidad ILIKE '%%{busqueda}%%' ORDER BY id DESC"
-    
-    st.dataframe(leer_datos(sql_cli), use_container_width=True, hide_index=True)
-    if st.button("🔄 Actualizar Tabla"):
-        st.rerun()
-
-# ---------------- PESTAÑA 2: PÓLIZAS ----------------
-with tab2:
-    st.subheader("📂 Pólizas Vigentes")
-    sql_pol = """
-        SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo,
-               TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vencimiento",
-               s."premio_UYU", s."premio_USD", s.archivo_url as "link_doc"
-        FROM seguros s JOIN clientes c ON s.cliente_id = c.id ORDER BY s.id DESC
-    """
-    df_p = leer_datos(sql_pol)
-    st.dataframe(df_p, use_container_width=True, hide_index=True,
-                 column_config={"link_doc": st.column_config.LinkColumn("Documento", display_text="📄 Ver Póliza")})
-
-# ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
-with tab3:
-    st.subheader("🔔 Monitor de Vencimientos")
-    dias = st.slider("Días próximos:", 15, 180, 30, 15)
-    sql_v = f"""
-        SELECT c.nombre_completo as "Cliente", c.celular, s.aseguradora, s.ramo,
-               TO_CHAR(s.vigencia_hasta, 'DD/MM/YYYY') as "Vence"
-        FROM seguros s JOIN clientes c ON s.cliente_id = c.id 
-        WHERE s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '{dias} days')
-        ORDER BY s.vigencia_hasta ASC
-    """
-    st.dataframe(leer_datos(sql_v), use_container_width=True, hide_index=True)
+        sql_cli = f"SELECT * FROM clientes WHERE nombre_completo ILIKE
