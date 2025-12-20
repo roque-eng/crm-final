@@ -13,14 +13,8 @@ st.markdown("""
     <style>
     .left-title { font-size: 38px !important; font-weight: bold; text-align: left; margin-top: 10px; margin-bottom: 25px; color: #31333F; }
     .block-container { padding-top: 2.5rem !important; }
-    
-    /* Encabezados de Tablas más oscuros */
     thead tr th { background-color: #d1d1d1 !important; color: #1a1a1a !important; font-weight: bold !important; }
-    
-    /* Alineación vertical centrada */
     [data-testid="stHorizontalBlock"] { align-items: center; }
-
-    /* Botón registro gris oscuro con + azul */
     .btn-registro {
         background-color: #333333 !important; color: white !important;
         padding: 8px 16px; border-radius: 5px; text-decoration: none;
@@ -31,7 +25,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 GESTIÓN DE USUARIOS
+# 🔐 GESTIÓN DE USUARIOS (Login Completo)
 # ==========================================
 USUARIOS = {"RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "EH": "EHugo2025", "GS": "GSanchez2025", "JM": "JMokosce2025", "PG": "PGagliardi2025", "MDF": "MDeFreitas2025"}
 
@@ -80,42 +74,53 @@ with col_user:
     c_t.write(f"👤 **{st.session_state['usuario_actual']}**")
     if c_b.button("Salir"): st.session_state['logueado'] = False; st.rerun()
 
-tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS Y HISTORIAL", "🔔 VENCIMIENTOS", "📊 ESTADÍSTICAS"])
+tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS E HISTORIAL", "🔔 VENCIMIENTOS", "📊 ESTADÍSTICAS"])
 
 # ---------------- PESTAÑA 1: CLIENTES ----------------
 with tab1:
-    c1, c2, c3, c4, c5 = st.columns([1.6, 2, 0.5, 0.4, 0.4])
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    c1, c2, c3, c4, c5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with c1: st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" class="btn-registro"><span class="plus-blue">+</span> REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
     with c2: busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="s_cli")
-    # c3 actúa como espaciador para empujar los botones a la derecha
-    with c4: 
-        if st.button("🔄", help="Refrescar Clientes", key="ref_cli"): st.rerun()
     
-    sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes"
+    sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email FROM clientes"
     if busqueda_cli: sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
     df_cli = leer_datos(sql_cli + " ORDER BY id DESC")
     
-    with c5: st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx', help="Exportar Excel")
+    with c4: 
+        if st.button("🔄", help="Refrescar", key="ref_cli"): st.rerun()
+    with c5: 
+        if not df_cli.empty:
+            st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx', help="Excel")
     st.divider()
     st.dataframe(df_cli, use_container_width=True, hide_index=True)
 
-# ---------------- PESTAÑA 2: PÓLIZAS ----------------
+# ---------------- PESTAÑA 2: PÓLIZAS (CON RIESGO/MATRÍCULA) ----------------
 with tab2:
-    cp1, cp2, cp3, cp4, cp5 = st.columns([1.6, 2, 0.5, 0.4, 0.4])
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    cp1, cp2, cp3, cp4, cp5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with cp1: st.subheader("📂 Gestión de Pólizas")
     with cp2: busqueda_pol = st.text_input("🔍 Buscar póliza...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="s_pol")
-    with cp4: 
-        if st.button("🔄", help="Refrescar Pólizas", key="ref_pol"): st.rerun()
-
-    sql_pol = 'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
-    if busqueda_pol: sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
+    
+    # Intento de lectura con detalle_riesgo incluido
+    sql_pol = """
+        SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, 
+               s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", 
+               s."premio_UYU", s."premio_USD", s.archivo_url
+        FROM seguros s JOIN clientes c ON s.cliente_id = c.id
+    """
+    if busqueda_pol:
+        sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
+    
     df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
 
+    with cp4: 
+        if st.button("🔄", help="Refrescar", key="ref_pol"): st.rerun()
     with cp5:
         if not df_all.empty:
-            excel_pol = df_all.drop(columns=['archivo_url']) if 'archivo_url' in df_all.columns else df_all
-            st.download_button(label="📊", data=to_excel(excel_pol), file_name=f'polizas_{date.today()}.xlsx', help="Exportar Excel")
+            st.download_button(label="📊", data=to_excel(df_all.drop(columns=['archivo_url'])), file_name=f'polizas_{date.today()}.xlsx', help="Excel")
 
+    st.divider()
     if not df_all.empty:
         today = pd.Timestamp(date.today())
         df_all['Hasta_dt'] = pd.to_datetime(df_all['Hasta'])
@@ -123,10 +128,23 @@ with tab2:
         df_his = df_all[df_all['Hasta_dt'] < today].copy()
 
         st.markdown("### ✅ Pólizas Vigentes")
-        st.dataframe(df_vig.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True, column_config={"archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"), "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.,d"), "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.,d")})
+        st.dataframe(df_vig.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True,
+            column_config={
+                "archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"),
+                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.,d"),
+                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.,d")
+            })
+        
         st.divider()
         st.markdown("### 📜 Historial")
-        st.dataframe(df_his.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True, column_config={"archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"), "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.,d"), "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.,d")})
+        st.dataframe(df_his.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True,
+            column_config={
+                "archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"),
+                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.,d"),
+                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.,d")
+            })
+    else:
+        st.warning("No se encontraron datos o la columna 'detalle_riesgo' no existe en la base de datos.")
 
 # ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
 with tab3:
@@ -140,7 +158,8 @@ with tab3:
     with cv3: 
         if st.button("🔄", key="ref_ven"): st.rerun()
     with cv4: 
-        st.download_button(label="📊", data=to_excel(df_v), file_name=f'vencimientos_{date.today()}.xlsx', help="Exportar Excel")
+        if not df_v.empty:
+            st.download_button(label="📊", data=to_excel(df_v), file_name=f'vencimientos_{date.today()}.xlsx', help="Excel")
     st.divider()
     st.dataframe(df_v, use_container_width=True, hide_index=True)
 
