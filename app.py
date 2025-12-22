@@ -11,8 +11,8 @@ st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", 
 # --- ESTILOS CSS PERSONALIZADOS ---
 st.markdown("""
     <style>
-    .left-title { font-size: 38px !important; font-weight: bold; text-align: left; margin-top: 10px; margin-bottom: 5px; color: #31333F; }
-    .block-container { padding-top: 1.5rem !important; }
+    .left-title { font-size: 38px !important; font-weight: bold; text-align: left; margin-top: 10px; margin-bottom: 25px; color: #31333F; }
+    .block-container { padding-top: 2.5rem !important; }
     thead tr th { background-color: #d1d1d1 !important; color: #1a1a1a !important; font-weight: bold !important; }
     [data-testid="stHorizontalBlock"] { align-items: center; }
     .btn-registro {
@@ -73,42 +73,39 @@ TC_USD = 40.5
 col_tit, col_user = st.columns([7, 3])
 with col_tit: st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
 with col_user:
-    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
     c_t, c_b = st.columns([2, 1])
     c_t.write(f"👤 **{st.session_state['usuario_actual']}**")
     if c_b.button("Salir"): st.session_state['logueado'] = False; st.rerun()
-
-# --- BUSCADOR GLOBAL ---
-st.markdown("---")
-busqueda_global = st.text_input("🔍 **Buscador Global** (Nombre, CI o Matrícula)", placeholder="Escriba aquí para filtrar todas las pestañas...", help="Este buscador filtra clientes, seguros y vencimientos simultáneamente.")
 
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 SEGUROS", "🔔 VENCIMIENTOS", "📊 ESTADÍSTICAS"])
 
 # ---------------- PESTAÑA 1: CLIENTES ----------------
 with tab1:
-    c1, _, c4, c5 = st.columns([1.6, 2, 0.4, 0.4])
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    c1, c2, c3, c4, c5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with c1: st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" class="btn-registro"><span class="plus-blue">+</span> REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
+    with c2: busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="s_cli")
     
     sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email FROM clientes"
-    if busqueda_global:
-        sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_global}%%' OR documento_identidad ILIKE '%%{busqueda_global}%%'"
+    if busqueda_cli: sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
     df_cli = leer_datos(sql_cli + " ORDER BY id DESC")
     
     with c4: st.button("🔄", key="ref_cli")
     with c5: 
         if not df_cli.empty: st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx')
-    
     st.divider()
     st.dataframe(df_cli, use_container_width=True, hide_index=True)
 
 # ---------------- PESTAÑA 2: SEGUROS ----------------
 with tab2:
-    cp1, _, cp4, cp5 = st.columns([1.6, 2, 0.4, 0.4])
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    cp1, cp2, cp3, cp4, cp5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with cp1: st.subheader("📂 Gestión de Seguros")
+    with cp2: busqueda_pol = st.text_input("🔍 Buscar...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="s_pol")
     
-    sql_pol = 'SELECT c.nombre_completo as "Cliente", c.documento_identidad as "CI", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
-    if busqueda_global:
-        sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_global}%%' OR c.documento_identidad ILIKE '%%{busqueda_global}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_global}%%'"
+    sql_pol = 'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
+    if busqueda_pol: sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
     df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
 
     with cp4: st.button("🔄", key="ref_pol")
@@ -122,11 +119,10 @@ with tab2:
         today = pd.Timestamp(date.today())
         df_all['Hasta_dt'] = pd.to_datetime(df_all['Hasta'])
         
-        # Configuración forzando alineación a la derecha
         conf_col = {
             "archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"),
-            "Premio $": st.column_config.TextColumn("Premio $", help="Pesos", width="medium"),
-            "Premio U$S": st.column_config.TextColumn("Premio U$S", help="Dólares", width="medium")
+            "Premio $": st.column_config.TextColumn("Premio $"),
+            "Premio U$S": st.column_config.TextColumn("Premio U$S")
         }
 
         st.markdown("### ✅ Seguros Vigentes")
@@ -139,11 +135,9 @@ with tab2:
 with tab3:
     cv1, cv2, cv3, cv4 = st.columns([2.5, 5.7, 0.4, 0.4])
     with cv1: st.header("🔔 Vencimientos")
-    with cv2: dias_v = st.slider("📅 Días próximos:", 15, 180, 30, 15)
+    with cv2: dias_v = st.slider("📅 Ver próximos (días):", 15, 180, 30, 15)
     
     sql_v = f'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo, s.vigencia_hasta FROM seguros s JOIN clientes c ON s.cliente_id = c.id WHERE s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL "{dias_v} days")'
-    if busqueda_global:
-        sql_v += f" AND (c.nombre_completo ILIKE '%%{busqueda_global}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_global}%%')"
     df_v = leer_datos(sql_v + " ORDER BY s.vigencia_hasta ASC")
     
     with cv3: st.button("🔄", key="ref_ven")
@@ -152,17 +146,16 @@ with tab3:
     
     st.divider()
     if not df_v.empty:
-        # Lógica de colores
         def color_vencimiento(row):
             dias_restantes = (row['vigencia_hasta'] - date.today()).days
-            if dias_restantes <= 7: return ['background-color: #ffcccc'] * len(row) # Rojo claro
-            if dias_restantes <= 15: return ['background-color: #fff0b3'] * len(row) # Naranja/Amarillo claro
+            if dias_restantes <= 7: return ['background-color: #ffcccc'] * len(row)
+            if dias_restantes <= 15: return ['background-color: #fff0b3'] * len(row)
             return [''] * len(row)
 
         df_v_styled = df_v.style.apply(color_vencimiento, axis=1)
         st.dataframe(df_v_styled, use_container_width=True, hide_index=True)
     else:
-        st.success("✅ No hay vencimientos próximos en el rango seleccionado.")
+        st.success("✅ No hay vencimientos próximos.")
 
 # ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
 with tab4:
@@ -170,14 +163,11 @@ with tab4:
     df_st = leer_datos('SELECT aseguradora, ramo, "premio_UYU", "premio_USD" FROM seguros')
     if not df_st.empty:
         df_st['total_usd'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
-        df_st['total_usd'] = df_st['total_usd'].round(0)
         st.metric("Cartera Total Estimada", f"U$S {int(df_st['total_usd'].sum()):,}".replace(",", "."))
         g1, g2 = st.columns(2)
         with g1:
             fig_r = px.bar(df_st.groupby('ramo')['total_usd'].sum().reset_index(), x='ramo', y='total_usd', title="USD por Ramo", color='ramo')
-            fig_r.update_traces(hovertemplate='Total: U$S %{y:,}')
             st.plotly_chart(fig_r, use_container_width=True)
         with g2:
             fig_a = px.bar(df_st.groupby('aseguradora')['total_usd'].sum().reset_index(), x='aseguradora', y='total_usd', title="USD por Aseguradora", color='aseguradora')
-            fig_a.update_traces(hovertemplate='Total: U$S %{y:,}')
             st.plotly_chart(fig_a, use_container_width=True)
