@@ -111,4 +111,51 @@ with tab2:
 
     with cp4: 
         if st.button("🔄", key="ref_pol"): st.rerun()
-    with cp5
+    with cp5:
+        if not df_all.empty: st.download_button(label="📊", data=to_excel(df_all.drop(columns=['archivo_url'])), file_name='polizas.xlsx')
+
+    st.divider()
+    if not df_all.empty:
+        df_all['Premio $'] = df_all['premio_UYU'].apply(lambda x: fmt_moneda(x, "$"))
+        df_all['Premio U$S'] = df_all['premio_USD'].apply(lambda x: fmt_moneda(x, "U$S"))
+        
+        today = pd.Timestamp(date.today())
+        df_all['Hasta_dt'] = pd.to_datetime(df_all['Hasta'])
+        cols_show = ["Cliente", "aseguradora", "ramo", "Riesgo/Matrícula", "Hasta", "Premio $", "Premio U$S", "archivo_url"]
+        df_vig = df_all[df_all['Hasta_dt'] >= today][cols_show]
+        df_his = df_all[df_all['Hasta_dt'] < today][cols_show]
+
+        # Configuración para alinear montos a la derecha
+        conf_columnas = {
+            "archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"),
+            "Premio $": st.column_config.TextColumn("Premio $", help="Monto en pesos"),
+            "Premio U$S": st.column_config.TextColumn("Premio U$S", help="Monto en dólares")
+        }
+
+        st.markdown("### ✅ Pólizas Vigentes")
+        st.dataframe(df_vig, use_container_width=True, hide_index=True, column_config=conf_columnas)
+        st.divider()
+        st.markdown("### 📜 Historial")
+        st.dataframe(df_his, use_container_width=True, hide_index=True, column_config=conf_columnas)
+
+# ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
+with tab4:
+    st.subheader(f"📊 Análisis de Cartera (TC: ${TC_USD})")
+    df_st = leer_datos('SELECT aseguradora, ramo, "premio_UYU", "premio_USD" FROM seguros')
+    if not df_st.empty:
+        df_st['total_usd'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
+        df_st['total_usd'] = df_st['total_usd'].astype(int)
+        
+        cartera_val = int(df_st['total_usd'].sum())
+        st.metric("Cartera Total Estimada", f"U$S {cartera_val:,}".replace(",", "."))
+        
+        g1, g2 = st.columns(2)
+        with g1:
+            fig_r = px.bar(df_st.groupby('ramo')['total_usd'].sum().reset_index(), x='ramo', y='total_usd', title="USD por Ramo", color='ramo')
+            fig_r.update_traces(hovertemplate='Total: U$S %{y:,}')
+            st.plotly_chart(fig_r, use_container_width=True)
+        with g2:
+            fig_a = df_st.groupby('aseguradora')['total_usd'].sum().reset_index()
+            fig_a = px.bar(fig_a, x='aseguradora', y='total_usd', title="USD por Aseguradora", color='aseguradora')
+            fig_a.update_traces(hovertemplate='Total: U$S %{y:,}')
+            st.plotly_chart(fig_a, use_container_width=True)
