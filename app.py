@@ -2,13 +2,13 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 import plotly.express as px
-from datetime import date, datetime, timedelta # Corregido: se agregó timedelta aquí
+from datetime import date, timedelta
 import io
 
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS PERSONALIZADOS ---
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     .left-title { font-size: 38px !important; font-weight: bold; text-align: left; margin-top: 10px; margin-bottom: 25px; color: #31333F; }
@@ -46,7 +46,7 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ FUNCIONES BASE
+# ⚙️ FUNCIONES DE BASE DE DATOS
 # ==========================================
 def leer_datos(query):
     try:
@@ -56,16 +56,25 @@ def leer_datos(query):
         return df
     except Exception: return pd.DataFrame()
 
+def ejecutar_query(query, params):
+    try:
+        conn = psycopg2.connect(st.secrets["DB_URL"])
+        cur = conn.cursor()
+        cur.execute(query, params)
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+        st.error(f"Error al actualizar: {e}")
+        return False
+
 def to_excel(df):
     output = io.BytesIO()
     writer = pd.ExcelWriter(output, engine='openpyxl')
     df.to_excel(writer, index=False, sheet_name='Datos')
     writer.close()
     return output.getvalue()
-
-def fmt_moneda(valor, prefijo="$"):
-    if pd.isna(valor) or valor == 0: return ""
-    return f"{prefijo} {int(valor):,}".replace(",", ".")
 
 TC_USD = 40.5 
 
@@ -80,63 +89,91 @@ with col_user:
 
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 SEGUROS", "🔔 VENCIMIENTOS", "📊 ESTADÍSTICAS"])
 
-# ---------------- PESTAÑA 1: CLIENTES ----------------
+# ---------------- PESTAÑA 1: CLIENTES (EDITABLE) ----------------
 with tab1:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with c1: st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" class="btn-registro"><span class="plus-blue">+</span> REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
     with c2: busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="s_cli")
     
-    sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email FROM clientes"
-    if busqueda_cli: sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
+    sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes"
+    if busqueda_cli:
+        sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
     df_cli = leer_datos(sql_cli + " ORDER BY id DESC")
     
     with c4: 
         if st.button("🔄", help="Refrescar", key="ref_cli"): st.rerun()
     with c5: 
         if not df_cli.empty: st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx')
+    
     st.divider()
-    st.dataframe(df_cli, use_container_width=True, hide_index=True)
+    if not df_cli.empty:
+        st.info("💡 Puedes editar celdas directamente. Haz clic en 'Guardar Cambios' al finalizar.")
+        # TABLA EDITABLE
+        df_editado = st.data_editor(df_cli, use_container_width=True, hide_index=True, disabled=["id"], key="editor_clientes")
+        
+        if st.button("💾 Guardar Cambios en Clientes"):
+            # Detectar qué filas cambiaron
+            for index, row in df_editado.iterrows():
+                original_row = df_cli[df_cli['id'] == row['id']].iloc[0]
+                if not row.equals(original_row):
+                    ejecutar_query(
+                        "UPDATE clientes SET nombre_completo=%s, documento_identidad=%s, celular=%s, email=%s, domicilio=%s WHERE id=%s",
+                        (row['nombre_completo'], row['documento_identidad'], row['celular'], row['email'], row['domicilio'], row['id'])
+                    )
+            st.success("✅ ¡Base de datos actualizada!")
+            st.rerun()
 
-# ---------------- PESTAÑA 2: SEGUROS ----------------
+# ---------------- PESTAÑA 2: SEGUROS (EDITABLE) ----------------
 with tab2:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     cp1, cp2, cp3, cp4, cp5 = st.columns([1.6, 2.5, 0.3, 0.3, 0.3])
     with cp1: st.subheader("📂 Gestión de Seguros")
     with cp2: busqueda_pol = st.text_input("🔍 Buscar...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="s_pol")
     
-    sql_pol = 'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
-    if busqueda_pol: sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
+    # Traemos ID para poder actualizar
+    sql_pol = 'SELECT s.id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
+    if busqueda_pol:
+        sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
     df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
 
     with cp4: 
         if st.button("🔄", key="ref_pol"): st.rerun()
     with cp5:
-        if not df_all.empty: st.download_button(label="📊", data=to_excel(df_all.drop(columns=['archivo_url'])), file_name='seguros.xlsx')
+        if not df_all.empty: st.download_button(label="📊", data=to_excel(df_all), file_name='seguros.xlsx')
 
     st.divider()
     if not df_all.empty:
-        df_all['Premio $'] = df_all['premio_UYU'].apply(lambda x: fmt_moneda(x, "$"))
-        df_all['Premio U$S'] = df_all['premio_USD'].apply(lambda x: fmt_moneda(x, "U$S"))
         today_ts = pd.Timestamp(date.today())
         df_all['Hasta_dt'] = pd.to_datetime(df_all['Hasta'])
         
-        cols_show = ["Cliente", "aseguradora", "ramo", "Riesgo/Matrícula", "Hasta", "Premio $", "Premio U$S", "archivo_url"]
+        df_vig = df_all[df_all['Hasta_dt'] >= today_ts].copy()
+        df_his = df_all[df_all['Hasta_dt'] < today_ts].copy()
+
+        st.markdown("### ✅ Seguros Vigentes (Editables)")
+        # Solo permitimos editar campos lógicos (compañía, ramo, riesgo, premios)
+        df_vig_edit = st.data_editor(df_vig.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True, disabled=["id", "Cliente"], key="editor_seguros_vig")
         
-        st.markdown("### ✅ Seguros Vigentes")
-        st.dataframe(df_all[df_all['Hasta_dt'] >= today_ts][cols_show], use_container_width=True, hide_index=True, column_config={"archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver")})
+        if st.button("💾 Guardar Cambios en Seguros"):
+            for index, row in df_vig_edit.iterrows():
+                ejecutar_query(
+                    'UPDATE seguros SET aseguradora=%s, ramo=%s, detalle_riesgo=%s, "premio_UYU"=%s, "premio_USD"=%s WHERE id=%s',
+                    (row['aseguradora'], row['ramo'], row['Riesgo/Matrícula'], row['premio_UYU'], row['premio_USD'], row['id'])
+                )
+            st.success("✅ Seguros actualizados.")
+            st.rerun()
+
         st.divider()
         st.markdown("### 📜 Historial")
-        st.dataframe(df_all[df_all['Hasta_dt'] < today_ts][cols_show], use_container_width=True, hide_index=True, column_config={"archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver")})
+        st.dataframe(df_his.drop(columns=['Hasta_dt', 'id']), use_container_width=True, hide_index=True)
 
-# ---------------- PESTAÑA 3: VENCIMIENTOS (FILTROS CORREGIDOS) ----------------
+# ---------------- PESTAÑA 3: VENCIMIENTOS (CON TIMEDELTA CORREGIDO) ----------------
 with tab3:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     cv1, cv2, cv3, cv4 = st.columns([3, 5, 0.4, 0.4])
     with cv1: st.header("🔔 Vencimientos")
     with cv2: dias_v = st.slider("📅 Ver próximos (días):", 15, 180, 60, 15)
     
-    # Traemos datos base para los filtros
     df_v_base = leer_datos('SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo", s.ejecutivo, s.corredor, s.agente, s.vigencia_hasta FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
     
     with cv3: 
@@ -145,7 +182,6 @@ with tab3:
         if not df_v_base.empty: st.download_button(label="📊", data=to_excel(df_v_base), file_name='vencimientos.xlsx')
 
     st.divider()
-    
     f1, f2, f3, f4, f5 = st.columns(5)
     def clean_list(df, col): 
         if df.empty or col not in df.columns: return ["Todos"]
@@ -161,8 +197,6 @@ with tab3:
         today_date = date.today()
         df_f = df_v_base.copy()
         df_f['vigencia_hasta'] = pd.to_datetime(df_f['vigencia_hasta']).dt.date
-        
-        # Filtro de tiempo y selección
         mask = (df_f['vigencia_hasta'] >= today_date) & (df_f['vigencia_hasta'] <= today_date + timedelta(days=dias_v))
         df_f = df_f[mask]
         
@@ -179,7 +213,6 @@ with tab3:
                 if d <= 15: return ['background-color: #fff0b3'] * len(row)
                 return [''] * len(row)
             st.dataframe(df_f.style.apply(color_venc, axis=1), use_container_width=True, hide_index=True)
-        else: st.info("Sin vencimientos para estos filtros.")
 
 # ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
 with tab4:
@@ -191,9 +224,7 @@ with tab4:
         g1, g2 = st.columns(2)
         with g1:
             fig_r = px.bar(df_st.groupby('ramo')['total_usd'].sum().reset_index(), x='ramo', y='total_usd', title="USD por Ramo", color='ramo')
-            fig_r.update_traces(hovertemplate='Total: U$S %{y:,}')
             st.plotly_chart(fig_r, use_container_width=True)
         with g2:
             fig_a = px.bar(df_st.groupby('aseguradora')['total_usd'].sum().reset_index(), x='aseguradora', y='total_usd', title="USD por Aseguradora", color='aseguradora')
-            fig_a.update_traces(hovertemplate='Total: U$S %{y:,}')
             st.plotly_chart(fig_a, use_container_width=True)
