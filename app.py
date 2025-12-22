@@ -13,14 +13,8 @@ st.markdown("""
     <style>
     .left-title { font-size: 38px !important; font-weight: bold; text-align: left; margin-top: 10px; margin-bottom: 25px; color: #31333F; }
     .block-container { padding-top: 2.5rem !important; }
-    
-    /* Encabezados de Tablas más oscuros */
     thead tr th { background-color: #d1d1d1 !important; color: #1a1a1a !important; font-weight: bold !important; }
-    
-    /* Alineación vertical centrada */
     [data-testid="stHorizontalBlock"] { align-items: center; }
-
-    /* Estilo del botón registro gris oscuro con + azul */
     .btn-registro {
         background-color: #333333 !important; color: white !important;
         padding: 8px 16px; border-radius: 5px; text-decoration: none;
@@ -80,18 +74,17 @@ with col_user:
     c_t.write(f"👤 **{st.session_state['usuario_actual']}**")
     if c_b.button("Salir"): st.session_state['logueado'] = False; st.rerun()
 
-tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS E HISTORIAL", "🔔 VENCIMIENTOS", "📊 ESTADÍSTICAS"])
+tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 PÓLIZAS Y HISTORIAL", "🔔 VENCIMIENTOS", "📊 ESTADÍSTICAS"])
 
 # ---------------- PESTAÑA 1: CLIENTES ----------------
 with tab1:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with c1: st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" class="btn-registro"><span class="plus-blue">+</span> REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
-    with c2: busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="search_cli")
+    with c2: busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="s_cli")
     
-    sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email FROM clientes"
-    if busqueda_cli:
-        sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
+    sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes"
+    if busqueda_cli: sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
     df_cli = leer_datos(sql_cli + " ORDER BY id DESC")
     
     with c4: 
@@ -99,30 +92,23 @@ with tab1:
     with c5: 
         if not df_cli.empty:
             st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx', help="Excel")
-    
     st.divider()
     st.dataframe(df_cli, use_container_width=True, hide_index=True)
 
-# ---------------- PESTAÑA 2: PÓLIZAS (FORMATOS CORREGIDOS) ----------------
+# ---------------- PESTAÑA 2: PÓLIZAS ----------------
 with tab2:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     cp1, cp2, cp3, cp4, cp5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with cp1: st.subheader("📂 Gestión de Pólizas")
-    with cp2: busqueda_pol = st.text_input("🔍 Buscar póliza...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="search_pol")
-    
-    # Query incluyendo detalle_riesgo ahora que existe en la DB
-    sql_pol = """
-        SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula",
-               s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url
-        FROM seguros s JOIN clientes c ON s.cliente_id = c.id
-    """
-    if busqueda_pol:
-        sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
-    
-    df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
-
+    with cp2: busqueda_pol = st.text_input("🔍 Buscar póliza...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="s_pol")
     with cp4: 
         if st.button("🔄", help="Refrescar", key="ref_pol"): st.rerun()
+
+    # Query con detalle_riesgo (creado en DBeaver)
+    sql_pol = 'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
+    if busqueda_pol: sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
+    df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
+
     with cp5:
         if not df_all.empty:
             df_excel = df_all.drop(columns=['archivo_url']) if 'archivo_url' in df_all.columns else df_all
@@ -136,11 +122,12 @@ with tab2:
         df_his = df_all[df_all['Hasta_dt'] < today].copy()
 
         st.markdown("### ✅ Pólizas Vigentes")
+        # Formato corregido para evitar SyntaxError y mostrar puntos de miles
         st.dataframe(df_vig.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True,
             column_config={
                 "archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"),
-                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.,d"),
-                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.,d")
+                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %,d"),
+                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %,d")
             })
         
         st.divider()
@@ -148,8 +135,8 @@ with tab2:
         st.dataframe(df_his.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True,
             column_config={
                 "archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"),
-                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.,d"),
-                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.,d")
+                "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %,d"),
+                "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %,d")
             })
 
 # ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
@@ -175,12 +162,7 @@ with tab4:
     df_st = leer_datos('SELECT aseguradora, ramo, "premio_UYU", "premio_USD" FROM seguros')
     if not df_st.empty:
         df_st['total_usd'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
-        df_st['total_usd'] = df_st['total_usd'].round(0)
-        
-        # Métrica formateada con punto para miles
-        total_val = df_st['total_usd'].sum()
-        st.metric("Cartera Total Estimada", f"U$S {total_val:,.0f}".replace(",", "."))
-        
+        st.metric("Cartera Total Estimada", f"U$S {df_st['total_usd'].sum():,.0f}".replace(",", "."))
         g1, g2 = st.columns(2)
         with g1:
             fig_r = px.bar(df_st.groupby('ramo')['total_usd'].sum().reset_index(), x='ramo', y='total_usd', title="USD por Ramo", color='ramo')
