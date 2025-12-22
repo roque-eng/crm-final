@@ -8,7 +8,7 @@ import io
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS PERSONALIZADOS ---
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     .left-title { font-size: 38px !important; font-weight: bold; text-align: left; margin-top: 10px; margin-bottom: 25px; color: #31333F; }
@@ -25,7 +25,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 GESTIÓN DE USUARIOS (Login Completo)
+# 🔐 GESTIÓN DE USUARIOS
 # ==========================================
 USUARIOS = {"RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "EH": "EHugo2025", "GS": "GSanchez2025", "JM": "JMokosce2025", "PG": "PGagliardi2025", "MDF": "MDeFreitas2025"}
 
@@ -82,43 +82,40 @@ with tab1:
     c1, c2, c3, c4, c5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with c1: st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" class="btn-registro"><span class="plus-blue">+</span> REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
     with c2: busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="s_cli")
+    with c4: 
+        if st.button("🔄", help="Refrescar", key="ref_cli"): st.rerun()
     
     sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email FROM clientes"
     if busqueda_cli: sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
     df_cli = leer_datos(sql_cli + " ORDER BY id DESC")
     
-    with c4: 
-        if st.button("🔄", help="Refrescar", key="ref_cli"): st.rerun()
-    with c5: 
-        if not df_cli.empty:
-            st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx', help="Excel")
+    with c5: st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx', help="Excel")
     st.divider()
     st.dataframe(df_cli, use_container_width=True, hide_index=True)
 
-# ---------------- PESTAÑA 2: PÓLIZAS (CON RIESGO/MATRÍCULA) ----------------
+# ---------------- PESTAÑA 2: PÓLIZAS (CON CONTROL DE COLUMNA) ----------------
 with tab2:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     cp1, cp2, cp3, cp4, cp5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
     with cp1: st.subheader("📂 Gestión de Pólizas")
     with cp2: busqueda_pol = st.text_input("🔍 Buscar póliza...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="s_pol")
     
-    # Intento de lectura con detalle_riesgo incluido
-    sql_pol = """
-        SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, 
-               s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", 
-               s."premio_UYU", s."premio_USD", s.archivo_url
-        FROM seguros s JOIN clientes c ON s.cliente_id = c.id
-    """
-    if busqueda_pol:
-        sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
-    
-    df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
+    # Se añade un intento de cargar detalle_riesgo, pero si falla se quita de la query
+    try:
+        sql_pol = 'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
+        if busqueda_pol: sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
+        df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
+    except:
+        sql_pol = 'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
+        if busqueda_pol: sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%'"
+        df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
 
     with cp4: 
         if st.button("🔄", help="Refrescar", key="ref_pol"): st.rerun()
     with cp5:
         if not df_all.empty:
-            st.download_button(label="📊", data=to_excel(df_all.drop(columns=['archivo_url'])), file_name=f'polizas_{date.today()}.xlsx', help="Excel")
+            df_excel = df_all.drop(columns=['archivo_url']) if 'archivo_url' in df_all.columns else df_all
+            st.download_button(label="📊", data=to_excel(df_excel), file_name=f'polizas_{date.today()}.xlsx', help="Excel")
 
     st.divider()
     if not df_all.empty:
@@ -143,8 +140,6 @@ with tab2:
                 "premio_UYU": st.column_config.NumberColumn("Premio $", format="$ %.,d"),
                 "premio_USD": st.column_config.NumberColumn("Premio U$S", format="U$S %.,d")
             })
-    else:
-        st.warning("No se encontraron datos o la columna 'detalle_riesgo' no existe en la base de datos.")
 
 # ---------------- PESTAÑA 3: VENCIMIENTOS ----------------
 with tab3:
@@ -152,7 +147,7 @@ with tab3:
     with cv1: st.header("🔔 Vencimientos")
     with cv2: dias_v = st.slider("📅 Días próximos:", 15, 180, 30, 15)
     
-    sql_v = f'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo, TO_CHAR(s.vigencia_hasta, "DD/MM/YYYY") as "Vence" FROM seguros s JOIN clientes c ON s.cliente_id = c.id WHERE s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL "{dias_v} days") ORDER BY s.vigencia_hasta ASC'
+    sql_v = f'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, TO_CHAR(s.vigencia_hasta, "DD/MM/YYYY") as "Vence" FROM seguros s JOIN clientes c ON s.cliente_id = c.id WHERE s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL "{dias_v} days") ORDER BY s.vigencia_hasta ASC'
     df_v = leer_datos(sql_v)
     
     with cv3: 
@@ -169,6 +164,7 @@ with tab4:
     df_st = leer_datos('SELECT aseguradora, ramo, "premio_UYU", "premio_USD" FROM seguros')
     if not df_st.empty:
         df_st['total_usd'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
+        df_st['total_usd'] = df_st['total_usd'].round(0)
         st.metric("Cartera Total Estimada", f"U$S {df_st['total_usd'].sum():,.0f}".replace(",", "."))
         g1, g2 = st.columns(2)
         with g1:
