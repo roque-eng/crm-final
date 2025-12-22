@@ -8,7 +8,7 @@ import io
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS ---
+# --- ESTILOS CSS PERSONALIZADOS ---
 st.markdown("""
     <style>
     .left-title { font-size: 38px !important; font-weight: bold; text-align: left; margin-top: 10px; margin-bottom: 25px; color: #31333F; }
@@ -76,6 +76,10 @@ def to_excel(df):
     writer.close()
     return output.getvalue()
 
+def fmt_moneda(valor, prefijo="$"):
+    if pd.isna(valor) or valor == 0: return ""
+    return f"{prefijo} {int(valor):,}".replace(",", ".")
+
 TC_USD = 40.5 
 
 # --- ENCABEZADO ---
@@ -89,7 +93,7 @@ with col_user:
 
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 SEGUROS", "🔔 VENCIMIENTOS", "📊 ESTADÍSTICAS"])
 
-# ---------------- PESTAÑA 1: CLIENTES (EDITABLE) ----------------
+# ---------------- PESTAÑA 1: CLIENTES (EDITABLE Y LIMPIA) ----------------
 with tab1:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns([1.6, 2, 0.4, 0.4, 0.4])
@@ -97,8 +101,7 @@ with tab1:
     with c2: busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="s_cli")
     
     sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email, domicilio FROM clientes"
-    if busqueda_cli:
-        sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
+    if busqueda_cli: sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
     df_cli = leer_datos(sql_cli + " ORDER BY id DESC")
     
     with c4: 
@@ -108,12 +111,10 @@ with tab1:
     
     st.divider()
     if not df_cli.empty:
-        st.info("💡 Puedes editar celdas directamente. Haz clic en 'Guardar Cambios' al finalizar.")
-        # TABLA EDITABLE
+        # EDITOR SIN CARTEL AZUL
         df_editado = st.data_editor(df_cli, use_container_width=True, hide_index=True, disabled=["id"], key="editor_clientes")
         
         if st.button("💾 Guardar Cambios en Clientes"):
-            # Detectar qué filas cambiaron
             for index, row in df_editado.iterrows():
                 original_row = df_cli[df_cli['id'] == row['id']].iloc[0]
                 if not row.equals(original_row):
@@ -124,14 +125,13 @@ with tab1:
             st.success("✅ ¡Base de datos actualizada!")
             st.rerun()
 
-# ---------------- PESTAÑA 2: SEGUROS (EDITABLE) ----------------
+# ---------------- PESTAÑA 2: SEGUROS (EDITABLE Y LIMPIA) ----------------
 with tab2:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     cp1, cp2, cp3, cp4, cp5 = st.columns([1.6, 2.5, 0.3, 0.3, 0.3])
     with cp1: st.subheader("📂 Gestión de Seguros")
     with cp2: busqueda_pol = st.text_input("🔍 Buscar...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="s_pol")
     
-    # Traemos ID para poder actualizar
     sql_pol = 'SELECT s.id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
     if busqueda_pol:
         sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
@@ -150,9 +150,8 @@ with tab2:
         df_vig = df_all[df_all['Hasta_dt'] >= today_ts].copy()
         df_his = df_all[df_all['Hasta_dt'] < today_ts].copy()
 
-        st.markdown("### ✅ Seguros Vigentes (Editables)")
-        # Solo permitimos editar campos lógicos (compañía, ramo, riesgo, premios)
-        df_vig_edit = st.data_editor(df_vig.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True, disabled=["id", "Cliente"], key="editor_seguros_vig")
+        st.markdown("### ✅ Seguros Vigentes")
+        df_vig_edit = st.data_editor(df_vig.drop(columns=['Hasta_dt']), use_container_width=True, hide_index=True, disabled=["id", "Cliente", "archivo_url"], key="editor_seguros_vig")
         
         if st.button("💾 Guardar Cambios en Seguros"):
             for index, row in df_vig_edit.iterrows():
@@ -167,7 +166,7 @@ with tab2:
         st.markdown("### 📜 Historial")
         st.dataframe(df_his.drop(columns=['Hasta_dt', 'id']), use_container_width=True, hide_index=True)
 
-# ---------------- PESTAÑA 3: VENCIMIENTOS (CON TIMEDELTA CORREGIDO) ----------------
+# ---------------- PESTAÑA 3: VENCIMIENTOS (CON ALERTAS) ----------------
 with tab3:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     cv1, cv2, cv3, cv4 = st.columns([3, 5, 0.4, 0.4])
@@ -224,7 +223,9 @@ with tab4:
         g1, g2 = st.columns(2)
         with g1:
             fig_r = px.bar(df_st.groupby('ramo')['total_usd'].sum().reset_index(), x='ramo', y='total_usd', title="USD por Ramo", color='ramo')
+            fig_r.update_traces(hovertemplate='Total: U$S %{y:,}')
             st.plotly_chart(fig_r, use_container_width=True)
         with g2:
             fig_a = px.bar(df_st.groupby('aseguradora')['total_usd'].sum().reset_index(), x='aseguradora', y='total_usd', title="USD por Aseguradora", color='aseguradora')
+            fig_a.update_traces(hovertemplate='Total: U$S %{y:,}')
             st.plotly_chart(fig_a, use_container_width=True)
