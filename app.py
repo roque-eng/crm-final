@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 import plotly.express as px
-from datetime import date
+from datetime import date, datetime
 import io
 
 # 1. CONFIGURACIÓN DE PÁGINA
@@ -65,6 +65,7 @@ def to_excel(df):
 
 def fmt_moneda(valor, prefijo="$"):
     if pd.isna(valor) or valor == 0: return ""
+    # Formateo con punto de miles uruguayo
     return f"{prefijo} {int(valor):,}".replace(",", ".")
 
 TC_USD = 40.5 
@@ -88,15 +89,13 @@ with tab1:
     with c2: busqueda_cli = st.text_input("🔍 Buscar cliente...", placeholder="Nombre o CI", label_visibility="collapsed", key="s_cli")
     
     sql_cli = "SELECT id, nombre_completo, documento_identidad, celular, email FROM clientes"
-    if busqueda_cli:
-        sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
+    if busqueda_cli: sql_cli += f" WHERE nombre_completo ILIKE '%%{busqueda_cli}%%' OR documento_identidad ILIKE '%%{busqueda_cli}%%'"
     df_cli = leer_datos(sql_cli + " ORDER BY id DESC")
     
     with c4: 
         if st.button("🔄", help="Refrescar", key="ref_cli"): st.rerun()
     with c5: 
-        if not df_cli.empty:
-            st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx', help="Excel")
+        if not df_cli.empty: st.download_button(label="📊", data=to_excel(df_cli), file_name=f'clientes_{date.today()}.xlsx', help="Excel")
     
     st.divider()
     st.dataframe(df_cli, use_container_width=True, hide_index=True)
@@ -109,19 +108,17 @@ with tab2:
     with cp2: busqueda_pol = st.text_input("🔍 Buscar...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="s_pol")
     
     sql_pol = 'SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id'
-    if busqueda_pol:
-        sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
+    if busqueda_pol: sql_pol += f" WHERE c.nombre_completo ILIKE '%%{busqueda_pol}%%' OR c.documento_identidad ILIKE '%%{busqueda_pol}%%' OR s.detalle_riesgo ILIKE '%%{busqueda_pol}%%'"
     df_all = leer_datos(sql_pol + " ORDER BY s.vigencia_hasta DESC")
 
     with cp4: 
-        if st.button("🔄", help="Refrescar", key="ref_pol"): st.rerun()
+        if st.button("🔄", key="ref_pol"): st.rerun()
     with cp5:
-        if not df_all.empty:
-            df_excel = df_all.drop(columns=['archivo_url']) if 'archivo_url' in df_all.columns else df_all
-            st.download_button(label="📊", data=to_excel(df_excel), file_name=f'polizas_{date.today()}.xlsx', help="Excel")
+        if not df_all.empty: st.download_button(label="📊", data=to_excel(df_all.drop(columns=['archivo_url'])), file_name='seguros.xlsx', help="Excel")
 
     st.divider()
     if not df_all.empty:
+        # Formateo y Alineación forzada a la derecha
         df_all['Premio $'] = df_all['premio_UYU'].apply(lambda x: fmt_moneda(x, "$"))
         df_all['Premio U$S'] = df_all['premio_USD'].apply(lambda x: fmt_moneda(x, "U$S"))
         today = pd.Timestamp(date.today())
@@ -131,7 +128,11 @@ with tab2:
         df_vig = df_all[df_all['Hasta_dt'] >= today][cols_show]
         df_his = df_all[df_all['Hasta_dt'] < today][cols_show]
 
-        conf_col = {"archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver")}
+        conf_col = {
+            "archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver"),
+            "Premio $": st.column_config.TextColumn("Premio $"),
+            "Premio U$S": st.column_config.TextColumn("Premio U$S")
+        }
 
         st.markdown("### ✅ Seguros Vigentes")
         st.dataframe(df_vig, use_container_width=True, hide_index=True, column_config=conf_col)
@@ -139,53 +140,68 @@ with tab2:
         st.markdown("### 📜 Historial")
         st.dataframe(df_his, use_container_width=True, hide_index=True, column_config=conf_col)
 
-# ---------------- PESTAÑA 3: VENCIMIENTOS (FILTROS RECUPERADOS) ----------------
+# ---------------- PESTAÑA 3: VENCIMIENTOS (FILTROS PERMANENTES) ----------------
 with tab3:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-    cv1, cv2, cv3, cv4 = st.columns([3, 5, 0.4, 0.4])
+    cv1, cv2, cv3, cv4 = st.columns([2.5, 5.7, 0.4, 0.4])
     with cv1: st.header("🔔 Vencimientos")
-    with cv2: dias_v = st.slider("📅 Ver próximos (días):", 15, 180, 30, 15)
+    with cv2: dias_v = st.slider("📅 Ver próximos (días):", 15, 180, 60, 15) # Default a 60 días para ver datos
     with cv3: 
         if st.button("🔄", key="ref_ven"): st.rerun()
-    with cv4:
-        # Carga de datos base para los filtros
-        df_v_base = leer_datos('SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo", s.ejecutivo, s.corredor, s.agente, s.vigencia_hasta FROM seguros s JOIN clientes c ON s.cliente_id = c.id WHERE s.vigencia_hasta BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL ' + f"'{dias_v} days')")
+    
+    # Traemos todos los datos para llenar los filtros SIEMPRE
+    df_v_base = leer_datos('SELECT c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo", s.ejecutivo, s.corredor, s.agente, s.vigencia_hasta FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
+    
+    with cv4: 
         if not df_v_base.empty:
-            st.download_button(label="📊", data=to_excel(df_v_base), file_name='vencimientos.xlsx')
+            st.download_button(label="📊", data=to_excel(df_v_base), file_name='vencimientos.xlsx', help="Excel")
 
     st.divider()
     
+    # Fila de Filtros (Siempre visible)
+    f1, f2, f3, f4, f5 = st.columns(5)
+    
+    # Función de limpieza para selectores
+    def clean_list(df, col): 
+        if df.empty or col not in df.columns: return ["Todos"]
+        return ["Todos"] + sorted([str(x) for x in df[col].unique() if x])
+
+    sel_eje = f1.selectbox("👤 Ejecutivo", clean_list(df_v_base, "ejecutivo"))
+    sel_ase = f2.selectbox("🏢 Aseguradora", clean_list(df_v_base, "aseguradora"))
+    sel_ram = f3.selectbox("🛡️ Ramo", clean_list(df_v_base, "ramo"))
+    sel_cor = f4.selectbox("💼 Corredor", clean_list(df_v_base, "corredor"))
+    sel_age = f5.selectbox("🧑 Agente", clean_list(df_v_base, "agente"))
+
+    # Aplicar Filtros de Tiempo y Selección
     if not df_v_base.empty:
-        # Fila de Filtros Avanzados
-        f1, f2, f3, f4, f5 = st.columns(5)
-        
-        # Limpiar None para los selectores
-        def clean_list(col): return ["Todos"] + sorted([x for x in df_v_base[col].unique() if x])
-
-        sel_eje = f1.selectbox("👤 Ejecutivo", clean_list("ejecutivo"))
-        sel_ase = f2.selectbox("🏢 Aseguradora", clean_list("aseguradora"))
-        sel_ram = f3.selectbox("🛡️ Ramo", clean_list("ramo"))
-        sel_cor = f4.selectbox("💼 Corredor", clean_list("corredor"))
-        sel_age = f5.selectbox("🧑 Agente", clean_list("agente"))
-
-        # Aplicar Filtros
+        today = date.today()
         df_f = df_v_base.copy()
+        df_f['vigencia_hasta'] = pd.to_datetime(df_f['vigencia_hasta']).dt.date
+        
+        # Filtro de fecha
+        mask_fecha = (df_f['vigencia_hasta'] >= today) & (df_f['vigencia_hasta'] <= today + timedelta(days=dias_v))
+        df_f = df_f[mask_fecha]
+        
+        # Filtros de menú
         if sel_eje != "Todos": df_f = df_f[df_f["ejecutivo"] == sel_eje]
         if sel_ase != "Todos": df_f = df_f[df_f["aseguradora"] == sel_ase]
         if sel_ram != "Todos": df_f = df_f[df_f["ramo"] == sel_ram]
         if sel_cor != "Todos": df_f = df_f[df_f["corredor"] == sel_cor]
         if sel_age != "Todos": df_f = df_f[df_f["agente"] == sel_age]
 
-        # Alertas de Color
-        def color_venc(row):
-            dias = (row['vigencia_hasta'] - date.today()).days
-            if dias <= 7: return ['background-color: #ffcccc'] * len(row)
-            if dias <= 15: return ['background-color: #fff0b3'] * len(row)
-            return [''] * len(row)
+        if not df_f.empty:
+            # Alertas de Color
+            def color_venc(row):
+                dias = (row['vigencia_hasta'] - date.today()).days
+                if dias <= 7: return ['background-color: #ffcccc'] * len(row)
+                if dias <= 15: return ['background-color: #fff0b3'] * len(row)
+                return [''] * len(row)
 
-        st.dataframe(df_f.style.apply(color_venc, axis=1), use_container_width=True, hide_index=True)
+            st.dataframe(df_f.style.apply(color_venc, axis=1), use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay vencimientos con esos filtros en el rango de días seleccionado.")
     else:
-        st.success("✅ No hay vencimientos próximos en el rango seleccionado.")
+        st.info("No hay datos cargados en la tabla de seguros.")
 
 # ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
 with tab4:
@@ -197,7 +213,9 @@ with tab4:
         g1, g2 = st.columns(2)
         with g1:
             fig_r = px.bar(df_st.groupby('ramo')['total_usd'].sum().reset_index(), x='ramo', y='total_usd', title="USD por Ramo", color='ramo')
+            fig_r.update_traces(hovertemplate='Total: U$S %{y:,}')
             st.plotly_chart(fig_r, use_container_width=True)
         with g2:
             fig_a = px.bar(df_st.groupby('aseguradora')['total_usd'].sum().reset_index(), x='aseguradora', y='total_usd', title="USD por Aseguradora", color='aseguradora')
+            fig_a.update_traces(hovertemplate='Total: U$S %{y:,}')
             st.plotly_chart(fig_a, use_container_width=True)
