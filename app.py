@@ -108,12 +108,13 @@ with tab1:
     st.divider()
     if not df_cli.empty:
         df_edit_cli = st.data_editor(df_cli, use_container_width=True, hide_index=True, disabled=["id"])
-        if st.button("💾 Guardar Cambios Clientes"):
+        if st.button("💾 Guardar Cambios en Clientes"):
             for idx, row in df_edit_cli.iterrows():
-                ejecutar_query("UPDATE clientes SET nombre_completo=%s, celular=%s, email=%s, domicilio=%s WHERE id=%s", (row['nombre_completo'], row['celular'], row['email'], row['domicilio'], row['id']))
+                ejecutar_query("UPDATE clientes SET nombre_completo=%s, documento_identidad=%s, celular=%s, email=%s, domicilio=%s WHERE id=%s", (row['nombre_completo'], row['documento_identidad'], row['celular'], row['email'], row['domicilio'], row['id']))
+            st.success("✅ Clientes actualizados.")
             st.rerun()
 
-# ---------------- PESTAÑA 2: SEGUROS ----------------
+# ---------------- PESTAÑA 2: SEGUROS (EDITABLE) ----------------
 with tab2:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     cp1, cp2, cp3, cp4, cp5 = st.columns([1.6, 2.5, 0.3, 0.3, 0.3])
@@ -121,7 +122,9 @@ with tab2:
     with cp2: busqueda_pol = st.text_input("🔍 Buscar...", placeholder="Nombre, CI o Matrícula", label_visibility="collapsed", key="s_pol")
     
     df_all = leer_datos('SELECT s.id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo/Matrícula", s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id ORDER BY s.vigencia_hasta DESC')
-    
+    if busqueda_pol:
+         df_all = df_all[df_all['Cliente'].str.contains(busqueda_pol, case=False, na=False) | df_all['Riesgo/Matrícula'].str.contains(busqueda_pol, case=False, na=False)]
+
     with cp4: 
         if st.button("🔄", key="ref_pol"): st.rerun()
     with cp5:
@@ -133,8 +136,18 @@ with tab2:
         df_all['Hasta_dt'] = pd.to_datetime(df_all['Hasta'])
         
         st.markdown("### ✅ Seguros Vigentes")
-        st.dataframe(df_all[df_all['Hasta_dt'] >= today].drop(columns=['Hasta_dt', 'id']), use_container_width=True, hide_index=True, 
-                     column_config={"archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver")})
+        # Se activa el data_editor para permitir corregir datos in situ
+        df_vig_edit = st.data_editor(df_all[df_all['Hasta_dt'] >= today].drop(columns=['Hasta_dt']), 
+                                     use_container_width=True, hide_index=True, 
+                                     disabled=["id", "Cliente", "archivo_url"], 
+                                     column_config={"archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver")})
+        
+        if st.button("💾 Guardar Cambios en Seguros"):
+            for idx, row in df_vig_edit.iterrows():
+                ejecutar_query('UPDATE seguros SET aseguradora=%s, ramo=%s, detalle_riesgo=%s, "premio_UYU"=%s, "premio_USD"=%s, vigencia_hasta=%s WHERE id=%s', 
+                               (row['aseguradora'], row['ramo'], row['Riesgo/Matrícula'], row['premio_UYU'], row['premio_USD'], row['Hasta'], row['id']))
+            st.success("✅ Seguros actualizados.")
+            st.rerun()
         
         st.divider()
         st.markdown("### 📜 Historial")
@@ -149,11 +162,9 @@ with tab3:
     with cr3: 
         if st.button("🔄", key="ref_ren"): st.rerun()
 
-    # Query completa con campos ocultos para procesar la renovación
     df_ren = leer_datos('SELECT s.id, s.cliente_id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo", s.ejecutivo, s.corredor, s.agente, s.vigencia_hasta as "Vence_Viejo", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
     
     st.divider()
-    # Filtros (Ejecutivo, Corredor y Agente ocultos de la tabla pero vivos aquí)
     f1, f2, f3, f4, f5 = st.columns(5)
     def clean_list(df, col): return ["Todos"] + sorted([str(x) for x in df[col].unique() if x])
     
@@ -175,9 +186,8 @@ with tab3:
         if sel_cor != "Todos": df_ren_f = df_ren_f[df_ren_f["corredor"] == sel_cor]
         if sel_age != "Todos": df_ren_f = df_ren_f[df_ren_f["agente"] == sel_age]
 
-        st.warning("👉 Modifica los datos de la renovación abajo y haz clic en 'Confirmar Nueva Póliza'.")
+        st.warning("👉 Modifica los datos abajo para crear la renovación. El registro anterior pasará al historial.")
         
-        # TABLA EDITABLE: Ocultamos los filtros y mostramos Premios y Doc
         df_ren_edit = st.data_editor(
             df_ren_f, 
             use_container_width=True, 
@@ -194,14 +204,12 @@ with tab3:
 
         if st.button("🚀 Confirmar Renovación (Crea nueva póliza)"):
             for idx, row in df_ren_edit.iterrows():
-                orig = df_ren_f.loc[idx]
-                # Si algo cambió, insertamos una NUEVA fila
-                if row['premio_UYU'] != orig['premio_UYU'] or row['Vence_Viejo'] != orig['Vence_Viejo'] or row['archivo_url'] != orig['archivo_url']:
-                    ejecutar_query(
-                        'INSERT INTO seguros (cliente_id, aseguradora, ramo, detalle_riesgo, vigencia_hasta, "premio_UYU", "premio_USD", archivo_url, ejecutivo, corredor, agente) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-                        (row['cliente_id'], row['aseguradora'], row['ramo'], row['Riesgo'], row['Vence_Viejo'], row['premio_UYU'], row['premio_USD'], row['archivo_url'], row['ejecutivo'], row['corredor'], row['agente'])
-                    )
-            st.success("✅ Renovación procesada. La póliza anterior ahora es Historial y la nueva está Vigente.")
+                # Lógica de inserción para no borrar el historial
+                ejecutar_query(
+                    'INSERT INTO seguros (cliente_id, aseguradora, ramo, detalle_riesgo, vigencia_hasta, "premio_UYU", "premio_USD", archivo_url, ejecutivo, corredor, agente) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                    (row['cliente_id'], row['aseguradora'], row['ramo'], row['Riesgo'], row['Vence_Viejo'], row['premio_UYU'], row['premio_USD'], row['archivo_url'], row['ejecutivo'], row['corredor'], row['agente'])
+                )
+            st.success("✅ Renovación exitosa.")
             st.rerun()
 
 # ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
