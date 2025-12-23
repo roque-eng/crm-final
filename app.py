@@ -7,18 +7,26 @@ from datetime import date, timedelta
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS FINALES (BOTONES Y ALINEACIÓN) ---
+# --- ESTILOS CSS FINALES (BOTONES DISCRETOS Y ALINEACIÓN) ---
 st.markdown("""
     <style>
     .left-title { font-size: 30px !important; font-weight: bold; text-align: left; color: #31333F; margin-top: -15px; }
     thead tr th { background-color: #f0f2f6 !important; color: #1a1a1a !important; font-weight: bold !important; }
     .user-info { text-align: right; font-weight: bold; font-size: 16px; color: #555; margin-bottom: 5px; }
     
-    /* Botón Salir: pequeño y a la derecha */
+    /* Botón Salir: Pequeño y a la extrema derecha */
+    .exit-container { display: flex; justify-content: flex-end; }
     .stButton > button { width: 80px !important; height: 32px !important; padding: 0px !important; }
-    
-    /* Botón Guardar: más ancho para que entre el texto */
-    .save-btn > div > button { width: 180px !important; height: 40px !important; font-weight: bold !important; }
+
+    /* Botón Guardar con Icono: Redondo y discreto */
+    .save-btn-style > div > button { 
+        width: 50px !important; 
+        height: 50px !important; 
+        border-radius: 50% !important; 
+        font-size: 20px !important;
+        background-color: #f0f2f6 !important;
+        border: 1px solid #ccc !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -75,17 +83,18 @@ def sincronizar_borrados(df_editado, df_original, tabla_nombre):
 
 TC_USD = 40.5 
 
-# --- ENCABEZADO (SALIR BIEN A LA DERECHA) ---
+# --- ENCABEZADO (SALIR A LA DERECHA) ---
 col_tit, col_user_box = st.columns([8.5, 1.5])
 with col_tit: 
     st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
 
 with col_user_box:
     st.markdown(f'<div class="user-info">👤 {st.session_state["usuario_actual"]}</div>', unsafe_allow_html=True)
-    # Botón Salir alineado a la derecha
+    st.markdown('<div class="exit-container">', unsafe_allow_html=True)
     if st.button("Salir"): 
         st.session_state['logueado'] = False
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 SEGUROS", "🔄 RENOVACIONES", "📊 ESTADÍSTICAS"])
 
@@ -94,6 +103,7 @@ with tab1:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_form, c_search = st.columns([1.5, 2.5])
     with c_form:
+        # Reinstalación del link al formulario de Google
         st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" style="text-decoration:none; background-color:#333; color:white; padding:8px 15px; border-radius:5px; font-weight:bold; display:inline-block; margin-top:5px;">+ REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
     with c_search:
         busqueda_cli = st.text_input("🔍 Buscar cliente por nombre o documento", key="s_cli")
@@ -105,9 +115,9 @@ with tab1:
     st.divider()
     if not df_cli.empty:
         df_edit_cli = st.data_editor(df_cli, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["id"])
-        # Botón Guardar agrandado y con texto simplificado
-        st.markdown('<div class="save-btn">', unsafe_allow_html=True)
-        if st.button("💾 Guardar Cambios"):
+        # Botón con Icono y Tooltip
+        st.markdown('<div class="save-btn-style">', unsafe_allow_html=True)
+        if st.button("💾", help="Guardar Cambios"):
             sincronizar_borrados(df_edit_cli, df_cli, "clientes")
             for _, row in df_edit_cli.iterrows():
                 if pd.notnull(row['id']):
@@ -123,8 +133,8 @@ with tab2:
         df_seg = df_seg[df_seg['Cliente'].str.contains(busqueda_pol, case=False, na=False) | df_seg['Riesgo/Matrícula'].str.contains(busqueda_pol, case=False, na=False)]
     
     df_seg_edit = st.data_editor(df_seg, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["Cliente"], column_config={"archivo_url": st.column_config.LinkColumn("Documento")})
-    st.markdown('<div class="save-btn">', unsafe_allow_html=True)
-    if st.button("💾 Guardar Cambios", key="save_seg"):
+    st.markdown('<div class="save-btn-style">', unsafe_allow_html=True)
+    if st.button("💾", key="save_seg_icon", help="Guardar Cambios"):
         sincronizar_borrados(df_seg_edit, df_seg, "seguros")
         for _, row in df_seg_edit.iterrows():
             if pd.notnull(row['id']):
@@ -132,11 +142,10 @@ with tab2:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- PESTAÑA 3: RENOVACIONES (MEJORADA) ----------------
+# ---------------- PESTAÑA 3: RENOVACIONES ----------------
 with tab3:
     st.header("🔄 Centro de Renovaciones")
     busqueda_ren = st.text_input("🔍 Buscar cliente específico para renovar...", placeholder="Escribe el nombre aquí")
-    
     df_ren_raw = leer_datos('SELECT s.id, s.cliente_id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo", s.ejecutivo, s.corredor, s.agente, s.vigencia_hasta as "Vence_Viejo", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
     
     if not df_ren_raw.empty:
