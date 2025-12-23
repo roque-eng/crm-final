@@ -60,9 +60,20 @@ def ejecutar_query(query, params):
         return True
     except Exception: return False
 
+def procesar_borrados(df_editado, df_original, tabla_nombre):
+    """Función para detectar qué IDs fueron eliminados en el editor dinámico"""
+    ids_originales = set(df_original['id'])
+    # Ignoramos filas nuevas (que no tienen ID todavía)
+    ids_editados = set(df_editado['id'].dropna().astype(int))
+    ids_a_borrar = ids_originales - ids_editados
+    
+    for row_id in ids_a_borrar:
+        ejecutar_query(f"DELETE FROM {tabla_nombre} WHERE id = %s", (row_id,))
+    return len(ids_a_borrar)
+
 TC_USD = 40.5 
 
-# --- ENCABEZADO (RDF Y SALIR ALINEADOS A LA DERECHA) ---
+# --- ENCABEZADO ---
 col_tit, col_user = st.columns([7, 3])
 with col_tit: 
     st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
@@ -90,14 +101,22 @@ with tab1:
 
     st.divider()
     if not df_cli.empty:
-        df_edit_cli = st.data_editor(df_cli, use_container_width=True, hide_index=True, disabled=["id"])
+        st.info("💡 Para borrar un cliente: Selecciónalo y presiona 'Supr' o usa la papelera lateral.")
+        # num_rows="dynamic" permite borrar filas
+        df_edit_cli = st.data_editor(df_cli, use_container_width=True, hide_index=True, disabled=["id"], num_rows="dynamic")
+        
         if st.button("💾 Guardar Cambios en Clientes"):
+            # 1. Procesar borrados primero
+            borrados = procesar_borrados(df_edit_cli, df_cli, "clientes")
+            # 2. Procesar actualizaciones de los que quedan
             for idx, row in df_edit_cli.iterrows():
-                ejecutar_query("UPDATE clientes SET nombre_completo=%s, documento_identidad=%s, celular=%s, email=%s WHERE id=%s", 
-                               (row['nombre_completo'], row['documento_identidad'], row['celular'], row['email'], row['id']))
+                if pd.notnull(row['id']): # Solo actualizamos si ya existía
+                    ejecutar_query("UPDATE clientes SET nombre_completo=%s, documento_identidad=%s, celular=%s, email=%s WHERE id=%s", 
+                                   (row['nombre_completo'], row['documento_identidad'], row['celular'], row['email'], row['id']))
+            st.success(f"Cambios guardados. {borrados} cliente(s) eliminado(s).")
             st.rerun()
 
-# ---------------- PESTAÑA 2: SEGUROS ----------------
+# ---------------- PESTAÑA 2: SEGUROS (LIMPIEZA DE DUPLICADOS) ----------------
 with tab2:
     cp1, cp2, cp3 = st.columns([1.6, 2.5, 0.3])
     with cp1: st.subheader("📂 Gestión de Seguros")
@@ -113,33 +132,40 @@ with tab2:
         df_all['Hasta_dt'] = pd.to_datetime(df_all['Hasta'])
         
         st.markdown("### ✅ Seguros Vigentes")
-        df_vig_edit = st.data_editor(df_all[df_all['Hasta_dt'] >= today].drop(columns=['Hasta_dt']), 
-                                     use_container_width=True, hide_index=True, 
-                                     disabled=["id", "Cliente", "archivo_url"], 
+        st.warning("⚠️ Selecciona los registros duplicados y elimínalos antes de guardar.")
+        
+        # Filtramos vigentes para el editor
+        df_vigentes = df_all[df_all['Hasta_dt'] >= today].drop(columns=['Hasta_dt'])
+        
+        # num_rows="dynamic" permite borrar los duplicados de Ruglio López
+        df_vig_edit = st.data_editor(df_vigentes, 
+                                     use_container_width=True, hide_index=True, num_rows="dynamic",
+                                     disabled=["Cliente", "archivo_url"], 
                                      column_config={"archivo_url": st.column_config.LinkColumn("Documento", display_text="📄 Ver")})
         
         if st.button("💾 Guardar Cambios en Seguros"):
+            # 1. Borrar duplicados
+            borrados_seg = procesar_borrados(df_vig_edit, df_vigentes, "seguros")
+            # 2. Actualizar el resto
             for idx, row in df_vig_edit.iterrows():
-                ejecutar_query('UPDATE seguros SET aseguradora=%s, ramo=%s, detalle_riesgo=%s, "premio_UYU"=%s, "premio_USD"=%s, vigencia_hasta=%s WHERE id=%s', 
-                               (row['aseguradora'], row['ramo'], row['Riesgo/Matrícula'], row['premio_UYU'], row['premio_USD'], row['Hasta'], row['id']))
+                if pd.notnull(row['id']):
+                    ejecutar_query('UPDATE seguros SET aseguradora=%s, ramo=%s, detalle_riesgo=%s, "premio_UYU"=%s, "premio_USD"=%s, vigencia_hasta=%s WHERE id=%s', 
+                                   (row['aseguradora'], row['ramo'], row['Riesgo/Matrícula'], row['premio_UYU'], row['premio_USD'], row['Hasta'], row['id']))
+            st.success(f"Cambios guardados. {borrados_seg} seguro(s) duplicado(s) eliminado(s).")
             st.rerun()
         
         st.divider()
         st.markdown("### 📜 Historial")
         st.dataframe(df_all[df_all['Hasta_dt'] < today].drop(columns=['Hasta_dt', 'id']), use_container_width=True, hide_index=True)
 
-# ---------------- PESTAÑA 3: RENOVACIONES (CON BOTÓN DE SUBIDA) ----------------
+# ---------------- PESTAÑA 3: RENOVACIONES ----------------
 with tab3:
     st.header("🔄 Centro de Renovaciones")
-    
-    # PUNTO 3: Botón para subir archivos PDF
     with st.expander("📁 Subir nueva póliza (PDF)"):
-        archivo_subido = st.file_uploader("Arrastra aquí el documento de la renovación", type=["pdf", "jpg", "png"])
-        if archivo_subido:
-            st.info(f"Documento '{archivo_subido.name}' listo. Copia el link de Drive en la tabla abajo para finalizar.")
+        archivo_subido = st.file_uploader("Arrastra aquí el documento", type=["pdf", "jpg", "png"])
+        if archivo_subido: st.info(f"Documento '{archivo_subido.name}' listo.")
 
     dias_v = st.slider("📅 Próximos vencimientos (días):", 15, 180, 60)
-    
     df_ren = leer_datos('SELECT s.id, s.cliente_id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo", s.ejecutivo, s.corredor, s.agente, s.vigencia_hasta as "Vence_Viejo", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
     
     if not df_ren.empty:
@@ -149,71 +175,35 @@ with tab3:
         df_ren_f = df_ren[mask].copy()
         
         if not df_ren_f.empty:
-            df_ren_edit = st.data_editor(
-                df_ren_f, use_container_width=True, hide_index=True,
+            df_ren_edit = st.data_editor(df_ren_f, use_container_width=True, hide_index=True,
                 column_order=["Cliente", "aseguradora", "ramo", "Riesgo", "Vence_Viejo", "premio_UYU", "premio_USD", "archivo_url"],
-                column_config={"Vence_Viejo": st.column_config.DateColumn("Nueva Fecha"), "archivo_url": st.column_config.TextColumn("URL Nuevo Doc.")},
-                disabled=["Cliente"]
-            )
-            if st.button("🚀 Confirmar Renovación (Insertar Nuevo)"):
+                column_config={"Vence_Viejo": st.column_config.DateColumn("Nueva Fecha")}, disabled=["Cliente"])
+            if st.button("🚀 Confirmar Renovación"):
                 for idx, row in df_ren_edit.iterrows():
                     ejecutar_query('INSERT INTO seguros (cliente_id, aseguradora, ramo, detalle_riesgo, vigencia_hasta, "premio_UYU", "premio_USD", archivo_url, ejecutivo, corredor, agente) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
                                    (row['cliente_id'], row['aseguradora'], row['ramo'], row['Riesgo'], row['Vence_Viejo'], row['premio_UYU'], row['premio_USD'], row['archivo_url'], row['ejecutivo'], row['corredor'], row['agente']))
-                st.success("✅ Registro nuevo creado con éxito.")
+                st.success("✅ Registro nuevo creado.")
                 st.rerun()
-        else: st.info("No hay vencimientos próximos.")
 
 # ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
 with tab4:
-    st.header("📊 Tablero de Proyecciones y Control")
+    st.header("📊 Tablero de Control")
     df_st = leer_datos('SELECT s.aseguradora, s.ramo, s.ejecutivo, s.agente, s.vigencia_hasta, s."premio_UYU", s."premio_USD" FROM seguros s')
-
     if not df_st.empty:
         df_st['vigencia_hasta'] = pd.to_datetime(df_st['vigencia_hasta'])
         df_st['Año'] = df_st['vigencia_hasta'].dt.year.astype(str)
         df_st['Mes'] = df_st['vigencia_hasta'].dt.month_name()
         df_st['Total_USD'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
 
-        col_f1, col_f2, col_f3, col_f4 = st.columns(4)
-        
-        with col_f1:
-            lista_anos = sorted(df_st['Año'].unique().tolist())
-            sel_ano = st.multiselect("⏳ Años (Tiempo)", lista_anos, default=lista_anos)
+        c_f1, c_f2 = st.columns(2)
+        with c_f1: sel_ano = st.multiselect("Año", sorted(df_st['Año'].unique()), default=sorted(df_st['Año'].unique()))
+        with c_f2: sel_eje = st.selectbox("Ejecutivo", ["Todos"] + sorted(df_st['ejecutivo'].unique().tolist()))
 
-        with col_f2:
-            meses_orden = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-            lista_meses_datos = [m for m in meses_orden if m in df_st['Mes'].unique()]
-            # Lógica de "Todos" por defecto
-            sel_mes_raw = st.multiselect("⏳ Meses (Tiempo)", ["Todos"] + lista_meses_datos, default=["Todos"])
-            sel_mes = lista_meses_datos if "Todos" in sel_mes_raw else sel_mes_raw
+        df_f = df_st[df_st['Año'].isin(sel_ano)]
+        if sel_eje != "Todos": df_f = df_f[df_f['ejecutivo'] == sel_eje]
 
-        with col_f3:
-            list_eje = ["Todos"] + sorted([str(x) for x in df_st['ejecutivo'].unique() if x])
-            sel_eje_st = st.selectbox("👤 Ejecutivo", list_eje)
-
-        with col_f4:
-            list_age = ["Todos"] + sorted([str(x) for x in df_st['agente'].unique() if x])
-            sel_age_st = st.selectbox("🧑 Agente", list_age)
-
-        df_f = df_st[df_st['Año'].isin(sel_ano) & df_st['Mes'].isin(sel_mes)]
-        if sel_eje_st != "Todos": df_f = df_f[df_f['ejecutivo'] == sel_eje_st]
-        if sel_age_st != "Todos": df_f = df_f[df_f['agente'] == sel_age_st]
-
-        st.divider()
         m1, m2 = st.columns(2)
-        m1.metric("Cartera Proyectada", f"U$S {df_f['Total_USD'].sum():,.0f}".replace(",", "."))
+        m1.metric("Cartera Proyectada", f"U$S {df_f['Total_USD'].sum():,.0f}")
         m2.metric("Pólizas", len(df_f))
         
-        st.divider()
-        # Gráfico de Aseguradoras
-        df_aseg = df_f.groupby('aseguradora')['Total_USD'].sum().reset_index().sort_values('Total_USD', ascending=False)
-        fig_aseg = px.bar(df_aseg, x='aseguradora', y='Total_USD', title="Volumen por Aseguradora (USD)", color='aseguradora')
-        st.plotly_chart(fig_aseg, use_container_width=True)
-
-        # Gráfico de Ramos dinámico
-        st.markdown("### 🎯 Detalle por Ramo")
-        target_aseg = st.selectbox("Filtra el gráfico de Ramos por una Aseguradora:", ["Todas"] + sorted(df_f['aseguradora'].unique().tolist()))
-        df_ramo_plot = df_f[df_f['aseguradora'] == target_aseg] if target_aseg != "Todas" else df_f
-        fig_ramo = px.bar(df_ramo_plot.groupby('ramo')['Total_USD'].sum().reset_index().sort_values('Total_USD', ascending=False), 
-                          x='ramo', y='Total_USD', title=f"Ramos en {target_aseg}", color='ramo')
-        st.plotly_chart(fig_ramo, use_container_width=True)
+        st.plotly_chart(px.bar(df_f.groupby('aseguradora')['Total_USD'].sum().reset_index(), x='aseguradora', y='Total_USD', title="USD por Compañía"), use_container_width=True)
