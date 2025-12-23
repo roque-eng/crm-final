@@ -7,14 +7,18 @@ from datetime import date, timedelta
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS REFINADOS ---
+# --- ESTILOS CSS FINALES (BOTONES Y ALINEACIÓN) ---
 st.markdown("""
     <style>
-    .left-title { font-size: 30px !important; font-weight: bold; text-align: left; color: #31333F; margin-top: -10px; }
+    .left-title { font-size: 30px !important; font-weight: bold; text-align: left; color: #31333F; margin-top: -15px; }
     thead tr th { background-color: #f0f2f6 !important; color: #1a1a1a !important; font-weight: bold !important; }
-    .user-info { text-align: right; font-weight: bold; font-size: 16px; color: #555; }
-    /* Ajuste para que el botón de salir no sea gigante */
-    div.stButton > button { width: 100px !important; padding: 2px 5px !important; height: 35px !important; }
+    .user-info { text-align: right; font-weight: bold; font-size: 16px; color: #555; margin-bottom: 5px; }
+    
+    /* Botón Salir: pequeño y a la derecha */
+    .stButton > button { width: 80px !important; height: 32px !important; padding: 0px !important; }
+    
+    /* Botón Guardar: más ancho para que entre el texto */
+    .save-btn > div > button { width: 180px !important; height: 40px !important; font-weight: bold !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -71,26 +75,25 @@ def sincronizar_borrados(df_editado, df_original, tabla_nombre):
 
 TC_USD = 40.5 
 
-# --- ENCABEZADO MEJORADO (BOTÓN SALIR PEQUEÑO) ---
-col_tit, col_user_box = st.columns([8, 2])
+# --- ENCABEZADO (SALIR BIEN A LA DERECHA) ---
+col_tit, col_user_box = st.columns([8.5, 1.5])
 with col_tit: 
     st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
 
 with col_user_box:
     st.markdown(f'<div class="user-info">👤 {st.session_state["usuario_actual"]}</div>', unsafe_allow_html=True)
-    # Al estar en una columna pequeña y con el CSS de arriba, el botón sale de tamaño normal
+    # Botón Salir alineado a la derecha
     if st.button("Salir"): 
         st.session_state['logueado'] = False
         st.rerun()
 
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CLIENTES", "📄 SEGUROS", "🔄 RENOVACIONES", "📊 ESTADÍSTICAS"])
 
-# ---------------- PESTAÑA 1: CLIENTES (CON LINK A FORMS) ----------------
+# ---------------- PESTAÑA 1: CLIENTES ----------------
 with tab1:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_form, c_search = st.columns([1.5, 2.5])
     with c_form:
-        # Reinstalado el link al formulario de Google
         st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" style="text-decoration:none; background-color:#333; color:white; padding:8px 15px; border-radius:5px; font-weight:bold; display:inline-block; margin-top:5px;">+ REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
     with c_search:
         busqueda_cli = st.text_input("🔍 Buscar cliente por nombre o documento", key="s_cli")
@@ -102,12 +105,15 @@ with tab1:
     st.divider()
     if not df_cli.empty:
         df_edit_cli = st.data_editor(df_cli, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["id"])
-        if st.button("💾 Guardar Cambios en Clientes"):
+        # Botón Guardar agrandado y con texto simplificado
+        st.markdown('<div class="save-btn">', unsafe_allow_html=True)
+        if st.button("💾 Guardar Cambios"):
             sincronizar_borrados(df_edit_cli, df_cli, "clientes")
             for _, row in df_edit_cli.iterrows():
                 if pd.notnull(row['id']):
                     ejecutar_query("UPDATE clientes SET nombre_completo=%s, documento_identidad=%s, celular=%s, email=%s WHERE id=%s", (row['nombre_completo'], row['documento_identidad'], row['celular'], row['email'], int(row['id'])))
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- PESTAÑA 2: SEGUROS ----------------
 with tab2:
@@ -117,18 +123,18 @@ with tab2:
         df_seg = df_seg[df_seg['Cliente'].str.contains(busqueda_pol, case=False, na=False) | df_seg['Riesgo/Matrícula'].str.contains(busqueda_pol, case=False, na=False)]
     
     df_seg_edit = st.data_editor(df_seg, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["Cliente"], column_config={"archivo_url": st.column_config.LinkColumn("Documento")})
-    if st.button("💾 Guardar Cambios en Seguros"):
+    st.markdown('<div class="save-btn">', unsafe_allow_html=True)
+    if st.button("💾 Guardar Cambios", key="save_seg"):
         sincronizar_borrados(df_seg_edit, df_seg, "seguros")
         for _, row in df_seg_edit.iterrows():
             if pd.notnull(row['id']):
                 ejecutar_query('UPDATE seguros SET aseguradora=%s, ramo=%s, detalle_riesgo=%s, "premio_UYU"=%s, "premio_USD"=%s, vigencia_hasta=%s, archivo_url=%s WHERE id=%s', (row['aseguradora'], row['ramo'], row['Riesgo/Matrícula'], row['premio_UYU'], row['premio_USD'], row['Hasta'], row['archivo_url'], int(row['id'])))
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- PESTAÑA 3: RENOVACIONES (FILTROS Y BÚSQUEDA) ----------------
+# ---------------- PESTAÑA 3: RENOVACIONES (MEJORADA) ----------------
 with tab3:
     st.header("🔄 Centro de Renovaciones")
-    
-    # Buscador directo por cliente en Renovaciones
     busqueda_ren = st.text_input("🔍 Buscar cliente específico para renovar...", placeholder="Escribe el nombre aquí")
     
     df_ren_raw = leer_datos('SELECT s.id, s.cliente_id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo", s.ejecutivo, s.corredor, s.agente, s.vigencia_hasta as "Vence_Viejo", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
@@ -146,8 +152,6 @@ with tab3:
 
         hoy = date.today()
         df_ren_raw['Vence_Viejo_dt'] = pd.to_datetime(df_ren_raw['Vence_Viejo']).dt.date
-        
-        # Filtro de 120 días atrás para capturar deudas antiguas
         mask = (df_ren_raw['Vence_Viejo_dt'] >= hoy - timedelta(days=120)) & (df_ren_raw['Vence_Viejo_dt'] <= hoy + timedelta(days=dias_v))
         
         if sel_eje != "Todos": mask = mask & (df_ren_raw['ejecutivo'] == sel_eje)
@@ -158,20 +162,15 @@ with tab3:
         df_ren_f['Situación'] = df_ren_f['Vence_Viejo_dt'].apply(lambda x: f"⚠️ VENCIDO ({(hoy-x).days} días)" if x < hoy else f"⏳ Vence en {(x-hoy).days} días")
 
         if not df_ren_f.empty:
-            st.info(f"Se encontraron {len(df_ren_f)} casos.")
             df_ren_edit = st.data_editor(df_ren_f, use_container_width=True, hide_index=True,
                 column_order=["Situación", "Cliente", "aseguradora", "ramo", "Riesgo", "Vence_Viejo", "premio_UYU", "premio_USD", "archivo_url"],
-                column_config={
-                    "Vence_Viejo": st.column_config.DateColumn("Nueva Fecha"),
-                    "archivo_url": st.column_config.TextColumn("Link Nuevo Documento"),
-                    "Situación": st.column_config.TextColumn("Situación")
-                }, disabled=["Cliente", "Situación"])
+                column_config={"Vence_Viejo": st.column_config.DateColumn("Nueva Fecha"), "archivo_url": st.column_config.TextColumn("Link Nuevo Documento"), "Situación": st.column_config.TextColumn("Situación")}, 
+                disabled=["Cliente", "Situación"])
             
-            if st.button("🚀 Confirmar y Crear Renovaciones"):
+            if st.button("🚀 Confirmar Renovaciones"):
                 for _, row in df_ren_edit.iterrows():
                     ejecutar_query('INSERT INTO seguros (cliente_id, aseguradora, ramo, detalle_riesgo, vigencia_hasta, "premio_UYU", "premio_USD", archivo_url, ejecutivo, corredor, agente) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
                                    (row['cliente_id'], row['aseguradora'], row['ramo'], row['Riesgo'], row['Vence_Viejo'], row['premio_UYU'], row['premio_USD'], row['archivo_url'], row['ejecutivo'], row['corredor'], row['agente']))
-                st.success("✅ Renovaciones procesadas correctamente.")
                 st.rerun()
 
 # ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
