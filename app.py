@@ -14,7 +14,6 @@ st.markdown("""
     .left-title { font-size: 32px !important; font-weight: bold; text-align: left; margin-bottom: 20px; color: #31333F; }
     thead tr th { background-color: #d1d1d1 !important; color: #1a1a1a !important; font-weight: bold !important; }
     .user-info { text-align: right; font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-    .btn-salir-container { display: flex; justify-content: flex-end; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -96,7 +95,6 @@ with tab1:
             for idx, row in df_edit_cli.iterrows():
                 ejecutar_query("UPDATE clientes SET nombre_completo=%s, documento_identidad=%s, celular=%s, email=%s WHERE id=%s", 
                                (row['nombre_completo'], row['documento_identidad'], row['celular'], row['email'], row['id']))
-            st.success("✅ Clientes actualizados.")
             st.rerun()
 
 # ---------------- PESTAÑA 2: SEGUROS ----------------
@@ -124,16 +122,22 @@ with tab2:
             for idx, row in df_vig_edit.iterrows():
                 ejecutar_query('UPDATE seguros SET aseguradora=%s, ramo=%s, detalle_riesgo=%s, "premio_UYU"=%s, "premio_USD"=%s, vigencia_hasta=%s WHERE id=%s', 
                                (row['aseguradora'], row['ramo'], row['Riesgo/Matrícula'], row['premio_UYU'], row['premio_USD'], row['Hasta'], row['id']))
-            st.success("✅ Seguros actualizados.")
             st.rerun()
         
         st.divider()
         st.markdown("### 📜 Historial")
         st.dataframe(df_all[df_all['Hasta_dt'] < today].drop(columns=['Hasta_dt', 'id']), use_container_width=True, hide_index=True)
 
-# ---------------- PESTAÑA 3: RENOVACIONES ----------------
+# ---------------- PESTAÑA 3: RENOVACIONES (CON BOTÓN DE SUBIDA) ----------------
 with tab3:
     st.header("🔄 Centro de Renovaciones")
+    
+    # PUNTO 3: Botón para subir archivos PDF
+    with st.expander("📁 Subir nueva póliza (PDF)"):
+        archivo_subido = st.file_uploader("Arrastra aquí el documento de la renovación", type=["pdf", "jpg", "png"])
+        if archivo_subido:
+            st.info(f"Documento '{archivo_subido.name}' listo. Copia el link de Drive en la tabla abajo para finalizar.")
+
     dias_v = st.slider("📅 Próximos vencimientos (días):", 15, 180, 60)
     
     df_ren = leer_datos('SELECT s.id, s.cliente_id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo as "Riesgo", s.ejecutivo, s.corredor, s.agente, s.vigencia_hasta as "Vence_Viejo", s."premio_UYU", s."premio_USD", s.archivo_url FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
@@ -155,10 +159,11 @@ with tab3:
                 for idx, row in df_ren_edit.iterrows():
                     ejecutar_query('INSERT INTO seguros (cliente_id, aseguradora, ramo, detalle_riesgo, vigencia_hasta, "premio_UYU", "premio_USD", archivo_url, ejecutivo, corredor, agente) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
                                    (row['cliente_id'], row['aseguradora'], row['ramo'], row['Riesgo'], row['Vence_Viejo'], row['premio_UYU'], row['premio_USD'], row['archivo_url'], row['ejecutivo'], row['corredor'], row['agente']))
-                st.success("✅ Registro nuevo creado. El anterior pasa a historial.")
+                st.success("✅ Registro nuevo creado con éxito.")
                 st.rerun()
+        else: st.info("No hay vencimientos próximos.")
 
-# ---------------- PESTAÑA 4: ESTADÍSTICAS (TIEMPO Y GRÁFICOS DINÁMICOS) ----------------
+# ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
 with tab4:
     st.header("📊 Tablero de Proyecciones y Control")
     df_st = leer_datos('SELECT s.aseguradora, s.ramo, s.ejecutivo, s.agente, s.vigencia_hasta, s."premio_UYU", s."premio_USD" FROM seguros s')
@@ -169,7 +174,6 @@ with tab4:
         df_st['Mes'] = df_st['vigencia_hasta'].dt.month_name()
         df_st['Total_USD'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
 
-        # --- FILTROS ALINEADOS ---
         col_f1, col_f2, col_f3, col_f4 = st.columns(4)
         
         with col_f1:
@@ -179,6 +183,7 @@ with tab4:
         with col_f2:
             meses_orden = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
             lista_meses_datos = [m for m in meses_orden if m in df_st['Mes'].unique()]
+            # Lógica de "Todos" por defecto
             sel_mes_raw = st.multiselect("⏳ Meses (Tiempo)", ["Todos"] + lista_meses_datos, default=["Todos"])
             sel_mes = lista_meses_datos if "Todos" in sel_mes_raw else sel_mes_raw
 
@@ -200,12 +205,12 @@ with tab4:
         m2.metric("Pólizas", len(df_f))
         
         st.divider()
-        # 1. Gráfico de Aseguradoras
+        # Gráfico de Aseguradoras
         df_aseg = df_f.groupby('aseguradora')['Total_USD'].sum().reset_index().sort_values('Total_USD', ascending=False)
         fig_aseg = px.bar(df_aseg, x='aseguradora', y='Total_USD', title="Volumen por Aseguradora (USD)", color='aseguradora')
         st.plotly_chart(fig_aseg, use_container_width=True)
 
-        # 2. Gráfico de Ramos dinámico
+        # Gráfico de Ramos dinámico
         st.markdown("### 🎯 Detalle por Ramo")
         target_aseg = st.selectbox("Filtra el gráfico de Ramos por una Aseguradora:", ["Todas"] + sorted(df_f['aseguradora'].unique().tolist()))
         df_ramo_plot = df_f[df_f['aseguradora'] == target_aseg] if target_aseg != "Todas" else df_f
