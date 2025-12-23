@@ -7,25 +7,32 @@ from datetime import date, timedelta
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS FINALES (BOTONES DISCRETOS Y ALINEACIÓN) ---
+# --- ESTILOS CSS FINALES (BOTONES CIRCULARES E ICONOS) ---
 st.markdown("""
     <style>
     .left-title { font-size: 30px !important; font-weight: bold; text-align: left; color: #31333F; margin-top: -15px; }
     thead tr th { background-color: #f0f2f6 !important; color: #1a1a1a !important; font-weight: bold !important; }
     .user-info { text-align: right; font-weight: bold; font-size: 16px; color: #555; margin-bottom: 5px; }
     
-    /* Botón Salir: Pequeño y a la extrema derecha */
+    /* Botón Salir: Extrema derecha */
     .exit-container { display: flex; justify-content: flex-end; }
-    .stButton > button { width: 80px !important; height: 32px !important; padding: 0px !important; }
-
-    /* Botón Guardar con Icono: Redondo y discreto */
-    .save-btn-style > div > button { 
+    
+    /* Botones de Acción (Guardar/Renovar): Redondos con Icono */
+    .action-btn-container > div > button { 
         width: 50px !important; 
         height: 50px !important; 
         border-radius: 50% !important; 
-        font-size: 20px !important;
+        font-size: 22px !important;
+        background-color: #ffffff !important;
+        border: 2px solid #333 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.3s;
+    }
+    .action-btn-container > div > button:hover {
         background-color: #f0f2f6 !important;
-        border: 1px solid #ccc !important;
+        transform: scale(1.1);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -83,7 +90,7 @@ def sincronizar_borrados(df_editado, df_original, tabla_nombre):
 
 TC_USD = 40.5 
 
-# --- ENCABEZADO (SALIR A LA DERECHA) ---
+# --- ENCABEZADO ---
 col_tit, col_user_box = st.columns([8.5, 1.5])
 with col_tit: 
     st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
@@ -91,7 +98,7 @@ with col_tit:
 with col_user_box:
     st.markdown(f'<div class="user-info">👤 {st.session_state["usuario_actual"]}</div>', unsafe_allow_html=True)
     st.markdown('<div class="exit-container">', unsafe_allow_html=True)
-    if st.button("Salir"): 
+    if st.button("Salir", key="exit_btn"): 
         st.session_state['logueado'] = False
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
@@ -103,7 +110,6 @@ with tab1:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     c_form, c_search = st.columns([1.5, 2.5])
     with c_form:
-        # Reinstalación del link al formulario de Google
         st.markdown('<a href="https://docs.google.com/forms/d/e/1FAIpQLSc99wmgzTwNKGpQuzKQvaZ5Z8Qa17BqELGto5Vco96yFXYgfQ/viewform" target="_blank" style="text-decoration:none; background-color:#333; color:white; padding:8px 15px; border-radius:5px; font-weight:bold; display:inline-block; margin-top:5px;">+ REGISTRAR NUEVO CLIENTE</a>', unsafe_allow_html=True)
     with c_search:
         busqueda_cli = st.text_input("🔍 Buscar cliente por nombre o documento", key="s_cli")
@@ -115,9 +121,8 @@ with tab1:
     st.divider()
     if not df_cli.empty:
         df_edit_cli = st.data_editor(df_cli, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["id"])
-        # Botón con Icono y Tooltip
-        st.markdown('<div class="save-btn-style">', unsafe_allow_html=True)
-        if st.button("💾", help="Guardar Cambios"):
+        st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+        if st.button("💾", help="Guardar cambios en clientes", key="save_cli"):
             sincronizar_borrados(df_edit_cli, df_cli, "clientes")
             for _, row in df_edit_cli.iterrows():
                 if pd.notnull(row['id']):
@@ -133,8 +138,8 @@ with tab2:
         df_seg = df_seg[df_seg['Cliente'].str.contains(busqueda_pol, case=False, na=False) | df_seg['Riesgo/Matrícula'].str.contains(busqueda_pol, case=False, na=False)]
     
     df_seg_edit = st.data_editor(df_seg, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["Cliente"], column_config={"archivo_url": st.column_config.LinkColumn("Documento")})
-    st.markdown('<div class="save-btn-style">', unsafe_allow_html=True)
-    if st.button("💾", key="save_seg_icon", help="Guardar Cambios"):
+    st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+    if st.button("💾", help="Guardar cambios en seguros", key="save_seg"):
         sincronizar_borrados(df_seg_edit, df_seg, "seguros")
         for _, row in df_seg_edit.iterrows():
             if pd.notnull(row['id']):
@@ -176,11 +181,15 @@ with tab3:
                 column_config={"Vence_Viejo": st.column_config.DateColumn("Nueva Fecha"), "archivo_url": st.column_config.TextColumn("Link Nuevo Documento"), "Situación": st.column_config.TextColumn("Situación")}, 
                 disabled=["Cliente", "Situación"])
             
-            if st.button("🚀 Confirmar Renovaciones"):
+            # Icono de disquete para Confirmar Renovación
+            st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+            if st.button("💾", help="Confirmar Renovaciones seleccionadas", key="confirm_ren"):
                 for _, row in df_ren_edit.iterrows():
                     ejecutar_query('INSERT INTO seguros (cliente_id, aseguradora, ramo, detalle_riesgo, vigencia_hasta, "premio_UYU", "premio_USD", archivo_url, ejecutivo, corredor, agente) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
                                    (row['cliente_id'], row['aseguradora'], row['ramo'], row['Riesgo'], row['Vence_Viejo'], row['premio_UYU'], row['premio_USD'], row['archivo_url'], row['ejecutivo'], row['corredor'], row['agente']))
+                st.success("✅ Renovaciones procesadas.")
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- PESTAÑA 4: ESTADÍSTICAS ----------------
 with tab4:
