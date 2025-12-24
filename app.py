@@ -7,7 +7,7 @@ from datetime import date, timedelta
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS FINALES ---
+# --- ESTILOS CSS FINALES (BOTONES E ICONOS) ---
 st.markdown("""
     <style>
     .left-title { font-size: 30px !important; font-weight: bold; text-align: left; color: #31333F; margin-top: -15px; }
@@ -28,7 +28,7 @@ st.markdown("""
     /* Botón No Renueva (Rojo) */
     .no-renueva-btn > div > button { border-color: #d32f2f !important; color: #d32f2f !important; }
 
-    /* Estilo del botón de registro */
+    /* Estilo del botón de registro: Fondo oscuro, letras blancas y chicas */
     .reg-btn {
         text-decoration: none !important; background-color: #333 !important; color: #FFFFFF !important; 
         padding: 8px 12px; border-radius: 5px; font-weight: bold; font-size: 12px !important;
@@ -86,10 +86,11 @@ with col_tit: st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF
 with col_user_box:
     st.markdown(f'<div class="user-info">👤 {st.session_state["usuario_actual"]}</div>', unsafe_allow_html=True)
     st.markdown('<div class="exit-container">', unsafe_allow_html=True)
-    if st.button("Salir"): st.session_state['logueado'] = False; st.rerun()
+    if st.button("Salir", key="exit_btn"): st.session_state['logueado'] = False; st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["👥 CLIENTES", "📄 SEGUROS", "🔄 RENOVACIONES", "📊 ESTADÍSTICAS", "🚫 EX SEGUROS"])
+# ORDEN DE PESTAÑAS: EX SEGUROS ENTRE RENOVACIONES Y ESTADÍSTICAS
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["👥 CLIENTES", "📄 SEGUROS", "🔄 RENOVACIONES", "🚫 EX SEGUROS", "📊 ESTADÍSTICAS"])
 
 # ---------------- TAB 1: CLIENTES ----------------
 with tab1:
@@ -101,22 +102,23 @@ with tab1:
     df_cli = leer_datos("SELECT * FROM clientes ORDER BY id DESC")
     if b_cli: df_cli = df_cli[df_cli['nombre_completo'].str.contains(b_cli, case=False, na=False)]
     if not df_cli.empty:
-        df_edit_cli = st.data_editor(df_cli, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["id"])
+        df_e_cli = st.data_editor(df_cli, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["id"])
         st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
-        if st.button("💾", help="Guardar cambios", key="sv_cli"):
-            sincronizar_borrados(df_edit_cli, df_cli, "clientes"); st.rerun()
+        if st.button("💾", help="Guardar cambios", key="save_cli"):
+            sincronizar_borrados(df_e_cli, df_cli, "clientes"); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- TAB 2: SEGUROS ----------------
+# ---------------- TAB 2: SEGUROS (CON PREMIOS RESTAURADOS) ----------------
 with tab2:
     b_seg = st.text_input("🔍 Buscar seguros...", key="s_pol")
-    df_seg = leer_datos('SELECT s.id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo, s.vigencia_hasta FROM seguros s JOIN clientes c ON s.cliente_id = c.id ORDER BY s.id DESC')
+    df_seg = leer_datos('SELECT s.id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo, s.vigencia_hasta, s."premio_UYU", s."premio_USD" FROM seguros s JOIN clientes c ON s.cliente_id = c.id ORDER BY s.id DESC')
     if b_seg: df_seg = df_seg[df_seg['Cliente'].str.contains(b_seg, case=False, na=False)]
-    df_e_seg = st.data_editor(df_seg, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["Cliente"])
-    st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
-    if st.button("💾", help="Guardar cambios", key="sv_seg"):
-        sincronizar_borrados(df_e_seg, df_seg, "seguros"); st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    if not df_seg.empty:
+        df_e_seg = st.data_editor(df_seg, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["Cliente"])
+        st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+        if st.button("💾", help="Guardar cambios", key="save_seg"):
+            sincronizar_borrados(df_e_seg, df_seg, "seguros"); st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- TAB 3: RENOVACIONES ----------------
 with tab3:
@@ -153,29 +155,30 @@ with tab3:
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- TAB 4: ESTADÍSTICAS (OPERATIVA) ----------------
+# ---------------- TAB 4: EX SEGUROS (UBICACIÓN SOLICITADA) ----------------
 with tab4:
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    df_ex = leer_datos('SELECT e.*, c.nombre_completo as "Cliente" FROM ex_seguros e JOIN clientes c ON e.cliente_id = c.id ORDER BY fecha_baja DESC')
+    if not df_ex.empty:
+        st.dataframe(df_ex, use_container_width=True, hide_index=True)
+
+# ---------------- TAB 5: ESTADÍSTICAS ----------------
+with tab5:
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     df_st = leer_datos('SELECT aseguradora, ramo, ejecutivo, vigencia_hasta, "premio_UYU", "premio_USD" FROM seguros')
     if not df_st.empty:
         df_st['vigencia_hasta'] = pd.to_datetime(df_st['vigencia_hasta'])
         df_st['Año'] = df_st['vigencia_hasta'].dt.year.astype(str)
         df_st['Total_USD'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
         
-        col_f1, col_f2 = st.columns(2)
-        with col_f1: anos = sorted(df_st['Año'].unique()); sel_ano = st.multiselect("Año de Vencimiento", anos, default=anos[-2:] if len(anos)>1 else anos)
-        with col_f2: ejes = sorted([str(x) for x in df_st['ejecutivo'].unique() if x]); sel_eje_st = st.selectbox("Filtrar por Ejecutivo", ["Todos"] + ejes)
+        c_f1, c_f2 = st.columns(2)
+        with c_f1: anos = sorted(df_st['Año'].unique()); sel_ano = st.multiselect("Año", anos, default=anos[-2:] if len(anos)>1 else anos)
+        with c_f2: ejes = sorted([str(x) for x in df_st['ejecutivo'].unique() if x]); sel_eje_st = st.selectbox("Ejecutivo", ["Todos"] + ejes)
 
         df_f_st = df_st[df_st['Año'].isin(sel_ano)]
         if sel_eje_st != "Todos": df_f_st = df_f_st[df_f_st['ejecutivo'] == sel_eje_st]
 
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Cartera Total (USD)", f"U$S {df_f_st['Total_USD'].sum():,.0f}")
+        m1, m2 = st.columns(2)
+        m1.metric("Cartera Proyectada (USD)", f"U$S {df_f_st['Total_USD'].sum():,.0f}")
         m2.metric("Pólizas Activas", len(df_f_st))
-        m3.metric("Ticket Promedio", f"U$S {(df_f_st['Total_USD'].sum()/len(df_f_st)) if len(df_f_st)>0 else 0:,.0f}")
-        
         st.plotly_chart(px.bar(df_f_st.groupby('aseguradora')['Total_USD'].sum().reset_index(), x='aseguradora', y='Total_USD', title="Volumen por Aseguradora"), use_container_width=True)
-
-# ---------------- TAB 5: EX SEGUROS ----------------
-with tab5:
-    df_ex = leer_datos('SELECT e.*, c.nombre_completo as "Cliente" FROM ex_seguros e JOIN clientes c ON e.cliente_id = c.id ORDER BY fecha_baja DESC')
-    st.dataframe(df_ex, use_container_width=True, hide_index=True)
