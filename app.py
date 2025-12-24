@@ -7,7 +7,7 @@ from datetime import date, timedelta
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- VARIABLE GLOBAL DE TIPO DE CAMBIO (EVITA EL ERROR NameError) ---
+# --- VARIABLE GLOBAL DE TIPO DE CAMBIO ---
 TC_USD = 40.5 
 
 # --- ESTILOS CSS FINALES ---
@@ -31,7 +31,7 @@ st.markdown("""
     /* Botón No Renueva (Rojo) */
     .no-renueva-btn > div > button { border-color: #d32f2f !important; color: #d32f2f !important; }
 
-    /* Botón de registro: Fondo oscuro, letras blancas y tamaño elegante */
+    /* Botón de registro: Fondo oscuro, letras BLANCAS y tamaño elegante */
     .reg-btn {
         text-decoration: none !important; 
         background-color: #333 !important; 
@@ -120,33 +120,46 @@ with tab1:
 # ---------------- TAB 2: SEGUROS (CON COLUMNA DOCUMENTO "VER") ----------------
 with tab2:
     b_seg = st.text_input("🔍 Buscar seguros...", key="s_pol")
-    df_seg = leer_datos('SELECT s.id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo, s.vigencia_hasta as "Hasta", s."premio_UYU", s."premio_USD", s.archivo_url as "Documento" FROM seguros s JOIN clientes c ON s.cliente_id = c.id ORDER BY s.id DESC')
+    df_seg = leer_datos('SELECT s.id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo, s.vigencia_hasta, s."premio_UYU", s."premio_USD", s.archivo_url as "Documento" FROM seguros s JOIN clientes c ON s.cliente_id = c.id ORDER BY s.id DESC')
     if b_seg: df_seg = df_seg[df_seg['Cliente'].str.contains(b_seg, case=False, na=False)]
     if not df_seg.empty:
-        # Configuración para que el link diga "Ver"
         df_e_seg = st.data_editor(df_seg, use_container_width=True, hide_index=True, num_rows="dynamic", disabled=["Cliente"],
                                   column_config={"Documento": st.column_config.LinkColumn("Documento", display_text="Ver")})
         st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
         if st.button("💾", help="Guardar cambios", key="save_seg"):
             sincronizar_borrados(df_e_seg, df_seg, "seguros")
-            # Actualización de URLs si se editan
             for _, row in df_e_seg.iterrows():
                 if pd.notnull(row['id']):
                     ejecutar_query('UPDATE seguros SET archivo_url=%s WHERE id=%s', (row['Documento'], int(row['id'])))
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- TAB 3: RENOVACIONES (CON COLUMNA DOCUMENTO "VER") ----------------
+# ---------------- TAB 3: RENOVACIONES (FILTROS RESTAURADOS) ----------------
 with tab3:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     b_ren = st.text_input("🔍 Buscar para renovar...", placeholder="Nombre del cliente")
-    df_ren = leer_datos('SELECT s.id, s.cliente_id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo, s.vigencia_hasta, s."premio_UYU", s."premio_USD", s.ejecutivo, s.corredor, s.agente, s.archivo_url as "Documento" FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
-    if not df_ren.empty:
+    df_ren_raw = leer_datos('SELECT s.id, s.cliente_id, c.nombre_completo as "Cliente", s.aseguradora, s.ramo, s.detalle_riesgo, s.vigencia_hasta, s."premio_UYU", s."premio_USD", s.ejecutivo, s.corredor, s.agente, s.archivo_url as "Documento" FROM seguros s JOIN clientes c ON s.cliente_id = c.id')
+    
+    if not df_ren_raw.empty:
+        # Reintegración de filtros
+        c1, c2, c3 = st.columns(3)
+        with c1: 
+            ejes_ren = sorted([str(x) for x in df_ren_raw['ejecutivo'].unique() if x])
+            sel_eje = st.selectbox("👤 Filtrar Ejecutivo", ["Todos"] + ejes_ren, key="ren_filt_eje")
+        with c2: 
+            aseg_ren = sorted([str(x) for x in df_ren_raw['aseguradora'].unique() if x])
+            sel_aseg = st.selectbox("🏢 Filtrar Aseguradora", ["Todos"] + aseg_ren, key="ren_filt_aseg")
+        with c3: 
+            dias_v = st.slider("📅 Ver próximos (días):", 15, 180, 180)
+
         hoy = date.today()
-        df_ren['Vence_dt'] = pd.to_datetime(df_ren['vigencia_hasta']).dt.date
-        mask = (df_ren['Vence_dt'] >= hoy - timedelta(days=120)) & (df_ren['Vence_dt'] <= hoy + timedelta(days=180))
-        if b_ren: mask = mask & (df_ren['Cliente'].str.contains(b_ren, case=False, na=False))
-        df_f = df_ren[mask].copy().sort_values("Vence_dt")
+        df_ren_raw['Vence_dt'] = pd.to_datetime(df_ren_raw['vigencia_hasta']).dt.date
+        mask = (df_ren_raw['Vence_dt'] >= hoy - timedelta(days=120)) & (df_ren_raw['Vence_dt'] <= hoy + timedelta(days=dias_v))
+        if b_ren: mask = mask & (df_ren_raw['Cliente'].str.contains(b_ren, case=False, na=False))
+        if sel_eje != "Todos": mask = mask & (df_ren_raw['ejecutivo'] == sel_eje)
+        if sel_aseg != "Todos": mask = mask & (df_ren_raw['aseguradora'] == sel_aseg)
+        
+        df_f = df_ren_raw[mask].copy().sort_values("Vence_dt")
         df_f['Situación'] = df_f['Vence_dt'].apply(lambda x: f"⚠️ VENCIDO ({(hoy-x).days} días)" if x < hoy else f"⏳ Vence en {(x-hoy).days} días")
 
         df_e_ren = st.data_editor(df_f, use_container_width=True, hide_index=True,
@@ -164,7 +177,7 @@ with tab3:
             st.markdown('</div>', unsafe_allow_html=True)
         with col_r2:
             st.markdown('<div class="action-btn-container no-renueva-btn">', unsafe_allow_html=True)
-            if st.button("🚫", help="Marcar como NO RENUEVA", key="btn_no_ren"):
+            if st.button("🚫", help="Mover a EX SEGUROS", key="btn_no_ren"):
                 for _, r in df_e_ren.iterrows():
                     ejecutar_query('INSERT INTO ex_seguros (cliente_id, aseguradora, ramo, detalle_riesgo, vigencia_hasta, "premio_UYU", "premio_USD", ejecutivo) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)', (r['cliente_id'], r['aseguradora'], r['ramo'], r['detalle_riesgo'], r['vigencia_hasta'], r['premio_UYU'], r['premio_USD'], r['ejecutivo']))
                     ejecutar_query('DELETE FROM seguros WHERE id = %s', (int(r['id']),))
@@ -177,8 +190,10 @@ with tab4:
     df_ex = leer_datos('SELECT e.*, c.nombre_completo as "Cliente" FROM ex_seguros e JOIN clientes c ON e.cliente_id = c.id ORDER BY fecha_baja DESC')
     if not df_ex.empty:
         st.dataframe(df_ex, use_container_width=True, hide_index=True)
+    else:
+        st.info("No hay registros en Ex Seguros todavía.")
 
-# ---------------- TAB 5: ESTADÍSTICAS ----------------
+# ---------------- TAB 5: ESTADÍSTICAS (FILTROS Y BARRAS) ----------------
 with tab5:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     df_st = leer_datos('SELECT aseguradora, ramo, ejecutivo, vigencia_hasta, "premio_UYU", "premio_USD" FROM seguros')
@@ -187,9 +202,9 @@ with tab5:
         df_st['Año'] = df_st['vigencia_hasta'].dt.year.astype(str)
         df_st['Total_USD'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
         
-        c_f1, c_f2 = st.columns(2)
-        with c_f1: anos = sorted(df_st['Año'].unique()); sel_ano = st.multiselect("Filtrar Año", anos, default=anos[-2:] if len(anos)>1 else anos)
-        with c_f2: ejes_st = sorted([str(x) for x in df_st['ejecutivo'].unique() if x]); sel_eje_st = st.selectbox("Filtrar Ejecutivo", ["Todos"] + ejes_st)
+        cf1, cf2 = st.columns(2)
+        with cf1: anos = sorted(df_st['Año'].unique()); sel_ano = st.multiselect("Filtrar Año", anos, default=anos[-2:] if len(anos)>1 else anos)
+        with cf2: ejes_st = sorted([str(x) for x in df_st['ejecutivo'].unique() if x]); sel_eje_st = st.selectbox("Filtrar Ejecutivo", ["Todos"] + ejes_st)
 
         df_f_st = df_st[df_st['Año'].isin(sel_ano)]
         if sel_eje_st != "Todos": df_f_st = df_f_st[df_f_st['ejecutivo'] == sel_eje_st]
@@ -199,4 +214,4 @@ with tab5:
         m2.metric("Pólizas Activas", len(df_f_st))
         
         df_plot = df_f_st.groupby('aseguradora')['Total_USD'].sum().reset_index().sort_values('Total_USD', ascending=False)
-        st.plotly_chart(px.bar(df_plot, x='aseguradora', y='Total_USD', title="Volumen por Aseguradora", color='aseguradora'), use_container_width=True)
+        st.plotly_chart(px.bar(df_plot, x='aseguradora', y='Total_USD', color='aseguradora'), use_container_width=True)
