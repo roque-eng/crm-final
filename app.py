@@ -7,10 +7,10 @@ from datetime import date, timedelta
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
 
-# --- VARIABLE GLOBAL DE TIPO DE CAMBIO (CORRECCIÓN DE ERROR) ---
+# --- VARIABLE GLOBAL DE TIPO DE CAMBIO ---
 TC_USD = 40.5 
 
-# --- ESTILOS CSS FINALES ---
+# --- ESTILOS CSS FINALES (BOTONES E ICONOS) ---
 st.markdown("""
     <style>
     .left-title { font-size: 30px !important; font-weight: bold; text-align: left; color: #31333F; margin-top: -15px; }
@@ -31,7 +31,7 @@ st.markdown("""
     /* Botón No Renueva (Rojo) */
     .no-renueva-btn > div > button { border-color: #d32f2f !important; color: #d32f2f !important; }
 
-    /* Estilo del botón de registro: Fondo oscuro, letras BLANCAS y chicas */
+    /* Estilo del botón de registro: Fondo oscuro, letras BLANCAS */
     .reg-btn {
         text-decoration: none !important; 
         background-color: #333 !important; 
@@ -87,7 +87,7 @@ def sincronizar_borrados(df_editado, df_original, tabla_nombre):
     for rid in ids_a_eliminar: ejecutar_query(f"DELETE FROM {tabla_nombre} WHERE id = %s", (rid,))
     return len(ids_a_eliminar)
 
-# --- ENCABEZADO ---
+# --- ENCABEZADO (SALIR A LA DERECHA) ---
 col_tit, col_user_box = st.columns([8.5, 1.5])
 with col_tit: st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
 with col_user_box:
@@ -126,7 +126,7 @@ with tab2:
             sincronizar_borrados(df_e_seg, df_seg, "seguros"); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- TAB 3: RENOVACIONES ----------------
+# ---------------- TAB 3: RENOVACIONES (120 DÍAS ATRÁS) ----------------
 with tab3:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     b_ren = st.text_input("🔍 Buscar para renovar...", placeholder="Nombre del cliente")
@@ -167,11 +167,30 @@ with tab4:
     if not df_ex.empty:
         st.dataframe(df_ex, use_container_width=True, hide_index=True)
 
-# ---------------- TAB 5: ESTADÍSTICAS (SIN ERROR DE TC_USD) ----------------
+# ---------------- TAB 5: ESTADÍSTICAS (FILTROS Y BARRAS RESTAURADOS) ----------------
 with tab5:
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
-    df_st = leer_datos('SELECT aseguradora, "premio_UYU", "premio_USD" FROM seguros')
+    df_st = leer_datos('SELECT aseguradora, ramo, ejecutivo, vigencia_hasta, "premio_UYU", "premio_USD" FROM seguros')
     if not df_st.empty:
+        df_st['vigencia_hasta'] = pd.to_datetime(df_st['vigencia_hasta'])
+        df_st['Año'] = df_st['vigencia_hasta'].dt.year.astype(str)
         df_st['Total_USD'] = df_st['premio_USD'].fillna(0) + (df_st['premio_UYU'].fillna(0) / TC_USD)
-        st.metric("Cartera Proyectada Total (USD)", f"U$S {df_st['Total_USD'].sum():,.0f}")
-        st.plotly_chart(px.pie(df_st, names='aseguradora', values='Total_USD', title="Distribución por Compañía"), use_container_width=True)
+        
+        col_f1, col_f2 = st.columns(2)
+        with col_f1: 
+            anos = sorted(df_st['Año'].unique())
+            sel_ano = st.multiselect("Filtrar por Año", anos, default=anos[-2:] if len(anos)>1 else anos)
+        with col_f2: 
+            ejes = sorted([str(x) for x in df_st['ejecutivo'].unique() if x])
+            sel_eje_st = st.selectbox("Filtrar por Ejecutivo", ["Todos"] + ejes)
+
+        df_f_st = df_st[df_st['Año'].isin(sel_ano)]
+        if sel_eje_st != "Todos": df_f_st = df_f_st[df_f_st['ejecutivo'] == sel_eje_st]
+
+        m1, m2 = st.columns(2)
+        m1.metric("Cartera Proyectada (USD)", f"U$S {df_f_st['Total_USD'].sum():,.0f}")
+        m2.metric("Pólizas en Gráfico", len(df_f_st))
+        
+        # Gráfico de Barras por Aseguradora
+        df_plot = df_f_st.groupby('aseguradora')['Total_USD'].sum().reset_index().sort_values('Total_USD', ascending=False)
+        st.plotly_chart(px.bar(df_plot, x='aseguradora', y='Total_USD', title="Volumen en USD por Compañía", color='aseguradora'), use_container_width=True)
