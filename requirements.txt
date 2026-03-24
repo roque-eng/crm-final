@@ -4,3 +4,4 @@ plotly
 streamlit
 requests
 openpyxl
+st-gsheets-connection
