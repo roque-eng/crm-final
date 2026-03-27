@@ -7,7 +7,7 @@ from datetime import date, timedelta
 # ==========================================
 # 🔗 CONFIGURACIÓN DE LA FUENTE DE DATOS
 # ==========================================
-URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit"
+URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 
 st.set_page_config(page_title="CRM - Grupo EDF", layout="wide", page_icon="🛡️")
 
