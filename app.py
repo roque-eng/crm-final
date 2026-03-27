@@ -28,7 +28,7 @@ USUARIOS = {"RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025",
 
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
 if not st.session_state['logueado']:
-    st.markdown("<h1 style='text-align: center;'>☁️ CRM Grupo EDF</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>🛡️ EDF SEGUROS</h1>", unsafe_allow_html=True)
     _, col2, _ = st.columns([1, 1, 1])
     with col2:
         with st.form("login"):
