@@ -7,11 +7,9 @@ from datetime import date, timedelta
 # ==========================================
 # 🔗 CONFIGURACIÓN DE LA FUENTE DE DATOS
 # ==========================================
-# PEGA AQUÍ EL LINK DE TU GOOGLE SHEETS (Asegúrate que diga "Cualquier persona con el enlace puede ver")
-URL_HOJA = "https://docs.google.com/spreadsheets/d/TU_ID_DE_HOJA_AQUI/edit?usp=sharing"
+URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit"
 
-# 1. CONFIGURACIÓN DE PÁGINA
-st.set_page_config(page_title="Gestión de Cartera - Grupo EDF", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="CRM - Grupo EDF", layout="wide", page_icon="🛡️")
 
 TC_USD = 40.5 
 
@@ -19,8 +17,7 @@ TC_USD = 40.5
 st.markdown("""
     <style>
     .left-title { font-size: 30px !important; font-weight: bold; text-align: left; color: #31333F; margin-top: -15px; }
-    .user-info { text-align: right; font-weight: bold; font-size: 16px; color: #555; margin-bottom: 5px; }
-    .reg-btn { text-decoration: none !important; background-color: #333 !important; color: #FFFFFF !important; padding: 8px 12px; border-radius: 5px; font-weight: bold; font-size: 12px !important; display: inline-block; margin-top: 5px; border: 1px solid #000; }
+    .user-info { text-align: right; font-weight: bold; font-size: 14px; color: #555; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -43,60 +40,79 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ CONEXIÓN DIRECTA A GOOGLE SHEETS
+# ⚙️ CARGA DE DATOS
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+@st.cache_data(ttl=600) # Se actualiza cada 10 min o al dar F5
 def cargar_datos():
-    try:
-        # Lee la hoja principal. Si tienes varias pestañas, puedes usar ttl=600 para cache
-        return conn.read(spreadsheet=URL_HOJA)
-    except Exception as e:
-        st.error(f"Error al conectar con Google Sheets: {e}")
-        return pd.DataFrame()
+    df = conn.read(spreadsheet=URL_HOJA, worksheet="Respuestas de formulario 2")
+    # Limpieza de fechas
+    df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.date
+    # Limpieza de premios (quitar NaN y convertir a número)
+    df['Premio USD [sin iva]'] = pd.to_numeric(df['Premio USD [sin iva]'], errors='coerce').fillna(0)
+    df['Premio UYU [con iva]'] = pd.to_numeric(df['Premio UYU [con iva]'], errors='coerce').fillna(0)
+    # Crear columna unificada en USD para estadísticas
+    df['Total_USD'] = df['Premio USD [sin iva]'] + (df['Premio UYU [con iva]'] / TC_USD)
+    return df
 
 # --- ENCABEZADO ---
-col_tit, col_user_box = st.columns([8.5, 1.5])
+col_tit, col_user_box = st.columns([8, 2])
 with col_tit: st.markdown('<p class="left-title">Gestión de Cartera - Grupo EDF</p>', unsafe_allow_html=True)
 with col_user_box:
     st.markdown(f'<div class="user-info">👤 {st.session_state["usuario_actual"]}</div>', unsafe_allow_html=True)
-    if st.button("Salir"): st.session_state['logueado'] = False; st.rerun()
+    if st.button("Cerrar Sesión"): st.session_state['logueado'] = False; st.rerun()
 
-# CARGA DE DATOS ÚNICA
-df_all = cargar_datos()
+df = cargar_datos()
 
-# PESTAÑAS
-tab1, tab2, tab3 = st.tabs(["👥 CARTERA TOTAL", "🔄 RENOVACIONES PRÓXIMAS", "📊 ESTADÍSTICAS"])
+# --- PESTAÑAS ---
+tab1, tab2, tab3 = st.tabs(["👥 CARTERA TOTAL", "🔄 VENCIMIENTOS", "📊 ANÁLISIS"])
 
-if df_all.empty:
-    st.warning("⚠️ No se encontraron datos en la hoja de Google Sheets.")
-else:
-    # ---------------- TAB 1: CARTERA ----------------
-    with tab1:
-        st.markdown('<a href="'+URL_HOJA+'" target="_blank" class="reg-btn">📝 EDITAR DATOS EN GOOGLE SHEETS</a>', unsafe_allow_html=True)
-        busqueda = st.text_input("🔍 Buscar por Cliente o Documento")
-        df_show = df_all.copy()
-        if busqueda:
-            df_show = df_show[df_show.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)]
-        st.dataframe(df_show, use_container_width=True, hide_index=True)
+with tab1:
+    col_a, col_b = st.columns([3, 1])
+    busqueda = col_a.text_input("🔍 Buscar por Asegurado, Documento o Ramo")
+    col_b.markdown(f"<br><a href='{URL_HOJA}' target='_blank'>📝 Editar en Google Sheets</a>", unsafe_allow_html=True)
+    
+    df_filtered = df.copy()
+    if busqueda:
+        mask = df_filtered.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
+        df_filtered = df_filtered[mask]
+    
+    # Configuración de columnas para que el link de póliza sea clickeable
+    st.data_editor(
+        df_filtered,
+        column_config={
+            "adjunto [póliza]": st.column_config.LinkColumn("Póliza", display_text="Ver Archivo"),
+            "Fin de Vigencia": st.column_config.DateColumn("Vence"),
+        },
+        use_container_width=True,
+        hide_index=True
+    )
 
-    # ---------------- TAB 2: RENOVACIONES ----------------
-    with tab2:
-        # Asumiendo que tu Excel tiene una columna 'vigencia_hasta'
-        if 'vigencia_hasta' in df_all.columns:
-            df_all['vigencia_hasta'] = pd.to_datetime(df_all['vigencia_hasta']).dt.date
-            hoy = date.today()
-            proximos = st.slider("Ver vencimientos en los próximos (días):", 15, 180, 60)
-            df_renov = df_all[(df_all['vigencia_hasta'] >= hoy) & (df_all['vigencia_hasta'] <= hoy + timedelta(days=proximos))]
-            st.dataframe(df_renov.sort_values('vigencia_hasta'), use_container_width=True)
-        else:
-            st.info("Columna 'vigencia_hasta' no encontrada para calcular renovaciones.")
+with tab2:
+    st.subheader("⏳ Próximas Renovaciones")
+    dias = st.slider("Ver vencimientos en los próximos (días):", 15, 180, 60)
+    hoy = date.today()
+    futuro = hoy + timedelta(days=dias)
+    
+    df_vence = df[(df['Fin de Vigencia'] >= hoy) & (df['Fin de Vigencia'] <= futuro)].copy()
+    df_vence = df_vence.sort_values('Fin de Vigencia')
+    
+    if not df_vence.empty:
+        st.warning(f"Hay {len(df_vence)} pólizas venciendo en los próximos {dias} días.")
+        st.table(df_vence[['Asegurado (Nombre/Razón Social)', 'Aseguradora', 'Ramo', 'Fin de Vigencia', 'Ejecutivo']])
+    else:
+        st.success("No hay vencimientos próximos en el rango seleccionado.")
 
-    # ---------------- TAB 3: ESTADÍSTICAS ----------------
-    with tab3:
-        if 'premio_USD' in df_all.columns:
-            total_usd = df_all['premio_USD'].sum()
-            st.metric("Cartera Total (USD)", f"U$S {total_usd:,.0f}")
-            if 'aseguradora' in df_all.columns:
-                fig = px.pie(df_all, names='aseguradora', values='premio_USD', title="Distribución por Aseguradora")
-                st.plotly_chart(fig, use_container_width=True)
+with tab3:
+    st.subheader("📈 Resumen de Cartera")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Pólizas Activas", len(df))
+    c2.metric("Total Cartera (est. USD)", f"U$S {df['Total_USD'].sum():,.0f}")
+    c3.metric("Tipo de Cambio", f"${TC_USD}")
+    
+    fig1 = px.pie(df, names='Aseguradora', values='Total_USD', title="Cartera por Aseguradora (USD)")
+    st.plotly_chart(fig1, use_container_width=True)
+    
+    fig2 = px.bar(df, x='Ramo', y='Total_USD', color='Aseguradora', title="Distribución por Ramo y Compañía")
+    st.plotly_chart(fig2, use_container_width=True)
