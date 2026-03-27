@@ -7,12 +7,14 @@ from datetime import date, timedelta
 # ==========================================
 # 🔗 CONFIGURACIÓN DE LA FUENTE DE DATOS
 # ==========================================
+# URL Verificada: Asegúrate de que el Sheets esté como "Cualquier persona con el enlace"
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
 TC_USD = 40.5 
 
+# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     .left-title { font-size: 30px !important; font-weight: bold; text-align: left; color: #31333F; margin-top: -15px; }
@@ -24,73 +26,114 @@ st.markdown("""
 # ==========================================
 # 🔐 GESTIÓN DE USUARIOS
 # ==========================================
-USUARIOS = {"RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "EH": "EHugo2025", "GS": "GSanchez2025", "JM": "JMokosce2025", "PG": "PGagliardi2025", "MDF": "MDeFreitas2025", "AC": "ACazarian2025", "MF": "MFlores2025"}
+USUARIOS = {
+    "RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025", 
+    "ER": "ERobaina.2025", "EH": "EHugo2025", "GS": "GSanchez2025", 
+    "JM": "JMokosce2025", "PG": "PGagliardi2025", "MDF": "MDeFreitas2025", 
+    "AC": "ACazarian2025", "MF": "MFlores2025"
+}
 
-if 'logueado' not in st.session_state: st.session_state['logueado'] = False
+if 'logueado' not in st.session_state: 
+    st.session_state['logueado'] = False
 
 if not st.session_state['logueado']:
     st.markdown("<h1 style='text-align: center;'>🛡️ EDF SEGUROS</h1>", unsafe_allow_html=True)
     _, col2, _ = st.columns([1, 1, 1])
     with col2:
         with st.form("login"):
-            u = st.text_input("Usuario"); p = st.text_input("Contraseña", type="password")
+            u = st.text_input("Usuario")
+            p = st.text_input("Contraseña", type="password")
             if st.form_submit_button("Ingresar", use_container_width=True):
                 if u in USUARIOS and USUARIOS[u] == p:
-                    st.session_state['logueado'] = True; st.session_state['usuario_actual'] = u; st.rerun()
-                else: st.error("❌ Credenciales incorrectas")
+                    st.session_state['logueado'] = True
+                    st.session_state['usuario_actual'] = u
+                    st.rerun()
+                else: 
+                    st.error("❌ Credenciales incorrectas")
     st.stop()
 
 # ==========================================
-# ⚙️ CONEXIÓN A GOOGLE SHEETS (MODO PRIVADO)
+# ⚙️ CONEXIÓN A GOOGLE SHEETS
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=600)
 def cargar_datos():
     try:
-        # IMPORTANTE: Usamos el conector para leer la hoja privada
-        df = conn.read(spreadsheet=URL_HOJA)
+        # Usamos ttl=0 para forzar la carga fresca de datos ahora que hay permisos
+        df = conn.read(spreadsheet=URL_HOJA, ttl=0)
+        # Limpieza de nombres de columnas
         df.columns = df.columns.str.strip()
         return df
     except Exception as e:
-        st.error(f"Error de conexión: {e}")
+        st.error(f"Error crítico de conexión: {e}")
         return pd.DataFrame()
 
 # --- ENCABEZADO ---
 col_tit, col_user_box = st.columns([8, 2])
-with col_tit: st.markdown('<p class="left-title">Gestión de Cartera - EDF SEGUROS</p>', unsafe_allow_html=True)
+with col_tit: 
+    st.markdown('<p class="left-title">Gestión de Cartera - EDF SEGUROS</p>', unsafe_allow_html=True)
+
 with col_user_box:
     st.markdown(f'<div class="user-info">👤 {st.session_state["usuario_actual"]}</div>', unsafe_allow_html=True)
-    if st.button("Cerrar Sesión"): st.session_state['logueado'] = False; st.rerun()
+    if st.button("Cerrar Sesión", use_container_width=True):
+        st.session_state['logueado'] = False
+        st.rerun()
 
+# CARGA DE DATOS
 df_raw = cargar_datos()
 
-if not df_raw.empty:
+if df_raw.empty:
+    st.warning("⚠️ No se detectaron datos. Revisa el enlace en el código y el permiso en el Sheets.")
+else:
+    # PESTAÑAS
     tab1, tab2, tab3 = st.tabs(["👥 CARTERA TOTAL", "🔄 VENCIMIENTOS", "📊 ANÁLISIS"])
 
     with tab1:
-        busqueda = st.text_input("🔍 Buscar por Asegurado, Ramo o Compañía...")
+        col_bus, col_link = st.columns([3, 1])
+        busqueda = col_bus.text_input("🔍 Buscar por Asegurado, Ramo o Compañía...")
+        col_link.markdown(f"<br><a href='{URL_HOJA}' target='_blank' class='reg-btn'>📝 EDITAR EXCEL</a>", unsafe_allow_html=True)
+        
         df_display = df_raw.copy()
         if busqueda:
             mask = df_display.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
             df_display = df_display[mask]
         
-        st.dataframe(df_display, use_container_width=True, hide_index=True,
+        st.dataframe(
+            df_display, 
+            use_container_width=True, 
+            hide_index=True,
             column_config={
-                "adjunto [póliza]": st.column_config.LinkColumn("Póliza", display_text="Ver"),
+                "adjunto [póliza]": st.column_config.LinkColumn("Póliza", display_text="Ver Archivo"),
                 "Fin de Vigencia": st.column_config.DateColumn("Vencimiento")
-            })
+            }
+        )
 
     with tab2:
-        st.subheader("📅 Próximas Renovaciones")
+        st.subheader("📅 Próximas Renovaciones (60 días)")
         if 'Fin de Vigencia' in df_raw.columns:
-            df_raw['Fin_V_dt'] = pd.to_datetime(df_raw['Fin de Vigencia'], errors='coerce').dt.date
+            df_raw['Fin_Vence_dt'] = pd.to_datetime(df_raw['Fin de Vigencia'], errors='coerce').dt.date
             hoy = date.today()
-            df_v = df_raw[(df_raw['Fin_V_dt'] >= hoy) & (df_raw['Fin_V_dt'] <= hoy + timedelta(days=60))].sort_values('Fin_V_dt')
-            st.dataframe(df_v.drop(columns=['Fin_V_dt']), use_container_width=True, hide_index=True)
+            futuro = hoy + timedelta(days=60)
+            
+            df_vencimientos = df_raw[
+                (df_raw['Fin_Vence_dt'] >= hoy) & 
+                (df_raw['Fin_Vence_dt'] <= futuro)
+            ].sort_values('Fin_Vence_dt')
+            
+            if not df_vencimientos.empty:
+                st.info(f"Pólizas por vencer pronto: {len(df_vencimientos)}")
+                st.dataframe(df_vencimientos.drop(columns=['Fin_Vence_dt']), use_container_width=True, hide_index=True)
+            else:
+                st.success("No hay vencimientos próximos.")
+        else:
+            st.error("No se encontró la columna 'Fin de Vigencia'.")
 
     with tab3:
-        st.subheader("📊 Resumen")
-        st.metric("Pólizas Activas", len(df_raw))
+        st.subheader("📊 Resumen de Cartera")
         if 'Aseguradora' in df_raw.columns:
-            st.plotly_chart(px.pie(df_raw, names='Aseguradora', title="Por Compañía"), use_container_width=True)
+            fig = px.pie(df_raw, names='Aseguradora', title="Distribución por Compañía")
+            st.plotly_chart(fig, use_container_width=True)
+        
+        if 'Ramo' in df_raw.columns:
+            fig2 = px.bar(df_raw, x='Ramo', title="Pólizas por Ramo", color="Ramo")
+            st.plotly_chart(fig2, use_container_width=True)
