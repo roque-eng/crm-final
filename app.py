@@ -54,7 +54,7 @@ def cargar_datos():
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
         
-        # Manejo de fechas seguro
+        # Manejo de fechas: Aseguramos que sean objetos de fecha
         df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.date
         
         # Estado de gestión
@@ -78,7 +78,7 @@ with col_user_box:
 st.divider()
 
 # ==========================================
-# 🎯 FILTROS DE OFICINA (SUPERIORES)
+# 🎯 FILTROS DE OFICINA
 # ==========================================
 with st.expander("🔍 Filtros de Oficina", expanded=True):
     c1, c2, c3, c4 = st.columns(4)
@@ -109,7 +109,8 @@ with tab1:
     st.dataframe(df_tab1.drop(columns=['Fin_V_dt'], errors='ignore'), use_container_width=True, hide_index=True,
         column_config={
             "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂 Ver"),
-            "Fin de Vigencia": st.column_config.DateColumn("Vence")
+            "Fin de Vigencia": st.column_config.DateColumn("Vence", format="DD/MM/YYYY"),
+            "Inicio de Vigencia": st.column_config.DateColumn("Inicio", format="DD/MM/YYYY")
         })
     
     st.markdown("---")
@@ -135,13 +136,13 @@ with tab2:
         df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
     
     if not df_v.empty:
-        # Volvemos a dataframe normal para evitar el error de API
         st.dataframe(
             df_v.sort_values('Fin_V_dt'),
             column_config={
                 "Estado_Gestion": "Estado",
                 "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
-                "Fin de Vigencia": st.column_config.DateColumn("Vencimiento")
+                "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
+                "Inicio de Vigencia": st.column_config.DateColumn("Inicio", format="DD/MM/YYYY")
             },
             hide_index=True,
             use_container_width=True
