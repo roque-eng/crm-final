@@ -52,7 +52,7 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ CARGA DE DATOS
+# ⚙️ CARGA DE DATOS (REFORZADA PARA FECHAS)
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -61,13 +61,15 @@ def cargar_datos():
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
         
-        # Premios
+        # Premios numéricos
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
         
-        # Fechas (convertimos a datetime objeto para cálculos)
-        df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
+        # PROCESAMIENTO SEGURO DE FECHAS
+        # dayfirst=True es clave para Uruguay (DD/MM/AAAA)
+        df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce')
+        df['Fin_V_dt'] = df['Fin de Vigencia'].dt.date
         
         # Estado
         if 'Estado_Gestion' not in df.columns: df['Estado_Gestion'] = "Pendiente"
@@ -137,13 +139,16 @@ with tab2:
     
     hoy = date.today()
     limite = hoy + timedelta(days=dias_v)
-    df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].copy()
+    
+    # Filtro de tiempo (eliminamos las filas con fechas inválidas NaT para evitar el error)
+    df_v = df_f.dropna(subset=['Fin_V_dt']).copy()
+    df_v = df_v[(df_v['Fin_V_dt'] >= hoy) & (df_v['Fin_V_dt'] <= limite)]
     
     if not ver_gest:
         df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
     
     st.dataframe(
-        df_v[cols_usuario].sort_values('Fin de Vigencia'),
+        df_v[cols_usuario].sort_values('Fin_V_dt'),
         use_container_width=True,
         hide_index=True,
         column_config={
@@ -151,7 +156,7 @@ with tab2:
             "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY")
         }
     )
-    st.info("📌 Para marcar como 'Renovado', edita la columna 'Estado_Gestion' en el Excel.")
+    st.info("📌 Tip: Si una fecha no aparece, revisa que esté escrita correctamente en el Excel.")
 
 with tab3:
-    st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía"), use_container_width=True)
+    st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Compañía"), use_container_width=True)
