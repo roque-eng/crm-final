@@ -12,7 +12,6 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# --- ESTILOS CSS ---
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1rem; }
@@ -49,21 +48,12 @@ def cargar_datos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
-        
-        # Limpieza y cálculos
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
-        
-        # Fechas
         df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.date
-        
-        # Asegurar columna de gestión
-        if 'Estado_Gestion' not in df.columns:
-            df['Estado_Gestion'] = "Pendiente"
-        else:
-            df['Estado_Gestion'] = df['Estado_Gestion'].fillna("Pendiente")
-            
+        if 'Estado_Gestion' not in df.columns: df['Estado_Gestion'] = "Pendiente"
+        else: df['Estado_Gestion'] = df['Estado_Gestion'].fillna("Pendiente")
         return df
     except Exception as e:
         st.error(f"Error cargando datos: {e}"); return pd.DataFrame()
@@ -80,21 +70,16 @@ with col_user_box:
 st.divider()
 
 # ==========================================
-# 🎯 FILTROS SUPERIORES
+# 🎯 FILTROS DE PERSONAS (GLOBALES)
 # ==========================================
-with st.expander("🔍 Filtros y Tiempo", expanded=True):
+with st.expander("🔍 Filtros de Oficina", expanded=True):
     c1, c2, c3, c4 = st.columns(4)
     f_ej = c1.selectbox("Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
     f_co = c2.selectbox("Corredor", ["Todos"] + sorted(df_raw['Corredor'].dropna().unique().tolist()))
     f_ag = c3.selectbox("Agente", ["Todos"] + sorted(df_raw['Agente'].dropna().unique().tolist()))
     f_as = c4.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
-    
-    st.markdown("---")
-    ct1, ct2 = st.columns([2, 1])
-    dias_vista = ct1.slider("Ver vencimientos en los próximos (días):", 15, 365, 60)
-    ver_gestionados = ct2.checkbox("Mostrar renovados/gestionados", value=False)
 
-# Aplicar filtros
+# Aplicar filtros de personas
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
@@ -126,37 +111,40 @@ with tab1:
     m3.metric("Tipo de Cambio", f"${TC_USD}")
 
 with tab2:
-    hoy = date.today()
-    limite = hoy + timedelta(days=dias_vista)
+    st.subheader("📅 Gestión de Renovaciones")
     
-    # Filtro de tiempo para vencimientos
+    # AQUÍ MOVIDOS LOS FILTROS DE TIEMPO
+    ct1, ct2 = st.columns([2, 1])
+    dias_v = ct1.slider("Ver vencimientos en los próximos (días):", 15, 365, 60, key="slider_vence")
+    ver_gest = ct2.checkbox("Mostrar renovados/gestionados", value=False, key="check_gest")
+    
+    hoy = date.today()
+    limite = hoy + timedelta(days=dias_v)
+    
+    # Filtro de tiempo exclusivo para esta pestaña
     df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].copy()
     
-    # Filtro de gestión: Ocultamos lo "Renovado" si el checkbox no está marcado
-    if not ver_gestionados:
+    if not ver_gest:
         df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
     
-    st.subheader(f"📅 Pendientes de Renovación ({dias_vista} días)")
-    
     if not df_v.empty:
-        # El data_editor permite al ejecutivo marcar la gestión al vuelo
+        # Simplificamos el editor para evitar el error de API
         st.data_editor(
             df_v.sort_values('Fin_V_dt'),
             column_config={
-                "Estado_Gestion": st.column_config.SelectboxColumn("Estado de Gestión", options=["Pendiente", "Renovado", "No Renueva"], required=True),
+                "Estado_Gestion": st.column_config.SelectboxColumn("Estado", options=["Pendiente", "Renovado", "No Renueva"], required=True),
                 "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
                 "Fin de Vigencia": st.column_config.DateColumn("Vencimiento")
             },
             hide_index=True,
             use_container_width=True,
-            key="editor_vencimientos"
+            key="editor_venc"
         )
-        st.info("💡 Tip: Para que los cambios en 'Estado' se guarden permanentemente en el Excel, edítalo directamente haciendo clic en el botón 'Editar Excel' de la pestaña Cartera.")
     else:
-        st.success("🎉 ¡No hay vencimientos pendientes en el rango seleccionado!")
+        st.success("🎉 ¡No hay vencimientos pendientes en este rango!")
 
 with tab3:
-    st.subheader("📊 Análisis de Cartera Filtrada")
+    st.subheader("📊 Análisis")
     col_chart1, col_chart2 = st.columns(2)
     with col_chart1:
         st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía"), use_container_width=True)
