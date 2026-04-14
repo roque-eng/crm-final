@@ -7,7 +7,6 @@ from datetime import date, timedelta
 # ==========================================
 # ⚙️ CONFIGURACIÓN DE PERFILES POR USUARIO
 # ==========================================
-# Aseguramos que todas las columnas clave estén aquí
 VISTA_ESTANDAR = ["Asegurado (Nombre/Razón Social)", "Ramo", "Aseguradora", "Inicio de Vigencia", "Fin de Vigencia", "Premio_Total_USD", "Adjunto (póliza)", "Estado_Gestion"]
 
 PERFILES = {
@@ -66,7 +65,7 @@ def cargar_datos():
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
         
-        # Procesamiento de fechas (Dayfirst para Uruguay)
+        # Procesamiento de fechas
         df['Inicio de Vigencia'] = pd.to_datetime(df['Inicio de Vigencia'], dayfirst=True, errors='coerce')
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce')
         df['Fin_V_dt'] = df['Fin de Vigencia'].dt.date
@@ -119,7 +118,6 @@ with tab1:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    # Filtrar solo columnas que existan en el DataFrame para evitar KeyError
     cols_existentes = [c for c in cols_perfil if c in df_tab1.columns]
     
     st.dataframe(
@@ -147,9 +145,9 @@ with tab2:
     hoy = date.today()
     limite = hoy + timedelta(days=dias_v)
     
-    # Filtro de tiempo seguro
-    df_v = df_f.dropna(subset=['Fin_V_dt']).copy()
-    df_v = df_v[(df_v['Fin_V_dt'] >= hoy) & (df_v['Fin_V_dt'] <= limite)]
+    # Filtro de tiempo (ordenamos antes de filtrar columnas para que no de error)
+    df_v = df_f.dropna(subset=['Fin_V_dt']).sort_values('Fin_V_dt')
+    df_v = df_v[(df_v['Fin_V_dt'] >= hoy) & (df_v['Fin_V_dt'] <= limite)].copy()
     
     if not ver_gest:
         df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
@@ -157,7 +155,7 @@ with tab2:
     cols_v_existentes = [c for c in cols_perfil if c in df_v.columns]
     
     st.dataframe(
-        df_v[cols_v_existentes].sort_values('Fin_V_dt'),
+        df_v[cols_v_existentes], # Aquí ya viene ordenado de arriba
         use_container_width=True,
         hide_index=True,
         column_config={
