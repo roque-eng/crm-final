@@ -48,12 +48,20 @@ def cargar_datos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
+        
+        # Conversiones numéricas
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
+        
+        # Manejo de fechas seguro
         df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.date
-        if 'Estado_Gestion' not in df.columns: df['Estado_Gestion'] = "Pendiente"
-        else: df['Estado_Gestion'] = df['Estado_Gestion'].fillna("Pendiente")
+        
+        # Estado de gestión
+        if 'Estado_Gestion' not in df.columns:
+            df['Estado_Gestion'] = "Pendiente"
+        df['Estado_Gestion'] = df['Estado_Gestion'].fillna("Pendiente")
+        
         return df
     except Exception as e:
         st.error(f"Error cargando datos: {e}"); return pd.DataFrame()
@@ -70,7 +78,7 @@ with col_user_box:
 st.divider()
 
 # ==========================================
-# 🎯 FILTROS DE PERSONAS (GLOBALES)
+# 🎯 FILTROS DE OFICINA (SUPERIORES)
 # ==========================================
 with st.expander("🔍 Filtros de Oficina", expanded=True):
     c1, c2, c3, c4 = st.columns(4)
@@ -79,7 +87,7 @@ with st.expander("🔍 Filtros de Oficina", expanded=True):
     f_ag = c3.selectbox("Agente", ["Todos"] + sorted(df_raw['Agente'].dropna().unique().tolist()))
     f_as = c4.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
 
-# Aplicar filtros de personas
+# Filtrado inicial
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
@@ -98,7 +106,7 @@ with tab1:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    st.dataframe(df_tab1, use_container_width=True, hide_index=True,
+    st.dataframe(df_tab1.drop(columns=['Fin_V_dt'], errors='ignore'), use_container_width=True, hide_index=True,
         column_config={
             "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂 Ver"),
             "Fin de Vigencia": st.column_config.DateColumn("Vence")
@@ -113,33 +121,32 @@ with tab1:
 with tab2:
     st.subheader("📅 Gestión de Renovaciones")
     
-    # AQUÍ MOVIDOS LOS FILTROS DE TIEMPO
     ct1, ct2 = st.columns([2, 1])
-    dias_v = ct1.slider("Ver vencimientos en los próximos (días):", 15, 365, 60, key="slider_vence")
-    ver_gest = ct2.checkbox("Mostrar renovados/gestionados", value=False, key="check_gest")
+    dias_v = ct1.slider("Ver vencimientos en los próximos (días):", 15, 365, 60)
+    ver_gest = ct2.checkbox("Mostrar renovados/gestionados", value=False)
     
     hoy = date.today()
     limite = hoy + timedelta(days=dias_v)
     
-    # Filtro de tiempo exclusivo para esta pestaña
+    # Filtro de tiempo
     df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].copy()
     
     if not ver_gest:
         df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
     
     if not df_v.empty:
-        # Simplificamos el editor para evitar el error de API
-        st.data_editor(
+        # Volvemos a dataframe normal para evitar el error de API
+        st.dataframe(
             df_v.sort_values('Fin_V_dt'),
             column_config={
-                "Estado_Gestion": st.column_config.SelectboxColumn("Estado", options=["Pendiente", "Renovado", "No Renueva"], required=True),
+                "Estado_Gestion": "Estado",
                 "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
                 "Fin de Vigencia": st.column_config.DateColumn("Vencimiento")
             },
             hide_index=True,
-            use_container_width=True,
-            key="editor_venc"
+            use_container_width=True
         )
+        st.info("📌 Para marcar como 'Renovado', edita la columna 'Estado_Gestion' en el Excel.")
     else:
         st.success("🎉 ¡No hay vencimientos pendientes en este rango!")
 
