@@ -7,9 +7,9 @@ from datetime import date, timedelta
 # ==========================================
 # ⚙️ CONFIGURACIÓN DE PERFILES POR USUARIO
 # ==========================================
-VISTA_ESTANDAR = ["Asegurado (Nombre/Razón Social)", "Ramo", "Aseguradora", "Inicio de Vigencia", "Fin de Vigencia", "Premio_Total_USD", "Adjunto (póliza)", "Estado_Gestion"]
-
-PERFILES = {
+# Estas son las columnas que aparecerán "por defecto". 
+# El resto del Excel estará disponible en el menú "ojo" de la tabla.
+PERFILES_DEFAULTS = {
     "RDF": ["Asegurado (Nombre/Razón Social)", "Documento de Identidad (Rut/Cédula/Otros)", "Ramo", "Aseguradora", "Inicio de Vigencia", "Fin de Vigencia", "Premio_Total_USD", "Adjunto (póliza)"],
     "JOE": ["Asegurado (Nombre/Razón Social)", "Detalle (Matrícula o Referencia)", "Ramo", "Inicio de Vigencia", "Fin de Vigencia", "Estado_Gestion", "Adjunto (póliza)"],
     "ANDRE": ["Asegurado (Nombre/Razón Social)", "Celular", "Aseguradora", "Inicio de Vigencia", "Fin de Vigencia", "Corredor", "Adjunto (póliza)"]
@@ -28,7 +28,6 @@ st.markdown("""
     .main .block-container { padding-top: 1rem; }
     .left-title { font-size: 32px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 0px; }
     .user-info { text-align: right; font-weight: bold; font-size: 14px; color: #666; }
-    div[data-testid="stMetricValue"] { font-size: 26px !important; color: #007bff; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -60,12 +59,10 @@ def cargar_datos():
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
         
-        # Premios
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
         
-        # Procesamiento de fechas
         df['Inicio de Vigencia'] = pd.to_datetime(df['Inicio de Vigencia'], dayfirst=True, errors='coerce')
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce')
         df['Fin_V_dt'] = df['Fin de Vigencia'].dt.date
@@ -79,7 +76,9 @@ def cargar_datos():
 
 df_raw = cargar_datos()
 user = st.session_state["usuario_actual"]
-cols_perfil = PERFILES.get(user, VISTA_ESTANDAR)
+
+# Aquí definimos qué columnas están visibles por defecto
+cols_default = PERFILES_DEFAULTS.get(user, ["Asegurado (Nombre/Razón Social)", "Ramo", "Fin de Vigencia"])
 
 # --- ENCABEZADO ---
 col_tit, col_user_box = st.columns([8, 2])
@@ -118,24 +117,26 @@ with tab1:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    cols_existentes = [c for c in cols_perfil if c in df_tab1.columns]
+    # CONFIGURACIÓN DE VISIBILIDAD DINÁMICA
+    # Ponemos TODAS las columnas, pero solo las del perfil están como "visibles"
+    config_columnas = {
+        "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
+        "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
+        "Inicio de Vigencia": st.column_config.DateColumn("Inicio", format="DD/MM/YYYY"),
+        "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="U$S %.2f")
+    }
     
+    # Ocultamos automáticamente las que NO están en el perfil
+    cols_a_ocultar = [c for c in df_tab1.columns if c not in cols_default and c != "Fin_V_dt"]
+    for col in cols_a_ocultar:
+        config_columnas[col] = None # Al poner None en column_config, Streamlit la oculta pero permite activarla
+
     st.dataframe(
-        df_tab1[cols_existentes], 
+        df_tab1.drop(columns=['Fin_V_dt'], errors='ignore'), 
         use_container_width=True, 
         hide_index=True,
-        column_config={
-            "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
-            "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-            "Inicio de Vigencia": st.column_config.DateColumn("Inicio", format="DD/MM/YYYY"),
-            "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="U$S %.2f")
-        }
+        column_config=config_columnas
     )
-    
-    st.markdown("---")
-    m1, m2 = st.columns(2)
-    m1.metric("Cant. Pólizas", len(df_tab1))
-    m2.metric("Cartera Total (USD)", f"U$S {df_tab1['Premio_Total_USD'].sum():,.0f}")
 
 with tab2:
     st.subheader("📅 Gestión de Renovaciones")
@@ -144,26 +145,21 @@ with tab2:
     
     hoy = date.today()
     limite = hoy + timedelta(days=dias_v)
-    
-    # Filtro de tiempo (ordenamos antes de filtrar columnas para que no de error)
     df_v = df_f.dropna(subset=['Fin_V_dt']).sort_values('Fin_V_dt')
     df_v = df_v[(df_v['Fin_V_dt'] >= hoy) & (df_v['Fin_V_dt'] <= limite)].copy()
     
     if not ver_gest:
         df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
     
-    cols_v_existentes = [c for c in cols_perfil if c in df_v.columns]
-    
-    st.dataframe(
-        df_v[cols_v_existentes], # Aquí ya viene ordenado de arriba
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
-            "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-            "Inicio de Vigencia": st.column_config.DateColumn("Inicio", format="DD/MM/YYYY")
-        }
-    )
+    # Aplicamos la misma lógica de visibilidad para Vencimientos
+    config_v = {
+        "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
+        "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY")
+    }
+    for col in [c for c in df_v.columns if c not in cols_default]:
+        config_v[col] = None
+
+    st.dataframe(df_v, use_container_width=True, hide_index=True, column_config=config_v)
 
 with tab3:
     st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía"), use_container_width=True)
