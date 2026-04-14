@@ -29,6 +29,7 @@ st.markdown("""
     .main .block-container { padding-top: 1rem; }
     .left-title { font-size: 32px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 0px; }
     .user-info { text-align: right; font-weight: bold; font-size: 14px; color: #666; }
+    div[data-testid="stMetricValue"] { font-size: 26px !important; color: #007bff; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -59,35 +60,38 @@ def cargar_datos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
+        
+        # Premios
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
         
-        # Convertimos a string las fechas para evitar errores de compatibilidad en el editor
-        df['Vence_txt'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.strftime('%d/%m/%Y')
-        df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.date
+        # Fechas (convertimos a datetime objeto para cálculos)
+        df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
         
+        # Estado
         if 'Estado_Gestion' not in df.columns: df['Estado_Gestion'] = "Pendiente"
         df['Estado_Gestion'] = df['Estado_Gestion'].fillna("Pendiente")
+        
         return df
     except Exception as e:
-        st.error(f"Error: {e}"); return pd.DataFrame()
+        st.error(f"Error cargando datos: {e}"); return pd.DataFrame()
 
 df_raw = cargar_datos()
-usuario_actual = st.session_state["usuario_actual"]
-cols_perfil = PERFILES.get(usuario_actual, VISTA_ESTANDAR)
+user = st.session_state["usuario_actual"]
+cols_usuario = PERFILES.get(user, VISTA_ESTANDAR)
 
 # --- ENCABEZADO ---
 col_tit, col_user_box = st.columns([8, 2])
 with col_tit: st.markdown('<p class="left-title">🛡️ EDF SEGUROS</p>', unsafe_allow_html=True)
 with col_user_box:
-    st.markdown(f'<div class="user-info">👤 {usuario_actual}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="user-info">👤 {user}</div>', unsafe_allow_html=True)
     if st.button("Cerrar Sesión", use_container_width=True): st.session_state['logueado'] = False; st.rerun()
 
 st.divider()
 
 # ==========================================
-# 🎯 FILTROS
+# 🎯 FILTROS DE OFICINA
 # ==========================================
 with st.expander("🔍 Filtros de Oficina", expanded=True):
     c1, c2, c3, c4 = st.columns(4)
@@ -114,36 +118,40 @@ with tab1:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    st.dataframe(df_tab1[cols_perfil], use_container_width=True, hide_index=True,
+    st.dataframe(
+        df_tab1[cols_usuario], 
+        use_container_width=True, 
+        hide_index=True,
         column_config={
             "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
-            "Fin de Vigencia": st.column_config.DateColumn("Vence", format="DD/MM/YYYY")
-        })
+            "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
+            "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="U$S %.2f")
+        }
+    )
 
 with tab2:
     st.subheader("📅 Gestión de Renovaciones")
-    dias_v = st.slider("Días a futuro:", 15, 365, 60)
-    ver_gest = st.checkbox("Ver ya gestionados")
+    ct1, ct2 = st.columns([2, 1])
+    dias_v = ct1.slider("Días a futuro:", 15, 365, 60)
+    ver_gest = ct2.checkbox("Ver ya gestionados")
     
     hoy = date.today()
     limite = hoy + timedelta(days=dias_v)
     df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].copy()
     
-    if not ver_gest: df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
+    if not ver_gest:
+        df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
     
-    if not df_v.empty:
-        # Mostramos una versión simplificada en el editor para evitar el error
-        st.data_editor(
-            df_v[cols_perfil],
-            column_config={
-                "Estado_Gestion": st.column_config.SelectboxColumn("Estado", options=["Pendiente", "Renovado", "No Renueva"]),
-                "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
-                "Fin de Vigencia": st.column_config.DateColumn("Vence", format="DD/MM/YYYY")
-            },
-            hide_index=True, use_container_width=True, key="vence_editor"
-        )
-    else:
-        st.success("✅ Sin pendientes")
+    st.dataframe(
+        df_v[cols_usuario].sort_values('Fin de Vigencia'),
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
+            "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY")
+        }
+    )
+    st.info("📌 Para marcar como 'Renovado', edita la columna 'Estado_Gestion' en el Excel.")
 
 with tab3:
-    st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Compañía"), use_container_width=True)
+    st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía"), use_container_width=True)
