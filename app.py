@@ -5,14 +5,12 @@ import plotly.express as px
 from datetime import date, timedelta
 
 # ==========================================
-# 🔗 CONFIGURACIÓN DE LA FUENTE DE DATOS
+# 🔗 CONFIGURACIÓN Y CONEXIÓN
 # ==========================================
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
+TC_USD = 40.5 
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
-
-# --- VARIABLE GLOBAL DE TIPO DE CAMBIO ---
-TC_USD = 40.5 
 
 # --- ESTILOS CSS ---
 st.markdown("""
@@ -20,14 +18,14 @@ st.markdown("""
     .main .block-container { padding-top: 1rem; }
     .left-title { font-size: 32px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 0px; }
     .user-info { text-align: right; font-weight: bold; font-size: 14px; color: #666; }
-    div[data-testid="stMetricValue"] { font-size: 24px !important; }
+    div[data-testid="stMetricValue"] { font-size: 26px !important; color: #007bff; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
 # 🔐 GESTIÓN DE USUARIOS
 # ==========================================
-USUARIOS = {"RDF": "Rockuda.4428", "LT": "LTomasi2025", "AP": "APerdomo2025", "EC": "ECabral2025", "RS": "RSierra2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "EH": "EHugo2025", "GS": "GSanchez2025", "JM": "JMokosce2025", "PG": "PGagliardi2025", "MDF": "MDeFreitas2025", "AC": "ACazarian2025", "MF": "MFlores2025"}
+USUARIOS = {"RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "EH": "EHugo2025", "GS": "GSanchez2025", "JM": "JMokosce2025", "PG": "PGagliardi2025", "MDF": "MDeFreitas2025", "AC": "ACazarian2025", "MF": "MFlores2025"}
 
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
 if not st.session_state['logueado']:
@@ -43,7 +41,7 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ CARGA Y LIMPIEZA DE DATOS
+# ⚙️ CARGA DE DATOS
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -52,18 +50,23 @@ def cargar_datos():
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
         
-        # Convertir premios a números para poder sumarlos
+        # Limpieza y cálculos
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
-        
-        # Cálculo de Total en USD unificado
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
         
-        if 'Fin de Vigencia' in df.columns:
-            df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.date
+        # Fechas
+        df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.date
+        
+        # Asegurar columna de gestión
+        if 'Estado_Gestion' not in df.columns:
+            df['Estado_Gestion'] = "Pendiente"
+        else:
+            df['Estado_Gestion'] = df['Estado_Gestion'].fillna("Pendiente")
+            
         return df
     except Exception as e:
-        st.error(f"Error: {e}"); return pd.DataFrame()
+        st.error(f"Error cargando datos: {e}"); return pd.DataFrame()
 
 df_raw = cargar_datos()
 
@@ -77,20 +80,21 @@ with col_user_box:
 st.divider()
 
 # ==========================================
-# 🎯 FILTROS
+# 🎯 FILTROS SUPERIORES
 # ==========================================
-with st.expander("🔍 Filtros", expanded=True):
+with st.expander("🔍 Filtros y Tiempo", expanded=True):
     c1, c2, c3, c4 = st.columns(4)
-    lista_ej = ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()) if 'Ejecutivo' in df_raw.columns else ["Todos"]
-    lista_co = ["Todos"] + sorted(df_raw['Corredor'].dropna().unique().tolist()) if 'Corredor' in df_raw.columns else ["Todos"]
-    lista_ag = ["Todos"] + sorted(df_raw['Agente'].dropna().unique().tolist()) if 'Agente' in df_raw.columns else ["Todos"]
-    lista_as = ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()) if 'Aseguradora' in df_raw.columns else ["Todos"]
+    f_ej = c1.selectbox("Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
+    f_co = c2.selectbox("Corredor", ["Todos"] + sorted(df_raw['Corredor'].dropna().unique().tolist()))
+    f_ag = c3.selectbox("Agente", ["Todos"] + sorted(df_raw['Agente'].dropna().unique().tolist()))
+    f_as = c4.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
+    
+    st.markdown("---")
+    ct1, ct2 = st.columns([2, 1])
+    dias_vista = ct1.slider("Ver vencimientos en los próximos (días):", 15, 365, 60)
+    ver_gestionados = ct2.checkbox("Mostrar renovados/gestionados", value=False)
 
-    f_ej = c1.selectbox("Ejecutivo", lista_ej)
-    f_co = c2.selectbox("Corredor", lista_co)
-    f_ag = c3.selectbox("Agente", lista_ag)
-    f_as = c4.selectbox("Aseguradora", lista_as)
-
+# Aplicar filtros
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
@@ -98,44 +102,63 @@ if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 
 # ==========================================
-# 📑 TABS Y CONTENIDO
+# 📑 PESTAÑAS
 # ==========================================
-tab1, tab2, tab3 = st.tabs(["👥 CARTERA TOTAL", "🔄 VENCIMIENTOS", "📊 ANÁLISIS"])
+tab1, tab2, tab3 = st.tabs(["👥 CARTERA TOTAL", "🔄 VENCIMIENTOS PENDIENTES", "📊 ANÁLISIS"])
 
 with tab1:
-    busqueda = st.text_input("🔍 Buscar por Nombre o Documento...")
+    busqueda = st.text_input("🔍 Buscar por Nombre, Documento o Matrícula...")
     df_tab1 = df_f.copy()
     if busqueda:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    # Mostrar tabla
-    ocultas = ['Ejecutivo', 'Corredor', 'Agente', 'Aseguradora', 'Fin_V_dt', 'Marca temporal', 'Dirección de correo electrónico', 'Premio_Total_USD']
-    cols_visibles = [c for c in df_tab1.columns if c not in ocultas]
-    
-    st.dataframe(df_tab1[cols_visibles], use_container_width=True, hide_index=True,
+    st.dataframe(df_tab1, use_container_width=True, hide_index=True,
         column_config={
-            "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="Ver Póliza"),
+            "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂 Ver"),
             "Fin de Vigencia": st.column_config.DateColumn("Vence")
         })
     
-    # --- CONTADORES ABAJO DE LA TABLA ---
     st.markdown("---")
     m1, m2, m3 = st.columns(3)
-    m1.metric("Cantidad de Pólizas", len(df_tab1))
-    total_usd = df_tab1['Premio_Total_USD'].sum()
-    m2.metric("Premio Total (USD)", f"U$S {total_usd:,.2f}")
-    promedio = total_usd / len(df_tab1) if len(df_tab1) > 0 else 0
-    m3.metric("Premio Promedio (USD)", f"U$S {promedio:,.2f}")
+    m1.metric("Cant. Pólizas", len(df_tab1))
+    m2.metric("Cartera Total (USD)", f"U$S {df_tab1['Premio_Total_USD'].sum():,.0f}")
+    m3.metric("Tipo de Cambio", f"${TC_USD}")
 
 with tab2:
     hoy = date.today()
-    proximos = hoy + timedelta(days=60)
-    df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= proximos)].sort_values('Fin_V_dt')
-    st.dataframe(df_v, use_container_width=True, hide_index=True,
-        column_config={"Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="Ver Póliza")})
+    limite = hoy + timedelta(days=dias_vista)
+    
+    # Filtro de tiempo para vencimientos
+    df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].copy()
+    
+    # Filtro de gestión: Ocultamos lo "Renovado" si el checkbox no está marcado
+    if not ver_gestionados:
+        df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
+    
+    st.subheader(f"📅 Pendientes de Renovación ({dias_vista} días)")
+    
+    if not df_v.empty:
+        # El data_editor permite al ejecutivo marcar la gestión al vuelo
+        st.data_editor(
+            df_v.sort_values('Fin_V_dt'),
+            column_config={
+                "Estado_Gestion": st.column_config.SelectboxColumn("Estado de Gestión", options=["Pendiente", "Renovado", "No Renueva"], required=True),
+                "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
+                "Fin de Vigencia": st.column_config.DateColumn("Vencimiento")
+            },
+            hide_index=True,
+            use_container_width=True,
+            key="editor_vencimientos"
+        )
+        st.info("💡 Tip: Para que los cambios en 'Estado' se guarden permanentemente en el Excel, edítalo directamente haciendo clic en el botón 'Editar Excel' de la pestaña Cartera.")
+    else:
+        st.success("🎉 ¡No hay vencimientos pendientes en el rango seleccionado!")
 
 with tab3:
-    st.subheader("📊 Análisis del Segmento")
-    fig = px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Compañía (USD)")
-    st.plotly_chart(fig, use_container_width=True)
+    st.subheader("📊 Análisis de Cartera Filtrada")
+    col_chart1, col_chart2 = st.columns(2)
+    with col_chart1:
+        st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía"), use_container_width=True)
+    with col_chart2:
+        st.plotly_chart(px.bar(df_f, x='Ramo', title="Cantidad por Ramo", color="Ramo"), use_container_width=True)
