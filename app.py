@@ -5,6 +5,33 @@ import plotly.express as px
 from datetime import date, timedelta
 
 # ==========================================
+# ⚙️ CONFIGURACIÓN DE PERFILES POR USUARIO
+# ==========================================
+# Define aquí qué columnas ve cada uno y en qué orden.
+# Las columnas deben llamarse EXACTAMENTE igual que en el Excel.
+
+VISTA_ESTANDAR = [
+    "Asegurado (Nombre/Razón Social)", "Ramo", "Aseguradora", 
+    "Fin de Vigencia", "Premio_Total_USD", "Adjunto (póliza)", "Estado_Gestion"
+]
+
+PERFILES = {
+    "RDF": [
+        "Asegurado (Nombre/Razón Social)", "Documento de Identidad (Rut/Cédula/Otros)", 
+        "Ramo", "Aseguradora", "Fin de Vigencia", "Premio_Total_USD", "Adjunto (póliza)"
+    ],
+    "JOE": [
+        "Asegurado (Nombre/Razón Social)", "Detalle (Matrícula o Referencia)", 
+        "Ramo", "Fin de Vigencia", "Estado_Gestion", "Adjunto (póliza)"
+    ],
+    "ANDRE": [
+        "Asegurado (Nombre/Razón Social)", "Celular", "Aseguradora", 
+        "Fin de Vigencia", "Corredor", "Adjunto (póliza)"
+    ]
+    # Agrega más usuarios aquí siguiendo el mismo formato
+}
+
+# ==========================================
 # 🔗 CONFIGURACIÓN Y CONEXIÓN
 # ==========================================
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
@@ -17,14 +44,19 @@ st.markdown("""
     .main .block-container { padding-top: 1rem; }
     .left-title { font-size: 32px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 0px; }
     .user-info { text-align: right; font-weight: bold; font-size: 14px; color: #666; }
-    div[data-testid="stMetricValue"] { font-size: 26px !important; color: #007bff; }
+    div[data-testid="stMetricValue"] { font-size: 24px !important; color: #007bff; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
 # 🔐 GESTIÓN DE USUARIOS
 # ==========================================
-USUARIOS = {"RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "EH": "EHugo2025", "GS": "GSanchez2025", "JM": "JMokosce2025", "PG": "PGagliardi2025", "MDF": "MDeFreitas2025", "AC": "ACazarian2025", "MF": "MFlores2025"}
+USUARIOS = {
+    "RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025", 
+    "ER": "ERobaina.2025", "EH": "EHugo2025", "GS": "GSanchez2025", 
+    "JM": "JMokosce2025", "PG": "PGagliardi2025", "MDF": "MDeFreitas2025", 
+    "AC": "ACazarian2025", "MF": "MFlores2025", "JOE": "Joe2025", "ANDRE": "Andre2025"
+}
 
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
 if not st.session_state['logueado']:
@@ -48,31 +80,29 @@ def cargar_datos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
-        
-        # Conversiones numéricas
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
-        
-        # Manejo de fechas: Aseguramos que sean objetos de fecha
         df['Fin_V_dt'] = pd.to_datetime(df['Fin de Vigencia'], errors='coerce').dt.date
         
-        # Estado de gestión
         if 'Estado_Gestion' not in df.columns:
             df['Estado_Gestion'] = "Pendiente"
         df['Estado_Gestion'] = df['Estado_Gestion'].fillna("Pendiente")
-        
         return df
     except Exception as e:
-        st.error(f"Error cargando datos: {e}"); return pd.DataFrame()
+        st.error(f"Error: {e}"); return pd.DataFrame()
 
 df_raw = cargar_datos()
+usuario_actual = st.session_state["usuario_actual"]
+
+# Seleccionar columnas según perfil
+cols_a_mostrar = PERFILES.get(usuario_actual, VISTA_ESTANDAR)
 
 # --- ENCABEZADO ---
 col_tit, col_user_box = st.columns([8, 2])
 with col_tit: st.markdown('<p class="left-title">🛡️ EDF SEGUROS</p>', unsafe_allow_html=True)
 with col_user_box:
-    st.markdown(f'<div class="user-info">👤 {st.session_state["usuario_actual"]}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="user-info">👤 {usuario_actual}</div>', unsafe_allow_html=True)
     if st.button("Cerrar Sesión", use_container_width=True): st.session_state['logueado'] = False; st.rerun()
 
 st.divider()
@@ -87,7 +117,6 @@ with st.expander("🔍 Filtros de Oficina", expanded=True):
     f_ag = c3.selectbox("Agente", ["Todos"] + sorted(df_raw['Agente'].dropna().unique().tolist()))
     f_as = c4.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
 
-# Filtrado inicial
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
@@ -106,55 +135,49 @@ with tab1:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    st.dataframe(df_tab1.drop(columns=['Fin_V_dt'], errors='ignore'), use_container_width=True, hide_index=True,
+    # Mostrar solo columnas del perfil
+    st.dataframe(df_tab1[cols_a_mostrar], use_container_width=True, hide_index=True,
         column_config={
-            "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂 Ver"),
+            "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
             "Fin de Vigencia": st.column_config.DateColumn("Vence", format="DD/MM/YYYY"),
-            "Inicio de Vigencia": st.column_config.DateColumn("Inicio", format="DD/MM/YYYY")
+            "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="U$S %.2f")
         })
     
     st.markdown("---")
-    m1, m2, m3 = st.columns(3)
+    m1, m2 = st.columns(2)
     m1.metric("Cant. Pólizas", len(df_tab1))
     m2.metric("Cartera Total (USD)", f"U$S {df_tab1['Premio_Total_USD'].sum():,.0f}")
-    m3.metric("Tipo de Cambio", f"${TC_USD}")
 
 with tab2:
     st.subheader("📅 Gestión de Renovaciones")
-    
     ct1, ct2 = st.columns([2, 1])
     dias_v = ct1.slider("Ver vencimientos en los próximos (días):", 15, 365, 60)
     ver_gest = ct2.checkbox("Mostrar renovados/gestionados", value=False)
     
     hoy = date.today()
     limite = hoy + timedelta(days=dias_v)
-    
-    # Filtro de tiempo
     df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].copy()
     
     if not ver_gest:
         df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
     
     if not df_v.empty:
-        st.dataframe(
-            df_v.sort_values('Fin_V_dt'),
+        # Editor interactivo para "limpiar" la lista visualmente
+        st.data_editor(
+            df_v[cols_a_mostrar].sort_values('Fin de Vigencia'),
             column_config={
-                "Estado_Gestion": "Estado",
+                "Estado_Gestion": st.column_config.SelectboxColumn("Estado", options=["Pendiente", "Renovado", "No Renueva"], required=True),
                 "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
-                "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-                "Inicio de Vigencia": st.column_config.DateColumn("Inicio", format="DD/MM/YYYY")
+                "Fin de Vigencia": st.column_config.DateColumn("Vence", format="DD/MM/YYYY")
             },
             hide_index=True,
-            use_container_width=True
+            use_container_width=True,
+            key="editor_vencimientos"
         )
-        st.info("📌 Para marcar como 'Renovado', edita la columna 'Estado_Gestion' en el Excel.")
+        st.info("💡 Tip: Si marcas 'Renovado', desaparecerá de esta lista (pero recuerda actualizarlo en el Excel para que sea permanente).")
     else:
-        st.success("🎉 ¡No hay vencimientos pendientes en este rango!")
+        st.success("🎉 ¡Todo al día!")
 
 with tab3:
     st.subheader("📊 Análisis")
-    col_chart1, col_chart2 = st.columns(2)
-    with col_chart1:
-        st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía"), use_container_width=True)
-    with col_chart2:
-        st.plotly_chart(px.bar(df_f, x='Ramo', title="Cantidad por Ramo", color="Ramo"), use_container_width=True)
+    st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía"), use_container_width=True)
