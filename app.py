@@ -26,12 +26,10 @@ st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
     .left-title { font-size: 30px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 0px; }
-    /* Resaltado del buscador */
     div[data-baseweb="input"] {
         border: 1.5px solid #1E1E1E !important;
         border-radius: 8px;
     }
-    /* Estilo para los tabs */
     .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] {
         background-color: #f0f2f6;
@@ -100,7 +98,7 @@ user = st.session_state["usuario_actual"]
 cols_default = PERFILES_DEFAULTS.get(user, ["Asegurado (Nombre/Razón Social)", "Ramo", "Fin de Vigencia", "Adjunto (póliza)"])
 
 # ==========================================
-# 🎯 BARRA LATERAL (SIDEBAR) - FILTROS Y USUARIO
+# 🎯 BARRA LATERAL (SIDEBAR)
 # ==========================================
 with st.sidebar:
     st.markdown(f"### 👤 {user}")
@@ -133,7 +131,6 @@ st.markdown('<p class="left-title">🛡️ EDF SEGUROS</p>', unsafe_allow_html=T
 tab1, tab2, tab3 = st.tabs(["👥 CARTERA TOTAL", "🔄 VENCIMIENTOS", "📊 ANÁLISIS"])
 
 with tab1:
-    # BUSCADOR RESALTADO
     st.markdown("### 🔎 Buscar Cliente")
     busqueda = st.text_input("Ingresa nombre, documento o número de póliza...", placeholder="Ej: Juan Perez o 123456", label_visibility="collapsed")
     
@@ -142,7 +139,6 @@ with tab1:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    # Configuración de columnas
     config_columnas = {
         "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂", required=True),
         "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
@@ -150,7 +146,6 @@ with tab1:
         "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="U$S %.2f")
     }
     
-    # Ocultar columnas que no pertenecen al perfil
     cols_a_ocultar = [c for c in df_tab1.columns if c not in cols_default and c != "Fin_V_dt"]
     for col in cols_a_ocultar:
         config_columnas[col] = None
@@ -181,11 +176,30 @@ with tab2:
         "Estado_Gestion": st.column_config.SelectboxColumn("Estado", options=["Pendiente", "En Gestión", "Renovado", "Anulado"])
     }
     
-    # Ocultar lo que no es del perfil para esta pestaña también
     for col in [c for c in df_v.columns if c not in cols_default]:
         config_v[col] = None
 
     st.dataframe(df_v, use_container_width=True, hide_index=True, column_config=config_v)
 
 with tab3:
-    st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía"), use_container_width=True)
+    st.subheader("📈 Análisis de Cartera")
+    
+    col_pie, col_bar = st.columns(2)
+    
+    with col_pie:
+        # Gráfico de Aseguradoras (USD)
+        fig_pie = px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', 
+                         title="Distribución por Aseguradora (en USD)",
+                         hole=0.4) # Lo hace tipo "Dona" que queda más moderno
+        st.plotly_chart(fig_pie, use_container_width=True)
+        
+    with col_bar:
+        # Gráfico de Barras por Ramos (Cantidad de pólizas)
+        df_ramos = df_f['Ramo'].value_counts().reset_index()
+        df_ramos.columns = ['Ramo', 'Cantidad']
+        
+        fig_bar = px.bar(df_ramos, x='Ramo', y='Cantidad', 
+                         title="Cantidad de Pólizas por Ramo",
+                         color='Ramo',
+                         text_auto=True) # Muestra el número arriba de la barra
+        st.plotly_chart(fig_bar, use_container_width=True)
