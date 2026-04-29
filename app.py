@@ -21,14 +21,15 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos CSS personalizados
+# Estilos CSS para el modo impresión y visualización
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
     .left-title { font-size: 30px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 20px; }
-    div[data-baseweb="input"] {
-        border: 1.5px solid #1E1E1E !important;
-        border-radius: 8px;
+    .stMetric { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
+    @media print {
+        .stSidebar, .stTabs, .no-print { display: none !important; }
+        .print-only { display: block !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -70,26 +71,21 @@ def cargar_datos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
-        
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
-        
         df['Inicio de Vigencia'] = pd.to_datetime(df['Inicio de Vigencia'], dayfirst=True, errors='coerce')
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce')
         df['Fin_V_dt'] = df['Fin de Vigencia'].dt.date
-        
         if 'Estado_Gestion' not in df.columns: df['Estado_Gestion'] = "Pendiente"
         df['Estado_Gestion'] = df['Estado_Gestion'].fillna("Pendiente")
-        
         return df
-    except Exception as e:
-        st.error(f"Error al conectar con Google Sheets: {e}")
+    except:
         return pd.DataFrame()
 
 df_raw = cargar_datos()
 user = st.session_state["usuario_actual"]
-cols_default = PERFILES_DEFAULTS.get(user, ["Asegurado (Nombre/Razón Social)", "Ramo", "Fin de Vigencia", "Adjunto (póliza)"])
+cols_default = PERFILES_DEFAULTS.get(user, ["Asegurado (Nombre/Razón Social)", "Ramo", "Fin de Vigencia"])
 
 # ==========================================
 # 🎯 BARRA LATERAL (SIDEBAR)
@@ -97,11 +93,8 @@ cols_default = PERFILES_DEFAULTS.get(user, ["Asegurado (Nombre/Razón Social)", 
 with st.sidebar:
     st.markdown(f"### 👤 {user}")
     st.markdown("---")
-    st.markdown("### 🔍 Filtros de Oficina")
-    
+    st.markdown("### 🔍 Filtros de Cartera")
     f_ej = st.selectbox("Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
-    f_co = st.selectbox("Corredor", ["Todos"] + sorted(df_raw['Corredor'].dropna().unique().tolist()))
-    f_ag = st.selectbox("Agente", ["Todos"] + sorted(df_raw['Agente'].dropna().unique().tolist()))
     f_as = st.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
     
     st.markdown("---")
@@ -109,93 +102,102 @@ with st.sidebar:
         st.session_state['logueado'] = False
         st.rerun()
 
-# Filtrado de datos global (basado en el sidebar)
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
-if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
-if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 
-# Título principal
+# Título Principal
 st.markdown('<p class="left-title">🛡️ EDF SEGUROS</p>', unsafe_allow_html=True)
 
 # ==========================================
-# 📑 PESTAÑAS PRINCIPALES
+# 📑 PESTAÑAS
 # ==========================================
-tab1, tab2, tab3 = st.tabs(["👥 CARTERA TOTAL", "🔄 VENCIMIENTOS", "📊 ANÁLISIS"])
+tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📊 ANÁLISIS", "📝 COTIZADOR"])
 
+# --- TAB 1: CARTERA ---
 with tab1:
-    st.markdown("### 🔎 Buscar Cliente")
-    busqueda = st.text_input("Ingresa nombre, documento o número de póliza...", placeholder="Ej: Juan Perez o 123456", label_visibility="collapsed")
-    
+    busqueda = st.text_input("Buscar cliente o póliza...", placeholder="Ej: Juan Perez o 123456")
     df_tab1 = df_f.copy()
     if busqueda:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    config_columnas = {
-        "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂", required=True),
-        "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-        "Inicio de Vigencia": st.column_config.DateColumn("Inicio", format="DD/MM/YYYY"),
-        "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="U$S %.2f")
-    }
-    
-    cols_a_ocultar = [c for c in df_tab1.columns if c not in cols_default and c != "Fin_V_dt"]
-    for col in cols_a_ocultar:
-        config_columnas[col] = None
+    st.dataframe(df_tab1[cols_default], use_container_width=True, hide_index=True)
 
-    st.dataframe(
-        df_tab1.drop(columns=['Fin_V_dt'], errors='ignore'), 
-        use_container_width=True, 
-        hide_index=True,
-        column_config=config_columnas
-    )
-
+# --- TAB 2: VENCIMIENTOS ---
 with tab2:
-    st.subheader("📅 Gestión de Renovaciones")
     dias_v = st.slider("Días a futuro:", 15, 365, 60)
-    ver_gest = st.checkbox("Ver ya gestionados")
-    
     hoy = date.today()
     limite = hoy + timedelta(days=dias_v)
-    df_v = df_f.dropna(subset=['Fin_V_dt']).sort_values('Fin_V_dt')
-    df_v = df_v[(df_v['Fin_V_dt'] >= hoy) & (df_v['Fin_V_dt'] <= limite)].copy()
-    
-    if not ver_gest:
-        df_v = df_v[df_v['Estado_Gestion'] != "Renovado"]
-    
-    config_v = {
-        "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂", required=True),
-        "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-        "Estado_Gestion": st.column_config.SelectboxColumn("Estado", options=["Pendiente", "En Gestión", "Renovado", "Anulado"])
-    }
-    
-    for col in [c for c in df_v.columns if c not in cols_default]:
-        config_v[col] = None
+    df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].sort_values('Fin_V_dt')
+    st.dataframe(df_v[cols_default], use_container_width=True, hide_index=True)
 
-    st.dataframe(df_v, use_container_width=True, hide_index=True, column_config=config_v)
-
+# --- TAB 3: ANÁLISIS ---
 with tab3:
-    st.subheader("📈 Resumen de Cartera")
+    t_usd = df_f['Premio_Total_USD'].sum()
+    p_vig = df_f[df_f['Fin_V_dt'] >= date.today()].shape[0]
     
-    # Cálculos dinámicos dentro de Análisis
-    total_usd = df_f['Premio_Total_USD'].sum()
-    polizas_activas = df_f[df_f['Fin_V_dt'] >= date.today()].shape[0]
-    total_registros = df_f.shape[0]
-
-    # Fila de métricas interna
     c1, c2, c3 = st.columns(3)
-    c1.metric("Cartera Total", f"U$S {total_usd:,.2f}")
-    c2.metric("Pólizas Vigentes", polizas_activas)
-    c3.metric("Total en Filtro", total_registros)
+    c1.metric("Cartera Total", f"U$S {t_usd:,.2f}")
+    c2.metric("Pólizas Vigentes", p_vig)
+    c3.metric("Registros", len(df_f))
     
     st.markdown("---")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía", hole=0.4), use_container_width=True)
+    with col_b:
+        df_r = df_f['Ramo'].value_counts().reset_index()
+        st.plotly_chart(px.bar(df_r, x='Ramo', y='count', title="Pólizas por Ramo", color='Ramo', text_auto=True), use_container_width=True)
+
+# --- TAB 4: COTIZADOR (EL NUEVO MODULO) ---
+with tab4:
+    st.subheader("📝 Generador de Cotización Automotores")
     
-    # Gráficos
-    col_pie, col_bar = st.columns(2)
-    with col_pie:
-        st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Distribución USD por Compañía", hole=0.4), use_container_width=True)
-    with col_bar:
-        df_ramos = df_f['Ramo'].value_counts().reset_index()
-        df_ramos.columns = ['Ramo', 'Cantidad']
-        st.plotly_chart(px.bar(df_ramos, x='Ramo', y='Cantidad', title="Pólizas por Ramo", color='Ramo', text_auto=True), use_container_width=True)
+    # Datos del cliente
+    with st.container(border=True):
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            ci_bus = st.text_input("DNI / RUT para buscar cliente")
+            # Auto-completado si existe
+            nombre_init = ""
+            if ci_bus:
+                match = df_raw[df_raw['Documento de Identidad (Rut/Cédula/Otros)'].astype(str).str.contains(ci_bus)]
+                if not match.empty: nombre_init = match.iloc[0]['Asegurado (Nombre/Razón Social)']
+            
+            nombre_cli = st.text_input("Nombre y Apellido", value=nombre_init)
+        with col_c2:
+            vehiculo = st.text_input("Vehículo (Marca, Modelo, Año)")
+            zona = st.selectbox("Zona de Circulación", ["Montevideo", "Canelones", "Maldonado", "Interior"])
+
+    # Tabla de Aseguradoras
+    st.markdown("#### 💰 Opciones de Cobertura")
+    if 'data_cot' not in st.session_state:
+        st.session_state.data_cot = pd.DataFrame([
+            {"Aseguradora": "BSE", "Contado": 0, "3 Cuotas": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Básico"},
+            {"Aseguradora": "SBI", "Contado": 0, "3 Cuotas": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Básico"}
+        ])
+
+    cot_editor = st.data_editor(st.session_state.data_cot, num_rows="dynamic", use_container_width=True)
+
+    # Beneficios
+    beneficios_text = st.text_area("Beneficios incluidos:", 
+        value="• Auxilio mecánico nacional e internacional las 24hs.\n• Cristales, cerraduras y espejos sin deducible.\n• Auto de alquiler por 15 días en caso de siniestro.")
+
+    # Generación de Vista Previa (Modo envío)
+    if st.button("👁️ Generar Vista Previa para Cliente"):
+        st.markdown("---")
+        st.markdown(f"""
+            <div style="text-align: center; border: 2px solid #1E1E1E; padding: 20px; border-radius: 15px;">
+                <h1 style="margin:0;">🛡️ EDF SEGUROS</h1>
+                <p>Propuesta de Seguro Automotor</p>
+                <hr>
+                <div style="text-align: left;">
+                    <p><b>Cliente:</b> {nombre_cli} | <b>DNI:</b> {ci_bus}</p>
+                    <p><b>Vehículo:</b> {vehiculo} | <b>Zona:</b> {zona}</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        st.table(cot_editor)
+        st.info(f"**Beneficios Destacados:**\n\n{beneficios_text}")
+        st.warning("⚠️ Nota: Los costos están sujetos a variaciones de las compañías y a inspección del vehículo.")
