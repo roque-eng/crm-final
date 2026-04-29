@@ -8,8 +8,11 @@ import plotly.express as px
 # ==========================================
 # ⚙️ CONFIGURACIÓN DE ENLACES
 # ==========================================
+# Planilla de la Empresa (Cartera)
 URL_EMPRESA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
+# Tu Planilla Personal (Cotizaciones)
 URL_MI_DRIVE = "https://docs.google.com/spreadsheets/d/1rd_ZCEUxolcgr9WaNUxzqjJVsL7tFvOOS4CaMZOrR8E/edit#gid=0"
+
 TC_USD = 40.5 
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
@@ -44,7 +47,7 @@ if not st.session_state['logueado']:
         with st.form("login"):
             u = st.text_input("Usuario")
             p = st.text_input("Contraseña", type="password")
-            if st.form_submit_button("Ingresar"):
+            if st.form_submit_button("Ingresar", use_container_width=True):
                 if u in USUARIOS and USUARIOS[u] == p:
                     st.session_state['logueado'] = True
                     st.session_state['usuario_actual'] = u
@@ -53,20 +56,21 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ CARGA DE DATOS
+# ⚙️ CARGA DE DATOS (CARTERA)
 # ==========================================
-@st.cache_data(ttl=300) # Se actualiza cada 5 minutos
+@st.cache_data(ttl=300)
 def cargar_cartera():
     try:
+        # Cargamos los datos de la empresa
         df = conn.read(spreadsheet=URL_EMPRESA, ttl=0)
         df.columns = df.columns.str.strip()
-        # Cálculo de premios para análisis
+        # Cálculo de premios para la pestaña de análisis
         u_col, p_col = 'Premio USD (IVA inc)', 'Premio UYU (IVA inc)'
         df['Premio_Total_USD'] = pd.to_numeric(df.get(u_col, 0), errors='coerce').fillna(0) + \
                                 (pd.to_numeric(df.get(p_col, 0), errors='coerce').fillna(0) / TC_USD)
         return df
     except Exception as e:
-        st.error(f"Error de conexión con la cartera: {e}")
+        st.error(f"Error de conexión con la cartera de la empresa: {e}")
         return pd.DataFrame()
 
 df_raw = cargar_cartera()
@@ -84,7 +88,7 @@ with tab1:
         df_f = df_raw[df_raw.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_raw
         st.dataframe(df_f, use_container_width=True, hide_index=True)
     else:
-        st.info("Cargando datos o cartera vacía...")
+        st.warning("⚠️ No se detectan datos en la cartera. Verifica el acceso del nuevo mail al Excel de la empresa.")
 
 # --- TAB 3: COTIZADOR ---
 with tab3:
@@ -95,7 +99,7 @@ with tab3:
             doc_in = st.text_input("CI / RUT para buscar cliente")
             n_auto = ""
             if doc_in and not df_raw.empty:
-                # Buscador inteligente en columnas de documento
+                # Buscador inteligente en columnas de identificación
                 for col in df_raw.columns:
                     if any(x in col.lower() for x in ['documento', 'ci', 'rut']):
                         m = df_raw[df_raw[col].astype(str).str.contains(doc_in, na=False)]
@@ -121,9 +125,9 @@ with tab3:
     with col_d:
         hog = st.text_area("🏠 Seguro de Hogar / Adicionales", "COBERTURA HOGAR SIN COSTO:\n- Incendio Edificio USD 100.000\n- Hurto Contenido USD 10.000\n- Responsabilidad Civil Hogar", height=150)
 
-    if st.button("💾 Guardar y Preparar Impresión"):
+    if st.button("💾 Guardar Cotización en mi Drive"):
         if not n_cli:
-            st.error("❌ El nombre es obligatorio.")
+            st.error("❌ El nombre del asegurado es obligatorio para guardar.")
         else:
             nueva = {
                 "Fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), 
@@ -141,29 +145,30 @@ with tab3:
                 df_up = pd.concat([df_h, pd.DataFrame([nueva])], ignore_index=True)
                 conn.update(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", data=df_up)
                 st.session_state['ultima_cot'] = nueva
-                st.success("✅ Cotización guardada en tu historial de Drive.")
+                st.success("✅ Guardado exitosamente en tu Excel personal.")
             except Exception as e:
-                st.error(f"Error al guardar: Verifica que la pestaña se llame 'Cotizaciones_Emitidas'. {e}")
+                st.error(f"Error al guardar: Verifica que la pestaña de tu Excel se llame 'Cotizaciones_Emitidas'. {e}")
 
-    # Historial de las últimas 5
+    # Historial rápido
     st.divider()
-    st.subheader("📂 Últimas Cotizaciones")
+    st.subheader("📂 Historial Reciente (Tu Drive)")
     try:
         df_hist = conn.read(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", ttl=0).iloc[::-1]
         for i, r in df_hist.head(5).iterrows():
             if st.button(f"📄 {r['Cliente']} - {r['Vehiculo']} ({r['Fecha']})", key=f"hist_{i}"):
                 st.session_state['ultima_cot'] = r.to_dict()
                 st.rerun()
-    except: st.info("Historial vacío.")
+    except:
+        st.info("Aún no hay cotizaciones guardadas en este archivo.")
 
-# --- TAB 2 y 4 (Funciones básicas) ---
-with tab2: st.info("Módulo de Vencimientos: Filtra la cartera por fechas próximas.")
+# --- TAB 2 y 4 ---
+with tab2: st.info("Módulo de Vencimientos: Aquí aparecerán las pólizas próximas a vencer de la cartera cargada.")
 with tab4: 
     if not df_raw.empty:
-        st.plotly_chart(px.pie(df_raw, names='Aseguradora', values='Premio_Total_USD', title="Distribución de Cartera por Compañía"))
+        st.plotly_chart(px.pie(df_raw, names='Aseguradora', values='Premio_Total_USD', title="Distribución de Cartera por Aseguradora (USD)"))
 
 # ==========================================
-# 🖨️ VISTA DE IMPRESIÓN (Invisible en web)
+# 🖨️ VISTA DE IMPRESIÓN
 # ==========================================
 if 'ultima_cot' in st.session_state:
     c = st.session_state['ultima_cot']
@@ -171,10 +176,12 @@ if 'ultima_cot' in st.session_state:
         <div class="print-only">
             <h1 style="text-align:center;">🛡️ EDF SEGUROS</h1>
             <hr>
-            <p><b>FECHA:</b> {c['Fecha']}</p>
+            <p><b>FECHA DE EMISIÓN:</b> {c['Fecha']}</p>
             <p><b>ASEGURADO:</b> {c['Cliente']} | <b>VEHÍCULO:</b> {c['Vehiculo']}</p>
-            <div class="titulo-cuadro">DETALLES DE COBERTURA Y BENEFICIOS</div>
+            <div class="titulo-cuadro">DETALLES DE COBERTURA Y BENEFICIOS ADICIONALES</div>
             <div class="cuadro-beneficios" style="white-space: pre-wrap;">{c['Detalles']}</div>
-            <p style="margin-top:20px; font-size:12px;"><i>Cotización sujeta a inspección y políticas de la aseguradora.</i></p>
+            <p style="margin-top:30px; font-size:11px; color:gray; text-align:center;">
+                Esta cotización es de carácter informativo y queda sujeta a la aprobación de la compañía aseguradora.
+            </p>
         </div>
     """, unsafe_allow_html=True)
