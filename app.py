@@ -25,16 +25,10 @@ st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
-    .left-title { font-size: 30px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 0px; }
+    .left-title { font-size: 30px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 20px; }
     div[data-baseweb="input"] {
         border: 1.5px solid #1E1E1E !important;
         border-radius: 8px;
-    }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #f0f2f6;
-        border-radius: 5px 5px 0px 0px;
-        padding: 8px 16px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -115,7 +109,7 @@ with st.sidebar:
         st.session_state['logueado'] = False
         st.rerun()
 
-# Filtrado de datos
+# Filtrado de datos global (basado en el sidebar)
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
@@ -182,24 +176,26 @@ with tab2:
     st.dataframe(df_v, use_container_width=True, hide_index=True, column_config=config_v)
 
 with tab3:
-    st.subheader("📈 Análisis de Cartera")
+    st.subheader("📈 Resumen de Cartera")
     
+    # Cálculos dinámicos dentro de Análisis
+    total_usd = df_f['Premio_Total_USD'].sum()
+    polizas_activas = df_f[df_f['Fin_V_dt'] >= date.today()].shape[0]
+    total_registros = df_f.shape[0]
+
+    # Fila de métricas interna
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Cartera Total", f"U$S {total_usd:,.2f}")
+    c2.metric("Pólizas Vigentes", polizas_activas)
+    c3.metric("Total en Filtro", total_registros)
+    
+    st.markdown("---")
+    
+    # Gráficos
     col_pie, col_bar = st.columns(2)
-    
     with col_pie:
-        # Gráfico de Aseguradoras (USD)
-        fig_pie = px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', 
-                         title="Distribución por Aseguradora (en USD)",
-                         hole=0.4) # Lo hace tipo "Dona" que queda más moderno
-        st.plotly_chart(fig_pie, use_container_width=True)
-        
+        st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Distribución USD por Compañía", hole=0.4), use_container_width=True)
     with col_bar:
-        # Gráfico de Barras por Ramos (Cantidad de pólizas)
         df_ramos = df_f['Ramo'].value_counts().reset_index()
         df_ramos.columns = ['Ramo', 'Cantidad']
-        
-        fig_bar = px.bar(df_ramos, x='Ramo', y='Cantidad', 
-                         title="Cantidad de Pólizas por Ramo",
-                         color='Ramo',
-                         text_auto=True) # Muestra el número arriba de la barra
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(px.bar(df_ramos, x='Ramo', y='Cantidad', title="Pólizas por Ramo", color='Ramo', text_auto=True), use_container_width=True)
