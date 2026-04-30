@@ -1,4 +1,5 @@
-pandas
-plotly
 streamlit
+pandas
 st-gsheets-connection
+plotly
+fpdf
