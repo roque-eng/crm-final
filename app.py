@@ -5,14 +5,14 @@ import plotly.express as px
 from datetime import date, timedelta
 
 # ==========================================
-# ⚙️ CONFIGURACIÓN INICIAL
+# ⚙️ CONFIGURACIÓN
 # ==========================================
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5 
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos CSS: Controlan la apariencia en pantalla y la limpieza al imprimir
+# Estilos CSS para Impresión y Diseño
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
@@ -29,7 +29,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 SISTEMA DE LOGIN
+# 🔐 USUARIOS
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "AB": "ABentancor2025", "GR": "GRobaina2025", 
@@ -56,7 +56,7 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ CONEXIÓN Y CARGA DE DATOS
+# ⚙️ CARGA DE DATOS ROBUSTA
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -64,11 +64,12 @@ def cargar_datos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
-        # Cálculo dinámico de cartera en USD
-        u_col = 'Premio USD (IVA inc)'
-        p_col = 'Premio UYU (IVA inc)'
-        df['Premio_Total_USD'] = pd.to_numeric(df.get(u_col, 0), errors='coerce').fillna(0) + \
-                                (pd.to_numeric(df.get(p_col, 0), errors='coerce').fillna(0) / TC_USD)
+        # Limpieza básica para evitar errores de tipo
+        if 'Premio USD (IVA inc)' in df.columns:
+            df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
+        if 'Premio UYU (IVA inc)' in df.columns:
+            df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
+        df['Premio_Total_USD'] = df.get('Premio USD (IVA inc)', 0) + (df.get('Premio UYU (IVA inc)', 0) / TC_USD)
         
         if 'Fin de Vigencia' in df.columns:
             df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce')
@@ -79,98 +80,97 @@ def cargar_datos():
 df_raw = cargar_datos()
 
 # ==========================================
-# 🎯 BARRA LATERAL (FILTROS DE CARTERA)
+# 🎯 SIDEBAR - FILTROS DINÁMICOS
 # ==========================================
 with st.sidebar:
     st.markdown(f"### 👤 {st.session_state['usuario_actual']}")
     st.markdown("---")
-    st.markdown("### 🔍 Filtros Globales")
+    st.markdown("### 🔍 Filtros de Cartera")
     
     filtros = {}
-    # Filtros automáticos si las columnas existen en el Excel
-    for col in ["Ejecutivo", "Aseguradora", "Corredor", "Agente", "Ramo"]:
+    # Lista de columnas que queremos filtrar si existen
+    columnas_interes = ["Ejecutivo", "Aseguradora", "Corredor", "Agente", "Ramo"]
+    
+    for col in columnas_interes:
         if col in df_raw.columns:
             opciones = ["Todos"] + sorted(df_raw[col].dropna().unique().tolist())
             filtros[col] = st.selectbox(col, opciones)
         else:
             filtros[col] = "Todos"
 
-    st.markdown("---")
     if st.button("Cerrar Sesión", use_container_width=True):
         st.session_state['logueado'] = False
         st.rerun()
 
-# Aplicación de los filtros
+# Aplicar filtros
 df_f = df_raw.copy()
 for col, val in filtros.items():
     if val != "Todos" and col in df_f.columns:
         df_f = df_f[df_f[col] == val]
 
-# Título de la App
 st.markdown('<h2 style="color: #1E1E1E;">🛡️ EDF SEGUROS</h2>', unsafe_allow_html=True)
 
 # ==========================================
-# 📑 PESTAÑAS PRINCIPALES
+# 📑 PESTAÑAS
 # ==========================================
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "📊 ANÁLISIS"])
 
-# --- TAB 1: CARTERA TOTAL ---
+# --- TAB 1 & 2: CARTERA Y VENCIMIENTOS ---
 with tab1:
-    busq = st.text_input("Buscar asegurado, póliza o documento...")
-    if not df_f.empty:
-        df_mostrar = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
-        st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
+    busq = st.text_input("Buscar en cartera filtrada...")
+    st.dataframe(df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f, use_container_width=True, hide_index=True)
 
-# --- TAB 2: VENCIMIENTOS ---
 with tab2:
-    dias = st.slider("Ver vencimientos en los próximos (días):", 15, 180, 60)
+    dias = st.slider("Vencimientos en los próximos (días):", 15, 120, 60)
     if 'Fin_V_dt' in df_f.columns:
-        vence = df_f[(df_f['Fin_V_dt'] >= date.today()) & (df_f['Fin_V_dt'] <= date.today() + timedelta(days=dias))]
-        st.dataframe(vence.sort_values('Fin_V_dt'), use_container_width=True, hide_index=True)
+        df_v = df_f[(df_f['Fin_V_dt'] >= date.today()) & (df_f['Fin_V_dt'] <= date.today() + timedelta(days=dias))]
+        st.dataframe(df_v.sort_values('Fin_V_dt'), use_container_width=True)
 
-# --- TAB 3: COTIZADOR PROFESIONAL ---
+# --- TAB 3: COTIZADOR CON FILTRO DE EJECUTIVO ---
 with tab3:
-    st.subheader("📝 Generador de Cotizaciones")
+    st.subheader("📝 Nueva Cotización")
     with st.container(border=True):
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3 = st.columns([1,1,1])
         with c1:
             ci_bus = st.text_input("CI / RUT")
-            nombre_cli = st.text_input("Asegurado")
+            nombre_cli = st.text_input("Cliente")
         with c2:
             vehiculo = st.text_input("Vehículo")
             zona = st.selectbox("Zona", ["Montevideo", "Canelones", "Maldonado", "Interior"])
         with c3:
-            eje_opciones = sorted(df_raw['Ejecutivo'].dropna().unique().tolist()) if 'Ejecutivo' in df_raw.columns else ["Oficina"]
-            ejecutivo_cot = st.selectbox("Ejecutivo Responsable", eje_opciones)
+            # Aquí asignamos el ejecutivo a la cotización
+            ejes_list = sorted(df_raw['Ejecutivo'].dropna().unique().tolist()) if 'Ejecutivo' in df_raw.columns else ["Sin Asignar"]
+            ejecutivo_cot = st.selectbox("Ejecutivo Responsable", ejes_list)
 
+    st.markdown("#### 💰 Costos")
     if 'data_cot' not in st.session_state:
-        st.session_state.data_cot = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Básico"}])
+        st.session_state.data_cot = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"}])
     cot_editada = st.data_editor(st.session_state.data_cot, num_rows="dynamic", use_container_width=True)
 
-    col_iz, col_de = st.columns(2)
-    with col_iz:
-        st.markdown("#### ✅ Beneficios Incluidos")
-        inc = st.text_area("Pre-escritos:", "• Auxilio mecánico 24hs\n• Cristales y cerraduras sin deducible\n• Responsabilidad Civil USD 500.000", height=150)
-    with col_de:
+    col_i, col_d = st.columns(2)
+    with col_i:
+        st.markdown("#### ✅ Incluidos")
+        inc = st.text_area("Fijos:", "• Auxilio 24hs\n• Cristales/Cerraduras\n• RC USD 500.000", height=150)
+    with col_d:
         st.markdown("#### ➕ Detalle de Cobertura")
         ca, cb = st.columns(2)
-        p_alq = ca.number_input("Costo Alquiler", 3900)
-        p_bici = cb.number_input("Costo Bici", 70)
-        det_text = f"- Vehículo de Alquiler por 15 días: UYU {p_alq}\n- Seguro de Bicicleta (Robo): USD {p_bici}"
-        det = st.text_area("Opcionales editables:", det_text, height=100)
+        p_alq = ca.number_input("Precio Alquiler", 3900)
+        p_bici = cb.number_input("Precio Bici", 70)
+        t_opc = f"- Auxilio de Alquiler: UYU {p_alq}\n- Seguro Bici: USD {p_bici}"
+        det_cob = st.text_area("Opcionales:", t_opc, height=100)
 
     if st.button("💾 Guardar Cotización", use_container_width=True):
         nueva = {
             "Fecha": date.today().strftime("%d/%m/%Y"), "Cliente": nombre_cli, "Documento": ci_bus,
-            "Vehiculo": vehiculo, "Zona": zona, "Ejecutivo": ejecutivo_cot, 
-            "Tabla": cot_editada.to_json(), "Incluidos": inc, "Opcionales": det
+            "Vehiculo": vehiculo, "Zona": zona, "Ejecutivo": ejecutivo_cot, # Guardamos el ejecutivo
+            "Tabla": cot_editada.to_json(), "Incluidos": inc, "Opcionales": det_cob
         }
         try:
-            df_h = conn.read(spreadsheet=URL_HOJA, worksheet="Cotizaciones Emitidas")
-            conn.update(spreadsheet=URL_HOJA, worksheet="Cotizaciones Emitidas", data=pd.concat([df_h, pd.DataFrame([nueva])], ignore_index=True))
+            df_h = conn.read(spreadsheet=URL_HOJA, worksheet="Cotizaciones_Emitidas")
+            conn.update(spreadsheet=URL_HOJA, worksheet="Cotizaciones_Emitidas", data=pd.concat([df_h, pd.DataFrame([nueva])], ignore_index=True))
             st.session_state['cot_activa'] = nueva
-            st.success(f"✅ ¡Guardado con éxito por {ejecutivo_cot}!")
-        except: st.error("Error: Asegúrate que la pestaña se llame 'Cotizaciones Emitidas'")
+            st.success(f"✅ Guardada por {ejecutivo_cot}")
+        except: st.error("Error: ¿Existe la pestaña 'Cotizaciones_Emitidas'?")
 
     if 'cot_activa' in st.session_state:
         c = st.session_state['cot_activa']
@@ -178,8 +178,8 @@ with tab3:
         st.markdown(f"""
             <div class="print-only">
                 <h1>🛡️ EDF SEGUROS</h1><hr>
-                <p><b>Cliente:</b> {c['Cliente']} | <b>Ejecutivo:</b> {c['Ejecutivo']}</p>
-                <p><b>Vehículo:</b> {c['Vehiculo']} | <b>Zona:</b> {c['Zona']}</p>
+                <p><b>Propuesta para:</b> {c['Cliente']} | <b>Ejecutivo:</b> {c['Ejecutivo']}</p>
+                <p><b>Vehículo:</b> {c['Vehiculo']}</p>
                 {tabla_html}
                 <div class="titulo-cuadro">✅ BENEFICIOS INCLUIDOS</div>
                 <div class="cuadro-beneficios" style="white-space: pre-wrap;">{c['Incluidos']}</div>
@@ -187,41 +187,29 @@ with tab3:
                 <div class="cuadro-beneficios" style="white-space: pre-wrap;">{c['Opcionales']}</div>
             </div>
         """, unsafe_allow_html=True)
-        st.info("Presioná **Control + P** para exportar la cotización activa.")
 
-    # HISTORIAL DE COTIZACIONES
+    # HISTORIAL CON BUSCADOR (FILTRO)
     st.markdown("---")
-    st.subheader("📂 Historial y Filtro de Cotizaciones")
-    f_hist = st.text_input("Filtrar historial por ejecutivo o cliente...")
+    st.subheader("📂 Historial de Cotizaciones")
+    busqueda_hist = st.text_input("Filtrar historial por Ejecutivo o Cliente...")
     try:
-        df_h = conn.read(spreadsheet=URL_HOJA, worksheet="Cotizaciones Emitidas").sort_index(ascending=False)
-        if f_hist:
-            df_h = df_h[df_h.astype(str).apply(lambda x: x.str.contains(f_hist, case=False)).any(axis=1)]
-        for i, r in df_h.head(10).iterrows():
-            ch1, ch2 = st.columns([0.85, 0.15])
-            ch1.write(f"📄 {r['Fecha']} - **{r['Cliente']}** (Eje: {r.get('Ejecutivo','-')})")
-            if ch2.button("Ver", key=f"hist_{i}"):
+        df_hist = conn.read(spreadsheet=URL_HOJA, worksheet="Cotizaciones_Emitidas").sort_index(ascending=False)
+        if busqueda_hist:
+            df_hist = df_hist[df_hist.astype(str).apply(lambda x: x.str.contains(busqueda_hist, case=False)).any(axis=1)]
+        
+        for i, r in df_hist.head(10).iterrows():
+            colh1, colh2 = st.columns([0.8, 0.2])
+            colh1.write(f"📄 {r['Fecha']} - **{r['Cliente']}** (Eje: {r.get('Ejecutivo', 'N/A')})")
+            if colh2.button("Ver", key=f"btn_{i}"):
                 st.session_state['cot_activa'] = r.to_dict()
                 st.rerun()
-    except: pass
+    except: st.info("No hay historial.")
 
-# --- TAB 4: ANÁLISIS (AL FINAL) ---
+# --- TAB 4: ANÁLISIS ---
 with tab4:
-    st.subheader("📊 Análisis de Cartera")
+    st.subheader("📊 Análisis General")
     if not df_f.empty:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Cartera (USD)", f"{df_f['Premio_Total_USD'].sum():,.0f}")
+        c1, c2 = st.columns(2)
+        c1.metric("Cartera Total USD", f"{df_f['Premio_Total_USD'].sum():,.0f}")
         c2.metric("Pólizas", len(df_f))
-        c3.metric("Ticket Promedio", f"{df_f['Premio_Total_USD'].mean():,.0f}")
-        
-        st.markdown("---")
-        col_pie, col_bar = st.columns(2)
-        with col_pie:
-            if 'Aseguradora' in df_f.columns:
-                st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía", hole=0.3), use_container_width=True)
-        with col_bar:
-            if 'Ramo' in df_f.columns:
-                df_ramo = df_f['Ramo'].value_counts().reset_index()
-                st.plotly_chart(px.bar(df_ramo, x='Ramo', y='count', title="Cantidad por Ramo", color='Ramo'), use_container_width=True)
-    else:
-        st.info("Aplica filtros o carga datos para ver el análisis.")
+        st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Distribución por Compañía"), use_container_width=True)
