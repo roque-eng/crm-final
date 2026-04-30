@@ -12,64 +12,72 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos CSS: Web + Íconos + Lógica de Impresión que NO sale en blanco
+# ==========================================
+# 🎨 ESTILOS CSS (CARPETA + IMPRESIÓN REAL)
+# ==========================================
 st.markdown("""
     <style>
+    /* Estilo Web General */
     .main .block-container { padding-top: 1.5rem; }
     .left-title { font-size: 30px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 20px; }
     
-    /* Estilo para el link de carpeta clickeable */
-    .folder-link { text-decoration: none; font-size: 1.3rem; }
+    /* Estilo para el icono de carpeta en la tabla */
+    .folder-btn {
+        text-decoration: none;
+        font-size: 1.5rem;
+        color: #007bff;
+        display: block;
+        text-align: center;
+    }
 
-    /* Estilos para la tabla de la cotización */
-    .tabla-impresion { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    .tabla-impresion th, .tabla-impresion td { border: 1px solid #333 !important; padding: 8px; text-align: left; }
-    .tabla-impresion th { background-color: #f2f2f2 !important; }
-    
-    .cuadro-beneficios { border: 1px solid #333; padding: 15px; margin-top: 10px; background-color: #fdfdfd; }
-    .titulo-cuadro { background-color: #1E1E1E; color: white; padding: 5px 10px; font-weight: bold; margin-top: 15px; }
+    /* Estilos de la Cotización para el PDF */
+    .tabla-pdf { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .tabla-pdf th, .tabla-pdf td { border: 1px solid #000 !important; padding: 10px; text-align: left; }
+    .tabla-pdf th { background-color: #f2f2f2 !important; }
+    .titulo-seccion { background-color: #1E1E1E; color: white; padding: 8px 12px; font-weight: bold; margin-top: 20px; }
+    .caja-texto { border: 1px solid #000; padding: 15px; background-color: #fff; min-height: 100px; }
 
-    /* LÓGICA DE IMPRESIÓN MEJORADA */
+    /* LÓGICA DE IMPRESIÓN (SOLUCIONA EL PDF EN BLANCO) */
     @media print {
-        /* Ocultar elementos web */
+        /* Ocultar absolutamente todo lo que es Streamlit */
         header, footer, .no-print, [data-testid="stSidebar"], [data-testid="stHeader"], 
-        .stTabs, button, [data-testid="stToolbar"], .stCheckbox, .stMarkdown button, .stSpinner { 
+        .stTabs, button, [data-testid="stToolbar"], [data-testid="stDecoration"],
+        .stSpinner, .stException { 
             display: none !important; 
         }
         
-        /* Forzar visualización del contenido de cotización */
-        .print-only { 
+        /* Forzar que el contenido sea visible y ocupe toda la página */
+        .print-area { 
             display: block !important; 
             visibility: visible !important;
-            position: absolute;
-            left: 0; top: 0; width: 100%;
-            z-index: 9999;
-            background-color: white;
+            width: 100% !important;
+            height: auto !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            background-color: white !important;
         }
         
-        .main .block-container { padding: 0; margin: 0; }
-        .titulo-cuadro { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        body { background-color: white !important; }
+        .main .block-container { padding: 0 !important; margin: 0 !important; }
     }
 
-    /* Oculto en web normal */
-    .print-only { display: none; }
+    /* En la web, el área de impresión está oculta */
+    .print-area { display: none; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 GESTIÓN DE USUARIOS
+# 🔐 SEGURIDAD
 # ==========================================
-USUARIOS = {
-    "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025",
-    "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025"
-}
+USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025"}
 
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
 
 if not st.session_state['logueado']:
     st.markdown("<h1 style='text-align: center;'>🛡️ EDF SEGUROS</h1>", unsafe_allow_html=True)
-    _, col2, _ = st.columns([1, 1, 1])
-    with col2:
+    _, col, _ = st.columns([1, 1, 1])
+    with col:
         with st.form("login"):
             u = st.text_input("Usuario")
             p = st.text_input("Contraseña", type="password")
@@ -78,7 +86,7 @@ if not st.session_state['logueado']:
                     st.session_state['logueado'] = True
                     st.session_state['usuario_actual'] = u
                     st.rerun()
-                else: st.error("❌ Credenciales incorrectas")
+                else: st.error("Credenciales incorrectas")
     st.stop()
 
 # ==========================================
@@ -87,7 +95,7 @@ if not st.session_state['logueado']:
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 @st.cache_data(ttl=300)
-def cargar_datos_principales():
+def cargar_datos_completos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
@@ -95,30 +103,28 @@ def cargar_datos_principales():
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce')
-        df['Fin_V_dt'] = df['Fin de Vigencia'].dt.date
         return df
     except: return pd.DataFrame()
 
-df_raw = cargar_datos_principales()
+df_raw = cargar_datos_completos()
 
 # ==========================================
-# 🎯 SIDEBAR (FILTROS)
+# 🎯 SIDEBAR (FILTROS SOLICITADOS)
 # ==========================================
 with st.sidebar:
     st.markdown(f"### 👤 {st.session_state['usuario_actual']}")
     st.divider()
-    st.subheader("🔍 Filtros Globales")
     f_ej = st.selectbox("Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
     f_as = st.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
     f_ra = st.selectbox("Ramo", ["Todos"] + sorted(df_raw['Ramo'].dropna().unique().tolist()))
     f_co = st.selectbox("Corredor", ["Todos"] + sorted(df_raw['Corredor'].dropna().unique().tolist()))
     f_ag = st.selectbox("Agente", ["Todos"] + sorted(df_raw['Agente'].dropna().unique().tolist()))
     
-    st.divider()
     if st.button("Cerrar Sesión", use_container_width=True):
         st.session_state['logueado'] = False
         st.rerun()
 
+# Filtros
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
@@ -133,96 +139,80 @@ st.markdown('<p class="left-title">🛡️ EDF SEGUROS</p>', unsafe_allow_html=T
 # ==========================================
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "📊 ANÁLISIS"])
 
-# --- TAB 1: CARTERA (Con ícono 📂) ---
+# --- CARTERA ---
 with tab1:
-    busqueda = st.text_input("Buscar cliente o matrícula...", placeholder="Ej: Juan Perez")
-    df_tab1 = df_f.copy()
-    if busqueda:
-        mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
-        df_tab1 = df_tab1[mask]
+    busq = st.text_input("Buscar cliente o matrícula...")
+    df_cartera = df_f.copy()
+    if busq:
+        df_cartera = df_cartera[df_cartera.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)]
     
-    def format_icon(url):
+    # Crear la columna de la carpetita
+    def crear_link(url):
         if pd.isna(url) or str(url).strip() == "": return ""
-        return f'<a href="{url}" target="_blank" class="folder-link">📂</a>'
+        return f'<a href="{url}" target="_blank" class="folder-btn">📂</a>'
 
-    if 'Link de la Poliza' in df_tab1.columns:
-        df_tab1['Póliza'] = df_tab1['Link de la Poliza'].apply(format_icon)
-        cols = ['Póliza'] + [c for c in df_tab1.columns if c not in ['Póliza', 'Link de la Poliza', 'Fin_V_dt', 'Premio_Total_USD']]
-        st.write(df_tab1[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
+    if 'Link de la Poliza' in df_cartera.columns:
+        df_cartera['Ver'] = df_cartera['Link de la Poliza'].apply(crear_link)
+        cols = ['Ver'] + [c for c in df_cartera.columns if c not in ['Ver', 'Link de la Poliza']]
+        st.write(df_cartera[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
     else:
-        st.dataframe(df_tab1, use_container_width=True, hide_index=True)
+        st.dataframe(df_cartera, use_container_width=True, hide_index=True)
 
-# --- TAB 2: VENCIMIENTOS ---
+# --- VENCIMIENTOS ---
 with tab2:
-    dias_v = st.slider("Días a futuro:", 15, 120, 30)
+    dias = st.slider("Días a futuro:", 15, 120, 30)
     hoy = date.today()
-    limite = hoy + timedelta(days=dias_v)
-    df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].sort_values('Fin_V_dt')
+    limite = hoy + timedelta(days=dias)
+    df_v = df_f[(df_f['Fin de Vigencia'].dt.date >= hoy) & (df_f['Fin de Vigencia'].dt.date <= limite)].sort_values('Fin de Vigencia')
     st.dataframe(df_v, use_container_width=True, hide_index=True)
 
-# --- TAB 3: COTIZADOR (VISTA IMPRIMIBLE) ---
+# --- COTIZADOR ---
 with tab3:
-    st.subheader("📝 Generador de Cotizaciones")
+    st.subheader("📝 Generar Cotización")
     with st.container(border=True):
         c1, c2 = st.columns(2)
-        with c1:
-            ci_bus = st.text_input("CI / RUT del cliente")
-            nombre_init = ""
-            if ci_bus:
-                match = df_raw[df_raw['Documento de Identidad (Rut/Cédula/Otros)'].astype(str).str.contains(ci_bus, na=False)]
-                if not match.empty: nombre_init = match.iloc[0]['Asegurado (Nombre/Razón Social)']
-            nombre_cli = st.text_input("Asegurado", value=nombre_init)
-        with c2:
-            vehiculo = st.text_input("Vehículo")
-            zona = st.selectbox("Zona", ["Montevideo", "Canelones", "Maldonado", "Interior"])
+        ci_rut = c1.text_input("CI / RUT del cliente")
+        n_cli = c1.text_input("Nombre Asegurado")
+        vehiculo = c2.text_input("Vehículo")
+        zona = c2.selectbox("Zona", ["Montevideo", "Canelones", "Maldonado", "Interior"])
 
-    df_cot = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"}])
-    cot_editada = st.data_editor(df_cot, num_rows="dynamic", use_container_width=True)
+    df_prop = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"}])
+    tabla_edit = st.data_editor(df_prop, num_rows="dynamic", use_container_width=True)
 
-    izq, der = st.columns(2)
-    inc = izq.text_area("✅ Beneficios Incluidos", value="• Auxilio mecánico 24hs.\n• Cristales, cerraduras y espejos sin deducible.\n• RC USD 500.000.", height=150)
-    opc = der.text_area("➕ Adicionales", value="INCLUYE HOGAR:\n- Incendio Edificio USD 100.000\n- Hurto USD 5.000\n\nINCLUYE ALQUILER:\n- 15 días por choque.", height=150)
+    iz, de = st.columns(2)
+    ben = iz.text_area("✅ Beneficios Incluidos", value="• Auxilio mecánico 24hs.\n• Cristales, cerraduras y espejos.\n• RC USD 500.000.", height=150)
+    ad = de.text_area("➕ Adicionales", value="INCLUYE HOGAR:\n- Incendio Edificio USD 100.000\n- Hurto USD 5.000\n\nINCLUYE ALQUILER:\n- 15 días por choque.", height=150)
 
-    # El botón ahora simplemente activa la variable de sesión
-    if st.button("👁️ Generar Propuesta para PDF", use_container_width=True):
-        st.session_state['propuesta'] = {
+    if st.button("👁️ Generar Vista para Impresión"):
+        st.session_state['pdf'] = {
             "Fecha": date.today().strftime("%d/%m/%Y"),
-            "Cliente": nombre_cli, "Vehiculo": vehiculo,
-            "Tabla": cot_editada.to_html(index=False, classes='tabla-impresion'),
-            "Inc": inc, "Opc": opc
+            "Cliente": n_cli, "Vehiculo": vehiculo, "Tabla": tabla_edit.to_html(index=False, classes='tabla-pdf'),
+            "Inc": ben, "Opc": ad
         }
 
-    if 'propuesta' in st.session_state:
-        p = st.session_state['propuesta']
-        # Bloque HTML para impresión
+    if 'pdf' in st.session_state:
+        p = st.session_state['pdf']
+        # ÁREA DE IMPRESIÓN (La que sale en el PDF)
         st.markdown(f"""
-            <div class="print-only">
-                <div style="display: flex; justify-content: space-between;">
+            <div class="print-area">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h1 style="margin: 0;">🛡️ EDF SEGUROS</h1>
                     <p><b>Fecha:</b> {p['Fecha']}</p>
                 </div>
-                <hr>
-                <p style="font-size: 1.2rem;"><b>Propuesta para:</b> {p['Cliente']}</p>
+                <hr style="border: 1px solid #000;">
+                <p style="font-size: 1.3rem;"><b>Asegurado:</b> {p['Cliente']}</p>
                 <p><b>Vehículo:</b> {p['Vehiculo']}</p>
-                <br>
                 {p['Tabla']}
-                <div class="titulo-cuadro">✅ BENEFICIOS INCLUIDOS</div>
-                <div class="cuadro-beneficios" style="white-space: pre-wrap;">{p['Inc']}</div>
-                <div class="titulo-cuadro">➕ COBERTURAS ADICIONALES</div>
-                <div class="cuadro-beneficios" style="white-space: pre-wrap;">{p['Opc']}</div>
+                <div class="titulo-seccion">✅ BENEFICIOS INCLUIDOS</div>
+                <div class="caja-texto" style="white-space: pre-wrap;">{p['Inc']}</div>
+                <div class="titulo-seccion">➕ COBERTURAS ADICIONALES</div>
+                <div class="caja-texto" style="white-space: pre-wrap;">{p['Opc']}</div>
             </div>
         """, unsafe_allow_html=True)
-        st.info("Propuesta generada. Presiona **Control + P** para guardar.")
+        st.success("✅ Vista lista. Presiona **Ctrl + P** para guardar PDF.")
 
-# --- TAB 4: ANÁLISIS ---
+# --- ANÁLISIS ---
 with tab4:
     if not df_f.empty:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Cartera Total", f"USD {df_f['Premio_Total_USD'].sum():,.0f}")
-        c2.metric("Pólizas", len(df_f))
-        st.divider()
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
-        with col_b:
-            st.plotly_chart(px.bar(df_f['Ramo'].value_counts().reset_index(), x='Ramo', y='count', title="Pólizas por Ramo"), use_container_width=True)
+        st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Compañía", hole=0.3), use_container_width=True)
+        st.plotly_chart(px.bar(df_f['Ramo'].value_counts().reset_index(), x='Ramo', y='count', title="Pólizas por Ramo"), use_container_width=True)
