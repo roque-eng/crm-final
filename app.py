@@ -12,29 +12,37 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
+# Estilos CSS críticos para evitar el PDF en blanco
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
-    .stDataFrame { border: 1px solid #f0f2f6; border-radius: 5px; }
     
-    /* Estilos para que el PDF no salga en blanco */
+    /* Lógica de Impresión Profesional */
     @media print {
+        /* Oculta la interfaz de Streamlit que causa el error de página en blanco */
         header, footer, .no-print, [data-testid="stSidebar"], [data-testid="stHeader"], 
-        .stTabs, button, [data-testid="stToolbar"] { 
+        .stTabs, button, [data-testid="stToolbar"], [data-testid="stDecoration"] { 
             display: none !important; 
         }
-        .section-to-print { display: block !important; width: 100%; }
+        
+        /* Fuerza la visibilidad del contenido de la cotización */
+        .section-to-print { 
+            display: block !important; 
+            visibility: visible !important;
+            position: absolute;
+            left: 0; top: 0; width: 100%;
+        }
     }
+    /* Oculta el bloque de impresión en la vista web normal */
     .section-to-print { display: none; }
     
-    .titulo-pdf { font-size: 32px; font-weight: bold; color: #1E1E1E; }
-    .sub-pdf { font-size: 18px; color: #555; margin-bottom: 20px; }
+    .titulo-pdf { font-size: 32px; font-weight: bold; color: #1E1E1E; border-bottom: 2px solid #1E1E1E; }
     .cuadro-gris { background-color: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 SEGURIDAD
+# 🔐 SEGURIDAD (Login)
 # ==========================================
 USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025"}
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
@@ -70,7 +78,7 @@ def cargar_datos():
 
 df_raw = cargar_datos()
 
-# Sidebar con Filtros Globales
+# Sidebar con Filtros Globales (Restaurados)
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -86,127 +94,109 @@ if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
 
 # ==========================================
-# 📑 PESTAÑAS PRINCIPALES
+# 📑 PESTAÑAS
 # ==========================================
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "📊 ANÁLISIS"])
 
-# --- TAB 1: CARTERA (INTERACTIVA CON ÍCONO) ---
+# --- TAB 1: CARTERA ---
 with tab1:
     busq = st.text_input("🔍 Buscar por cliente, matrícula o documento...")
     df_c = df_f.copy()
     if busq:
         df_c = df_c[df_c.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)]
     
-    if 'Adjunto (póliza)' in df_c.columns:
-        # Usamos LinkColumn para mantener el ordenamiento y filtros
-        st.dataframe(
-            df_c, use_container_width=True, hide_index=True,
-            column_config={
-                "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂")
-            }
-        )
-    else:
-        st.dataframe(df_c, use_container_width=True, hide_index=True)
+    # Icono de carpetita funcional y tabla ordenable
+    st.dataframe(
+        df_c, use_container_width=True, hide_index=True,
+        column_config={
+            "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂")
+        }
+    )
 
 # --- TAB 3: COTIZADOR (TODO RESTAURADO) ---
 with tab3:
     st.subheader("📝 Módulo de Cotización")
-    
     with st.container(border=True):
         c1, c2, c3 = st.columns([1, 1, 1])
-        # Lógica de búsqueda por CI/RUT
         doc_input = c1.text_input("Documento (CI / RUT)")
+        
+        # Lógica de autocompletado por CI/RUT
         nombre_sugerido = ""
         if doc_input:
-            busqueda_cli = df_raw[df_raw['Documento de Identidad (Rut/Cédula/Otros)'].astype(str).str.contains(doc_input)]
-            if not busqueda_cli.empty:
-                nombre_sugerido = busqueda_cli.iloc[0]['Asegurado (Nombre/Razón Social)']
+            match = df_raw[df_raw['Documento de Identidad (Rut/Cédula/Otros)'].astype(str).str.contains(doc_input)]
+            if not match.empty:
+                nombre_sugerido = match.iloc[0]['Asegurado (Nombre/Razón Social)']
         
         nombre_cli = c2.text_input("Asegurado", value=nombre_sugerido)
-        ejecutivo_cot = c3.selectbox("Ejecutivo Responsable", sorted(df_raw['Ejecutivo'].dropna().unique()))
+        ejecutivo_cot = c3.selectbox("Ejecutivo Responsable", ["Roque de Freitas", "Joe", "Andre"])
         
-        c4, c5 = st.columns(2)
-        vehiculo_cot = c4.text_input("Vehículo (Marca, Modelo, Año)")
-        zona_cot = c5.selectbox("Zona de Circulación", ["Montevideo", "Canelones", "Maldonado", "Interior", "Todo el País"])
+        cx, cy = st.columns(2)
+        vehiculo_cot = cx.text_input("Vehículo (Marca, Modelo, Año)")
+        zona_cot = cy.selectbox("Zona de Circulación", ["Montevideo", "Canelones", "Maldonado", "Interior"])
 
     st.markdown("#### 📊 Comparativa de Seguros")
     df_propu = pd.DataFrame([
         {"Aseguradora": "BSE", "Contado": 0.0, "6 Cuotas": 0.0, "10 Cuotas": 0.0, "Deducible": "Global"},
-        {"Aseguradora": "SURCO", "Contado": 0.0, "6 Cuotas": 0.0, "10 Cuotas": 0.0, "Deducible": "Global"}
+        {"Aseguradora": "SBI", "Contado": 0.0, "6 Cuotas": 0.0, "10 Cuotas": 0.0, "Deducible": "Global"}
     ])
     tabla_cot = st.data_editor(df_propu, num_rows="dynamic", use_container_width=True)
 
-    st.markdown("#### ✅ Coberturas y Adicionales (Editables)")
     col_a, col_b = st.columns(2)
-    
     with col_a:
-        st.write("**Beneficios Base:**")
-        beneficios = st.text_area("Incluidos en la propuesta", 
-            "• Auxilio mecánico 24hs (Sin límite)\n• Cristales, Cerraduras y Espejos (Sin Deducible)\n• Responsabilidad Civil USD 500.000", height=120)
-    
+        beneficios = st.text_area("Beneficios Incluidos", 
+            "• Auxilio mecánico 24hs.\n• Cristales, Cerraduras y Espejos sin deducible.\n• RC USD 500.000", height=150)
     with col_b:
-        st.write("**Costos Adicionales:**")
-        casa = st.text_input("Seguro de Casa (Costo)", "Incluido")
-        alquiler = st.text_input("Vehículo de Alquiler", "15 días por choque/robo")
-        bici = st.text_input("Seguro de Bicicleta", "Opcional USD 25/mes")
+        casa = st.text_input("Seguro Hogar", "Incluido - Incendio USD 100.000")
+        alquiler = st.text_input("Auto Alquiler", "15 días por choque")
+        bici = st.text_input("Seguro Bici", "Opcional USD 20/mes")
 
     if st.button("🔥 GENERAR VISTA DE IMPRESIÓN"):
         st.session_state['imprimir'] = True
-        st.session_state['p_datos'] = {
+        st.session_state['datos_p'] = {
             "cliente": nombre_cli, "vehiculo": vehiculo_cot, "ejecutivo": ejecutivo_cot,
             "zona": zona_cot, "tabla": tabla_cot, "beneficios": beneficios,
             "casa": casa, "alquiler": alquiler, "bici": bici
         }
 
+    # SECCIÓN QUE SE ACTIVA PARA EL PDF
     if st.session_state.get('imprimir'):
-        d = st.session_state['p_datos']
+        d = st.session_state['datos_p']
         st.divider()
-        # HTML para el PDF (Visible solo al imprimir)
         st.markdown(f"""
             <div class="section-to-print">
                 <div class="titulo-pdf">🛡️ EDF SEGUROS</div>
-                <div class="sub-pdf">Propuesta Comercial | {date.today().strftime('%d/%m/%Y')}</div>
-                <hr>
-                <p><b>Asegurado:</b> {d['cliente']} | <b>Ejecutivo:</b> {d['ejecutivo']}</p>
-                <p><b>Vehículo:</b> {d['vehiculo']} | <b>Zona:</b> {d['zona']}</p>
+                <p><b>Fecha:</b> {date.today().strftime('%d/%m/%Y')} | <b>Asegurado:</b> {d['cliente']}</p>
+                <p><b>Vehículo:</b> {d['vehiculo']} | <b>Ejecutivo:</b> {d['ejecutivo']}</p>
                 <br>
             </div>
         """, unsafe_allow_html=True)
         
-        st.table(d['tabla']) # Tabla estática para el PDF
+        # Mostramos una tabla estática (st.table) que sí es reconocida por el motor de impresión
+        st.table(d['tabla'])
         
         st.markdown(f"""
             <div class="section-to-print">
-                <div style="display: flex; gap: 20px; margin-top: 20px;">
+                <div style="display: flex; gap: 20px;">
                     <div class="cuadro-gris" style="flex: 1;">
-                        <b>BENEFICIOS INCLUIDOS:</b><br>{d['beneficios'].replace('\\n', '<br>')}
+                        <b>BENEFICIOS:</b><br>{d['beneficios'].replace('\\n', '<br>')}
                     </div>
                     <div class="cuadro-gris" style="flex: 1;">
-                        <b>COBERTURAS ADICIONALES:</b><br>
-                        • Casa: {d['casa']}<br>
+                        <b>ADICIONALES:</b><br>
+                        • Hogar: {d['casa']}<br>
                         • Alquiler: {d['alquiler']}<br>
                         • Bicicleta: {d['bici']}
                     </div>
                 </div>
-                <p style="text-align: center; margin-top: 30px; font-size: 12px; color: gray;">
-                    Propuesta sujeta a inspección y políticas de la aseguradora.
-                </p>
             </div>
         """, unsafe_allow_html=True)
-        st.info("✅ Propuesta lista. Presiona **Ctrl + P** para guardar como PDF.")
+        st.info("✅ Propuesta lista. Ahora presiona **Ctrl + P** para guardar el PDF.")
 
-# --- TAB 4: ANÁLISIS (GRÁFICA RESTAURADA) ---
+# --- TAB 4: ANÁLISIS ---
 with tab4:
     if not df_f.empty:
-        col_m1, col_m2 = st.columns(2)
-        col_m1.metric("Cartera Total (USD)", f"{df_f['Premio_Total_USD'].sum():,.0f}")
-        col_m2.metric("Total Pólizas", len(df_f))
-        
         col_g1, col_g2 = st.columns(2)
         with col_g1:
-            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Aseguradora"), use_container_width=True)
+            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía"), use_container_width=True)
         with col_g2:
-            # Gráfica de Barras por Ramo
             ramos_df = df_f['Ramo'].value_counts().reset_index()
-            ramos_df.columns = ['Ramo', 'Cantidad']
-            st.plotly_chart(px.bar(ramos_df, x='Ramo', y='Cantidad', color='Ramo', title="Pólizas por Ramo"), use_container_width=True)
+            st.plotly_chart(px.bar(ramos_df, x='Ramo', y='count', title="Pólizas por Ramo"), use_container_width=True)
