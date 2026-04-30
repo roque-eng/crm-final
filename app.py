@@ -104,28 +104,24 @@ with tab1:
         column_config={"Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂")}
     )
 
-# --- TAB 2: VENCIMIENTOS (FILTRO ARREGLADO) ---
+# --- TAB 2: VENCIMIENTOS ---
 with tab2:
     st.subheader("🔄 Control de Vencimientos")
     if not df_f.empty:
-        # Limpieza de fechas para evitar años locos (filtramos rango 2020-2040)
         df_v = df_f.dropna(subset=['Fin de Vigencia'])
         df_v = df_v[(df_v['Fin de Vigencia'] >= date(2020, 1, 1)) & (df_v['Fin de Vigencia'] <= date(2040, 12, 31))]
         
         if not df_v.empty:
             col_f1, col_f2 = st.columns([1, 2])
             with col_f1:
-                # El filtro ahora sugiere por defecto el mes actual
                 hoy = date.today()
                 f_inicio = st.date_input("Vencimientos desde:", hoy.replace(day=1))
                 f_final = st.date_input("Vencimientos hasta:", hoy + timedelta(days=90))
             
             df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_inicio) & (df_v['Fin de Vigencia'] <= f_final)]
             st.dataframe(df_venc_final.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True)
-    else:
-        st.info("No hay datos de vencimientos disponibles.")
 
-# --- TAB 3: COTIZADOR (ESPACIO AMPLIADO) ---
+# --- TAB 3: COTIZADOR (CON TEXTOS PRE-ESCRITOS) ---
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
     with st.container(border=True):
@@ -153,10 +149,15 @@ with tab3:
     
     with col_b:
         st.write("**Coberturas Complementarias:**")
-        # Cuadros de texto con altura ajustada (5, 3 y 4 renglones aprox)
-        c_hogar = st.text_area("Hogar (Precio/Detalle):", "Incluido", height=130)
-        c_alq = st.text_area("Alquiler (Precio/Detalle):", "15 días por choque", height=90)
-        c_bici = st.text_area("Bici (Precio/Detalle):", "Opcional", height=110)
+        
+        # TEXTOS PRE-ESCRITOS SEGÚN TU IMAGEN
+        txt_hogar = "• Incendio Edificio e Incendio Contenido.\n• Hurto Contenido.\n• Cristales.\n• Responsabilidad Civil.\n• Daños por Agua."
+        txt_alq = "• Auto de cortesía por 15 días en caso de siniestro con un tercero identificado."
+        txt_bici = "• Hurto e Incendio de bicicleta en República Oriental del Uruguay y el mundo.\n• Responsabilidad Civil."
+
+        c_hogar = st.text_area("Hogar:", value=txt_hogar, height=150)
+        c_alq = st.text_area("Alquiler:", value=txt_alq, height=90)
+        c_bici = st.text_area("Bici:", value=txt_bici, height=120)
 
     def generar_excel():
         output = io.BytesIO()
@@ -177,8 +178,8 @@ with tab3:
                 ws.write(curr, 0, '✅ BENEFICIOS:', f_h)
                 ws.write(curr+1, 0, ben_cot)
                 ws.write(curr+7, 0, '🏠 COMPLEMENTARIAS:', f_h)
-                ws.write(curr+8, 0, f"Hogar: {c_hogar}\nAlquiler: {c_alq}\nBici: {c_bici}")
-                ws.set_column('A:E', 25)
+                ws.write(curr+8, 0, f"Hogar:\n{c_hogar}\n\nAlquiler:\n{c_alq}\n\nBici:\n{c_bici}")
+                ws.set_column('A:E', 35)
             return output.getvalue()
         except: return None
 
