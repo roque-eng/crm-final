@@ -1,5 +1,6 @@
-streamlit
 pandas
-st-gsheets-connection
 plotly
-fpdf
+streamlit
+st-gsheets-connection
+xlsxwriter
+openpyxl
