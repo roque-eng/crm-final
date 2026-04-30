@@ -75,11 +75,11 @@ df_raw = cargar_datos_completos()
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
-    st.subheader("📅 Filtro de Tiempo")
+    st.subheader("📅 Rango de Vencimientos")
     if not df_raw.empty:
         f_min = df_raw['Fin de Vigencia'].min()
         f_max = df_raw['Fin de Vigencia'].max()
-        rango_s = st.date_input("Vencimientos entre:", [f_min, f_max])
+        rango_s = st.date_input("Filtrar fechas:", [f_min, f_max])
     
     st.subheader("🔍 Otros Filtros")
     f_ej = st.selectbox("Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
@@ -99,75 +99,119 @@ if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 
 st.markdown("# 🛡️ EDF SEGUROS")
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "📊 ANÁLISIS"])
+# --- TAB 1: CARTERA ---
 with tab1:
     busq = st.text_input("🔍 Buscar cliente o matrícula...")
-    df_c = df_f.copy()
+    df_cartera = df_f.copy()
     if busq:
-        mask = df_c.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)
-        df_c = df_c[mask]
-    st.dataframe(df_c, use_container_width=True, hide_index=True,
-                 column_config={"Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂")})
+        mask = df_cartera.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)
+        df_cartera = df_cartera[mask]
+    
+    st.dataframe(
+        df_cartera, use_container_width=True, hide_index=True,
+        column_config={"Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂")}
+    )
 
+# --- TAB 2: VENCIMIENTOS ---
 with tab2:
-    st.subheader("📅 Control de Vencimientos")
+    st.subheader("🔄 Control de Vencimientos")
     st.dataframe(df_f.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True)
 
+# --- TAB 3: COTIZADOR (AJUSTADO SEGÚN TUS PEDIDOS) ---
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
+    
     with st.container(border=True):
         c1, c2, c3 = st.columns(3)
         doc_in = c1.text_input("Documento (CI / RUT)")
+        
+        # Autocompletado inteligente
         nom_sug = ""
         if doc_in:
             match = df_raw[df_raw['Documento de Identidad (Rut/Cédula/Otros)'].astype(str).str.contains(doc_in)]
-            if not match.empty: nom_sug = match.iloc[0]['Asegurado (Nombre/Razón Social)']
+            if not match.empty:
+                nom_sug = match.iloc[0]['Asegurado (Nombre/Razón Social)']
+        
         nombre_cot = c1.text_input("Asegurado", value=nom_sug)
-        vehi_cot = c2.text_input("Vehículo")
+        vehi_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
         ejecutivo_cot = c3.selectbox("Hecha por:", sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
 
-    tabla_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"}]), num_rows="dynamic", use_container_width=True)
+    st.write("### 💰 Tabla Comparativa de Costos")
+    df_init = pd.DataFrame([
+        {"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"},
+        {"Aseguradora": "SBI", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"}
+    ])
+    tabla_edit = st.data_editor(df_init, num_rows="dynamic", use_container_width=True)
 
+    st.write("### ✅ Beneficios y Coberturas Complementarias")
     col_a, col_b = st.columns(2)
+    
     with col_a:
-        st.write("**Beneficios:**")
-        ben_cot = st.text_area("Editar Beneficios", "• Auxilio mecánico 24hs.\n• Ayuda económica para cristales:\n  - USD 200 SBI / USD 200 BSE\n  - USD 100 SURA / USD 300 SANCOR\n  - Ilimitado MAPFRE\n• RC USD 500.000", height=200)
+        st.write("**Beneficios Incluidos:**")
+        beneficios_cot = st.text_area("Editar Beneficios", 
+            "• Auxilio mecánico 24hs.\n• Ayuda económica para cristales:\n  - USD 200 SBI / USD 200 BSE\n  - USD 100 SURA / USD 300 SANCOR\n  - Ilimitado MAPFRE\n• RC USD 500.000", height=200)
+    
     with col_b:
         st.write("**Coberturas Complementarias:**")
-        c_hogar = st.text_input("Hogar", "Incluido")
-        c_alq = st.text_input("Alquiler", "15 días")
-        c_bici = st.text_input("Bici", "Opcional")
+        c_hogar = st.text_input("Seguro Hogar (Precio/Detalle)", "Incluido")
+        c_alq = st.text_input("Auto Alquiler (Precio/Detalle)", "15 días por choque")
+        c_bici = st.text_input("Seguro Bici", "Opcional")
 
-    def generar_excel():
+    # Función para generar el Excel Profesional
+    def generar_excel_format():
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             workbook = writer.book
             ws = workbook.add_worksheet('Cotización')
-            f_h = workbook.add_format({'bold': True, 'bg_color': '#1a4a7a', 'font_color': 'white', 'border': 1})
-            ws.write('A1', '🛡️ EDF SEGUROS - PROPUESTA', workbook.add_format({'bold': True, 'font_size': 14}))
+            
+            # Formatos de diseño
+            f_tit = workbook.add_format({'bold': True, 'font_size': 14})
+            f_header = workbook.add_format({'bold': True, 'bg_color': '#1a4a7a', 'font_color': 'white', 'border': 1})
+            f_sub = workbook.add_format({'bold': True, 'bg_color': '#D9EAD3', 'border': 1})
+            f_border = workbook.add_format({'border': 1})
+
+            ws.write('A1', '🛡️ EDF SEGUROS - PROPUESTA', f_tit)
             ws.write('A3', f'Asegurado: {nombre_cot}')
             ws.write('A4', f'Vehículo: {vehi_cot}')
             ws.write('A5', f'Hecha por: {ejecutivo_cot}')
-            for c, col in enumerate(tabla_edit.columns): ws.write(7, c, col, f_h)
-            for r, row in enumerate(tabla_edit.values):
-                for c, val in enumerate(row): ws.write(r+8, c, val, workbook.add_format({'border':1}))
-            curr = 8 + len(tabla_edit) + 2
-            ws.write(curr, 0, 'BENEFICIOS:', f_h)
-            ws.write(curr+1, 0, ben_cot)
-            ws.write(curr+6, 0, 'COMPLEMENTARIAS:', f_h)
-            ws.write(curr+7, 0, f"Hogar: {c_hogar} | Alquiler: {c_alq} | Bici: {c_bici}")
+
+            # Tabla de Precios
+            start_row = 7
+            for col_num, value in enumerate(tabla_edit.columns.values):
+                ws.write(start_row, col_num, value, f_header)
+            for row_num, row_data in enumerate(tabla_edit.values):
+                for col_num, cell_data in enumerate(row_data):
+                    ws.write(start_row + 1 + row_num, col_num, cell_data, f_border)
+
+            # Coberturas
+            curr = start_row + len(tabla_edit) + 2
+            ws.write(curr, 0, '✅ BENEFICIOS:', f_sub)
+            ws.write(curr + 1, 0, beneficios_cot)
+            ws.write(curr + 6, 0, '🏠 COMPLEMENTARIAS:', f_sub)
+            ws.write(curr + 7, 0, f"Hogar: {c_hogar} | Alquiler: {c_alq} | Bici: {c_bici}")
             ws.set_column('A:E', 25)
         return output.getvalue()
 
-    st.download_button("📥 Descargar Propuesta (Excel)", data=generar_excel(), file_name=f"Cotizacion_{nombre_cot}.xlsx", use_container_width=True)
+    st.download_button(
+        label="📥 Descargar Propuesta Profesional (Excel)",
+        data=generar_excel_format(),
+        file_name=f"Cotizacion_{nombre_cot}.xlsx",
+        use_container_width=True
+    )
 
+# --- TAB 4: ANÁLISIS ---
 with tab4:
     if not df_f.empty:
         m1, m2, m3 = st.columns(3)
         m1.metric("Cartera Total (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
         m2.metric("Pólizas", f"{len(df_f)} u.")
         m3.metric("Ticket Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
+        
+        st.divider()
         col_g1, col_g2 = st.columns(2)
-        with col_g1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
+        with col_g1:
+            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
         with col_g2:
             ramos = df_f['Ramo'].value_counts().reset_index()
-            st.plotly_chart(px.bar(ramos, x='Ramo', y='count', title="Pólizas por Ramo", color='Ramo'), use_container_width=True)
+            ramos.columns = ['Ramo', 'Cantidad']
+            st.plotly_chart(px.bar(ramos, x='Ramo', y='Cantidad', color='Ramo', title="Pólizas por Ramo"), use_container_width=True)
