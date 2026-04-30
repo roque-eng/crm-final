@@ -1,16 +1,13 @@
 import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
-import json
-from datetime import datetime, date, timedelta
-import plotly.express as px
+from datetime import datetime
 
 # ==========================================
 # ⚙️ CONFIGURACIÓN DE ENLACES
 # ==========================================
 URL_EMPRESA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 URL_MI_DRIVE = "https://docs.google.com/spreadsheets/d/1rd_ZCEUxolcgr9WaNUxzqjJVsL7tFvOOS4CaMZOrR8E/edit#gid=0"
-TC_USD = 40.5 
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
@@ -28,141 +25,106 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Conexión única (usa los Secrets configurados)
+# Conexión principal
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# ==========================================
-# 🔐 SEGURIDAD
-# ==========================================
-USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025"}
+# --- LOGIN ---
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
-
 if not st.session_state['logueado']:
-    st.markdown("<h1 style='text-align: center;'>🛡️ EDF SEGUROS</h1>", unsafe_allow_html=True)
-    _, col2, _ = st.columns([1, 1, 1])
-    with col2:
+    with st.columns([1,1,1])[1]:
         with st.form("login"):
+            st.markdown("### 🛡️ Acceso EDF")
             u = st.text_input("Usuario")
             p = st.text_input("Contraseña", type="password")
-            if st.form_submit_button("Ingresar"):
-                if u in USUARIOS and USUARIOS[u] == p:
+            if st.form_submit_button("Ingresar", use_container_width=True):
+                if u == "RDF" and p == "Rockuda.4428":
                     st.session_state['logueado'] = True
-                    st.session_state['usuario_actual'] = u
                     st.rerun()
-                else: st.error("❌ Credenciales incorrectas")
+                else: st.error("Credenciales incorrectas")
     st.stop()
 
-# ==========================================
-# ⚙️ CARGA DE DATOS (EMPRESA)
-# ==========================================
+# --- CARGA DE CARTERA ---
 @st.cache_data(ttl=300)
-def cargar_datos():
+def cargar_cartera():
     try:
         df = conn.read(spreadsheet=URL_EMPRESA, ttl=0)
         df.columns = df.columns.str.strip()
-        # Cálculo de premios
-        df['Premio_Total_USD'] = pd.to_numeric(df.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + \
-                                (pd.to_numeric(df.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / TC_USD)
         return df
-    except Exception as e:
-        st.error(f"Error de conexión con la cartera: {e}")
-        return pd.DataFrame()
+    except: return pd.DataFrame()
 
-df_raw = cargar_datos()
+df_raw = cargar_cartera()
 
 st.title("🛡️ EDF SEGUROS")
-tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "📊 ANÁLISIS"])
+t1, t2 = st.tabs(["👥 CARTERA", "📝 COTIZADOR"])
 
-# --- TAB 3: COTIZADOR (El que estamos armando) ---
-with tab3:
-    st.subheader("Generador de Cotizaciones")
+with t1:
+    busq = st.text_input("Buscar cliente...")
+    if not df_raw.empty:
+        df_f = df_raw[df_raw.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_raw
+        st.dataframe(df_f, use_container_width=True, hide_index=True)
+
+with t2:
+    st.subheader("📝 Nueva Cotización")
     with st.container(border=True):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            doc_input = st.text_input("CI / RUT para buscar cliente")
-            nombre_auto = ""
-            if doc_input and not df_raw.empty:
-                # Buscar cliente por documento
-                col_doc = 'Documento de Identidad (Rut/Cédula/Otros)'
-                if col_doc in df_raw.columns:
-                    filtro = df_raw[df_raw[col_doc].astype(str).str.contains(doc_input, na=False)]
-                    if not filtro.empty:
-                        nombre_auto = filtro.iloc[0]['Asegurado (Nombre/Razón Social)']
-            nombre_cli = st.text_input("Nombre Asegurado", value=nombre_auto)
-        with c2:
-            vehiculo = st.text_input("Vehículo")
-            zona = st.selectbox("Zona", ["Montevideo", "Interior", "Canelones", "Maldonado"])
-        with c3:
-            ejes = sorted(df_raw['Ejecutivo'].dropna().unique().tolist()) if 'Ejecutivo' in df_raw.columns else ["Roque"]
-            ejecutivo_cot = st.selectbox("Ejecutivo", ejes)
+        col1, col2 = st.columns(2)
+        doc_in = col1.text_input("CI / RUT")
+        n_auto = ""
+        if doc_in and not df_raw.empty:
+            col_doc = 'Documento de Identidad (Rut/Cédula/Otros)'
+            if col_doc in df_raw.columns:
+                m = df_raw[df_raw[col_doc].astype(str).str.contains(doc_in, na=False)]
+                if not m.empty: n_auto = m.iloc[0]['Asegurado (Nombre/Razón Social)']
+        
+        n_cli = col1.text_input("Asegurado", value=n_auto)
+        veh = col2.text_input("Vehículo")
+        zn = col2.selectbox("Zona", ["Montevideo", "Interior", "Canelones", "Maldonado"])
 
-    # Tabla de Aseguradoras
-    st.write("💰 **Comparativa de Costos**")
-    df_editor = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"}])
-    costos_finales = st.data_editor(df_editor, num_rows="dynamic", use_container_width=True)
+    st.write("💰 **Costos**")
+    df_c = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"}])
+    costos_edit = st.data_editor(df_c, num_rows="dynamic", use_container_width=True)
 
-    # Beneficios y Hogar
-    col_iz, col_de = st.columns(2)
-    with col_iz:
-        inc = st.text_area("✅ Beneficios Incluidos", "• Auxilio Mecánico 24hs\n• Cristales, Cerraduras y Ópticas\n• RC USD 500.000", height=200)
-    with col_de:
-        texto_hogar_alq = (
-            "Adicionales:\n\n"
-            "INCLUYA SEGURO DE HOGAR:\n"
-            "- Incendio Edificio USD 100.000\n"
-            "- Incendio Contenido USD 50.000\n"
-            "- Hurto Contenido USD 10.000\n"
-            "Costo Anual:\n\n"
-            "INCLUYA VEHÍCULO DE ALQUILER:\n"
-            "- En caso de choque de su vehículo asegurado, hasta 15 días de vehículo de alquiler.\n"
-            "Costo Anual:"
-        )
-        hogar = st.text_area("🏠 Adicionales Sugeridos", value=texto_hogar_alq, height=250)
+    c_iz, c_de = st.columns(2)
+    inc = c_iz.text_area("✅ Beneficios", "• Auxilio Mecánico 24hs\n• Cristales, Cerraduras y Ópticas\n• RC USD 500.000", height=250)
+    
+    txt_adicionales = (
+        "Adicionales:\n\n"
+        "INCLUYA SEGURO DE HOGAR:\n"
+        "- Incendio Edificio USD 100.000\n"
+        "- Incendio Contenido USD 50.000\n"
+        "- Hurto Contenido USD 10.000\n"
+        "Costo Anual:\n\n"
+        "INCLUYA VEHÍCULO DE ALQUILER:\n"
+        "- En caso de choque de su vehículo asegurado, hasta 15 días de vehículo de alquiler.\n"
+        "Costo Anual:"
+    )
+    hog = c_de.text_area("🏠 Adicionales", value=txt_adicionales, height=250)
 
-    if st.button("Guardar Cotización"):
-        if not nombre_cli:
-            st.error("❌ Por favor completa el nombre del asegurado.")
+    if st.button("Guardar Cotización", use_container_width=True):
+        if not n_cli: st.error("Falta el nombre")
         else:
-            nueva = {
-                "Fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "Cliente": nombre_cli, "Documento": doc_input,
-                "Vehiculo": vehiculo, "Zona": zona, "Ejecutivo": ejecutivo_cot,
-                "Tabla_Costos": costos_finales.to_json(), "Detalles": f"{inc}\n\n{hogar}"
-            }
+            nueva_fila = pd.DataFrame([{
+                "Fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "Cliente": n_cli,
+                "Documento": doc_in,
+                "Vehiculo": veh,
+                "Zona": zn,
+                "Ejecutivo": "Roque de Freitas",
+                "Tabla_Costos": costos_edit.to_json(orient='records'),
+                "Detalles": f"{inc}\n\n{hog}"
+            }])
             try:
-                # Escribimos en tu Drive personal
-                df_h = conn.read(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", ttl=0)
-                df_up = pd.concat([df_h, pd.DataFrame([nueva])], ignore_index=True)
-                conn.update(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", data=df_up)
-                st.session_state['ultima_cot'] = nueva
-                st.success("✅ ¡Cotización guardada exitosamente en tu Drive!")
+                # 1. Leer lo que hay (ahora está vacío pero traerá los encabezados)
+                df_existente = conn.read(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", ttl=0)
+                # 2. Unir
+                df_final = pd.concat([df_existente, nueva_fila], ignore_index=True)
+                # 3. Escribir
+                conn.update(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", data=df_final)
+                st.success("✅ Guardado con éxito en tu Drive")
+                st.session_state['ultima_cot'] = nueva_fila.iloc[0].to_dict()
             except Exception as e:
-                st.error(f"Error al guardar: {e}. Recuerda compartir el Excel con el nuevo mail como EDITOR.")
+                st.error(f"Error al guardar: {e}")
 
-    # Historial rápido
-    st.divider()
-    st.subheader("📂 Últimas Cotizaciones Guardadas")
-    try:
-        df_hist = conn.read(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", ttl=0).iloc[::-1]
-        for i, r in df_hist.head(10).iterrows():
-            with st.expander(f"📄 {r['Fecha']} - {r['Cliente']}"):
-                st.write(f"**Vehículo:** {r['Vehiculo']}")
-                if st.button("Seleccionar para Impresión", key=f"p_{i}"):
-                    st.session_state['ultima_cot'] = r.to_dict()
-                    st.rerun()
-    except: st.info("No se pudo cargar el historial todavía.")
-
-# Vista de impresión
+# Vista para imprimir
 if 'ultima_cot' in st.session_state:
     c = st.session_state['ultima_cot']
-    st.markdown(f"""
-        <div class="print-only">
-            <h1>🛡️ EDF SEGUROS</h1><hr>
-            <p><b>Asegurado:</b> {c['Cliente']} | <b>Vehículo:</b> {c['Vehiculo']}</p>
-            <div class="titulo-cuadro">DETALLES Y BENEFICIOS</div>
-            <div class="cuadro-beneficios" style="white-space: pre-wrap;">{c['Detalles']}</div>
-        </div>
-    """, unsafe_allow_html=True)
-
-with tab1: st.dataframe(df_raw, use_container_width=True, hide_index=True)
-with tab2: st.write("Módulo de Vencimientos")
-with tab4: st.plotly_chart(px.pie(df_raw, names='Aseguradora', values='Premio_Total_USD', title="Distribución de Cartera"))
+    st.markdown(f"""<div class="print-only"><h1>🛡️ EDF SEGUROS</h1><hr><p><b>Cliente:</b> {c['Cliente']}</p><div class="titulo-cuadro">COBERTURA</div><div class="cuadro-beneficios" style="white-space: pre-wrap;">{c['Detalles']}</div></div>""", unsafe_allow_html=True)
