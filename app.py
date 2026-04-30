@@ -8,11 +8,8 @@ import plotly.express as px
 # ==========================================
 # ⚙️ CONFIGURACIÓN DE ENLACES
 # ==========================================
-# Planilla de la Empresa (Cartera)
 URL_EMPRESA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
-# Tu Planilla Personal (Cotizaciones)
 URL_MI_DRIVE = "https://docs.google.com/spreadsheets/d/1rd_ZCEUxolcgr9WaNUxzqjJVsL7tFvOOS4CaMZOrR8E/edit#gid=0"
-
 TC_USD = 40.5 
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
@@ -61,10 +58,9 @@ if not st.session_state['logueado']:
 @st.cache_data(ttl=300)
 def cargar_cartera():
     try:
-        # Cargamos los datos de la empresa
         df = conn.read(spreadsheet=URL_EMPRESA, ttl=0)
         df.columns = df.columns.str.strip()
-        # Cálculo de premios para la pestaña de análisis
+        # Cálculo de premios para análisis
         u_col, p_col = 'Premio USD (IVA inc)', 'Premio UYU (IVA inc)'
         df['Premio_Total_USD'] = pd.to_numeric(df.get(u_col, 0), errors='coerce').fillna(0) + \
                                 (pd.to_numeric(df.get(p_col, 0), errors='coerce').fillna(0) / TC_USD)
@@ -87,8 +83,15 @@ with tab1:
     if not df_raw.empty:
         df_f = df_raw[df_raw.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_raw
         st.dataframe(df_f, use_container_width=True, hide_index=True)
-    else:
-        st.warning("⚠️ No se detectan datos en la cartera. Verifica el acceso del nuevo mail al Excel de la empresa.")
+
+# --- TAB 2: VENCIMIENTOS ---
+with tab2:
+    if not df_raw.empty and 'Fin de Vigencia' in df_raw.columns:
+        st.subheader("Pólizas próximas a vencer")
+        df_raw['Fin_V_dt'] = pd.to_datetime(df_raw['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
+        dias = st.slider("Días a futuro", 15, 90, 30)
+        vence = df_raw[(df_raw['Fin_V_dt'] >= date.today()) & (df_raw['Fin_V_dt'] <= date.today() + timedelta(days=dias))]
+        st.dataframe(vence.sort_values('Fin_V_dt'), use_container_width=True)
 
 # --- TAB 3: COTIZADOR ---
 with tab3:
@@ -99,7 +102,6 @@ with tab3:
             doc_in = st.text_input("CI / RUT para buscar cliente")
             n_auto = ""
             if doc_in and not df_raw.empty:
-                # Buscador inteligente en columnas de identificación
                 for col in df_raw.columns:
                     if any(x in col.lower() for x in ['documento', 'ci', 'rut']):
                         m = df_raw[df_raw[col].astype(str).str.contains(doc_in, na=False)]
@@ -114,74 +116,58 @@ with tab3:
             eje_list = sorted(df_raw['Ejecutivo'].dropna().unique().tolist()) if 'Ejecutivo' in df_raw.columns else ["Roque"]
             eje = st.selectbox("Ejecutivo responsable", eje_list)
 
-    # Editor de costos
     st.write("💰 **Comparativa de Costos**")
     costos_df = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"}])
     costos_edit = st.data_editor(costos_df, num_rows="dynamic", use_container_width=True)
 
     col_i, col_d = st.columns(2)
     with col_i:
-        inc = st.text_area("✅ Beneficios Incluidos", "• Auxilio Mecánico 24hs\n• Cristales, Cerraduras y Ópticas\n• RC USD 500.000\n• Asistencia en Viaje", height=150)
+        inc = st.text_area("✅ Beneficios Incluidos", "• Auxilio Mecánico 24hs\n• Cristales, Cerraduras y Ópticas\n• RC USD 500.000", height=150)
     with col_d:
-        hog = st.text_area("🏠 Seguro de Hogar / Adicionales", "COBERTURA HOGAR SIN COSTO:\n- Incendio Edificio USD 100.000\n- Hurto Contenido USD 10.000\n- Responsabilidad Civil Hogar", height=150)
+        hog = st.text_area("🏠 Seguro de Hogar / Adicionales", "INCLUYE HOGAR:\n- Incendio Edificio USD 100.000\n- Hurto Contenido USD 10.000\n- RC Hogar", height=150)
 
-    if st.button("💾 Guardar Cotización en mi Drive"):
+    if st.button("💾 Guardar Cotización"):
         if not n_cli:
-            st.error("❌ El nombre del asegurado es obligatorio para guardar.")
+            st.error("❌ El nombre es obligatorio.")
         else:
             nueva = {
                 "Fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), 
-                "Cliente": n_cli, 
-                "Documento": doc_in,
-                "Vehiculo": veh, 
-                "Zona": zn, 
-                "Ejecutivo": eje,
-                "Tabla_Costos": costos_edit.to_json(), 
-                "Detalles": f"{inc}\n\n{hog}"
+                "Cliente": n_cli, "Documento": doc_in, "Vehiculo": veh, "Zona": zn, "Ejecutivo": eje,
+                "Tabla_Costos": costos_edit.to_json(), "Detalles": f"{inc}\n\n{hog}"
             }
             try:
-                # Guardar en tu Drive Personal
                 df_h = conn.read(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", ttl=0)
                 df_up = pd.concat([df_h, pd.DataFrame([nueva])], ignore_index=True)
                 conn.update(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", data=df_up)
                 st.session_state['ultima_cot'] = nueva
-                st.success("✅ Guardado exitosamente en tu Excel personal.")
+                st.success("✅ Guardado en tu Drive personal.")
             except Exception as e:
-                st.error(f"Error al guardar: Verifica que la pestaña de tu Excel se llame 'Cotizaciones_Emitidas'. {e}")
+                st.error(f"Error al guardar: {e}")
 
     # Historial rápido
     st.divider()
-    st.subheader("📂 Historial Reciente (Tu Drive)")
+    st.subheader("📂 Últimas Cotizaciones Guardadas")
     try:
         df_hist = conn.read(spreadsheet=URL_MI_DRIVE, worksheet="Cotizaciones_Emitidas", ttl=0).iloc[::-1]
         for i, r in df_hist.head(5).iterrows():
             if st.button(f"📄 {r['Cliente']} - {r['Vehiculo']} ({r['Fecha']})", key=f"hist_{i}"):
                 st.session_state['ultima_cot'] = r.to_dict()
                 st.rerun()
-    except:
-        st.info("Aún no hay cotizaciones guardadas en este archivo.")
+    except: st.info("No hay historial aún.")
 
-# --- TAB 2 y 4 ---
-with tab2: st.info("Módulo de Vencimientos: Aquí aparecerán las pólizas próximas a vencer de la cartera cargada.")
-with tab4: 
+# --- TAB 4: ANÁLISIS ---
+with tab4:
     if not df_raw.empty:
-        st.plotly_chart(px.pie(df_raw, names='Aseguradora', values='Premio_Total_USD', title="Distribución de Cartera por Aseguradora (USD)"))
+        st.plotly_chart(px.pie(df_raw, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía"))
 
-# ==========================================
-# 🖨️ VISTA DE IMPRESIÓN
-# ==========================================
+# Vista de Impresión
 if 'ultima_cot' in st.session_state:
     c = st.session_state['ultima_cot']
     st.markdown(f"""
         <div class="print-only">
-            <h1 style="text-align:center;">🛡️ EDF SEGUROS</h1>
-            <hr>
-            <p><b>FECHA DE EMISIÓN:</b> {c['Fecha']}</p>
+            <h1 style="text-align:center;">🛡️ EDF SEGUROS</h1><hr>
             <p><b>ASEGURADO:</b> {c['Cliente']} | <b>VEHÍCULO:</b> {c['Vehiculo']}</p>
-            <div class="titulo-cuadro">DETALLES DE COBERTURA Y BENEFICIOS ADICIONALES</div>
+            <div class="titulo-cuadro">DETALLES DE COBERTURA</div>
             <div class="cuadro-beneficios" style="white-space: pre-wrap;">{c['Detalles']}</div>
-            <p style="margin-top:30px; font-size:11px; color:gray; text-align:center;">
-                Esta cotización es de carácter informativo y queda sujeta a la aprobación de la compañía aseguradora.
-            </p>
         </div>
     """, unsafe_allow_html=True)
