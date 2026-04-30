@@ -12,26 +12,47 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos CSS mejorados para visualización y botones de enlace
+# Estilos CSS para Impresión, Diseño y Botones
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
     .left-title { font-size: 30px !important; font-weight: bold; color: #1E1E1E; margin-bottom: 20px; }
     
-    /* Estilos para impresión profesional */
-    .tabla-impresion { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; margin-top: 15px; }
-    .tabla-impresion th, .tabla-impresion td { border: 1px solid #333 !important; padding: 10px; text-align: left; }
-    .tabla-impresion th { background-color: #f2f2f2 !important; }
-    .cuadro-beneficios { border: 1px solid #333; padding: 15px; margin-top: 10px; background-color: #fdfdfd; }
-    .titulo-cuadro { background-color: #1E1E1E; color: white; padding: 5px 10px; font-weight: bold; margin-top: 15px; }
-
-    /* Estilo para el link de póliza tipo botón */
-    .btn-poliza {
-        display: inline-block; padding: 4px 8px; background-color: #f0f2f6; 
-        color: #31333F; text-decoration: none; border-radius: 4px; border: 1px solid #dcdfe6;
-        font-size: 12px; font-weight: 500;
+    /* Estilo para el link tipo ícono de carpeta */
+    .folder-link {
+        text-decoration: none;
+        font-size: 1.2rem;
+        transition: 0.3s;
     }
-    .btn-poliza:hover { background-color: #e6e9ef; }
+    .folder-link:hover { transform: scale(1.2); }
+
+    /* Estilos para la tabla e informes de impresión */
+    .tabla-impresion {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial, sans-serif;
+        margin-top: 15px;
+    }
+    .tabla-impresion th, .tabla-impresion td {
+        border: 1px solid #333 !important;
+        padding: 10px;
+        text-align: left;
+    }
+    .tabla-impresion th { background-color: #f2f2f2 !important; }
+    
+    .cuadro-beneficios {
+        border: 1px solid #333;
+        padding: 15px;
+        margin-top: 10px;
+        background-color: #fdfdfd;
+    }
+    .titulo-cuadro {
+        background-color: #1E1E1E;
+        color: white;
+        padding: 5px 10px;
+        font-weight: bold;
+        margin-top: 15px;
+    }
 
     @media print {
         .no-print, .stSidebar, .stTabs, button, header, footer, [data-testid="stToolbar"], .stCheckbox, .stMarkdown button { 
@@ -39,7 +60,8 @@ st.markdown("""
         }
         .print-only { 
             display: block !important; 
-            position: absolute; left: 0; top: 0; width: 100%;
+            position: absolute;
+            left: 0; top: 0; width: 100%;
         }
         table, tr, td, th { page-break-inside: avoid !important; }
     }
@@ -51,7 +73,8 @@ st.markdown("""
 # 🔐 GESTIÓN DE USUARIOS
 # ==========================================
 USUARIOS = {
-    "RDF": "Rockuda.4428", "AB": "ABentancor2025", "JOE": "Joe2025", "ANDRE": "Andre2025"
+    "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025",
+    "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025"
 }
 
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
@@ -68,7 +91,8 @@ if not st.session_state['logueado']:
                     st.session_state['logueado'] = True
                     st.session_state['usuario_actual'] = u
                     st.rerun()
-                else: st.error("❌ Credenciales incorrectas")
+                else:
+                    st.error("❌ Credenciales incorrectas")
     st.stop()
 
 # ==========================================
@@ -86,20 +110,22 @@ def cargar_datos_principales():
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce')
         df['Fin_V_dt'] = df['Fin de Vigencia'].dt.date
         return df
-    except: return pd.DataFrame()
+    except:
+        return pd.DataFrame()
 
 df_raw = cargar_datos_principales()
 
 # ==========================================
-# 🎯 SIDEBAR
+# 🎯 SIDEBAR (FILTROS)
 # ==========================================
 with st.sidebar:
     st.markdown(f"### 👤 {st.session_state['usuario_actual']}")
     st.divider()
-    st.subheader("🔍 Filtros")
+    st.markdown("### 🔍 Filtros de Cartera")
     f_ej = st.selectbox("Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
     f_as = st.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
     
+    st.divider()
     if st.button("Cerrar Sesión", use_container_width=True):
         st.session_state['logueado'] = False
         st.rerun()
@@ -117,19 +143,20 @@ tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COT
 
 # --- TAB 1: CARTERA (Con ícono de póliza) ---
 with tab1:
-    busqueda = st.text_input("Buscar cliente o matrícula...")
+    busqueda = st.text_input("Buscar cliente o póliza...", placeholder="Ej: Juan Perez o 123456")
     df_tab1 = df_f.copy()
     if busqueda:
         mask = df_tab1.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)
         df_tab1 = df_tab1[mask]
     
-    # Formatear link de póliza como botón
-    def format_link(url):
-        if pd.isna(url) or str(url) == "": return "N/A"
-        return f'<a href="{url}" target="_blank" class="btn-poliza">📄 Abrir</a>'
+    # Función para convertir link en carpetita clickeable
+    def link_con_icono(url):
+        if pd.isna(url) or str(url).strip() == "": return ""
+        return f'<a href="{url}" target="_blank" class="folder-link">📂</a>'
 
     if 'Link de la Poliza' in df_tab1.columns:
-        df_tab1['Póliza'] = df_tab1['Link de la Poliza'].apply(format_link)
+        df_tab1['Póliza'] = df_tab1['Link de la Poliza'].apply(link_con_icono)
+        # Reordenamos para que el ícono esté al principio
         cols = ['Póliza'] + [c for c in df_tab1.columns if c not in ['Póliza', 'Link de la Poliza', 'Fin_V_dt', 'Premio_Total_USD']]
         st.write(df_tab1[cols].to_html(escape=False, index=False), unsafe_allow_html=True)
     else:
@@ -137,15 +164,16 @@ with tab1:
 
 # --- TAB 2: VENCIMIENTOS ---
 with tab2:
-    dias_v = st.slider("Días a futuro:", 15, 120, 30)
+    dias_v = st.slider("Días a futuro:", 15, 365, 60)
     hoy = date.today()
     limite = hoy + timedelta(days=dias_v)
     df_v = df_f[(df_f['Fin_V_dt'] >= hoy) & (df_f['Fin_V_dt'] <= limite)].sort_values('Fin_V_dt')
     st.dataframe(df_v, use_container_width=True, hide_index=True)
 
-# --- TAB 3: COTIZADOR (MODO IMPRESIÓN) ---
+# --- TAB 3: COTIZADOR (VISTA IMPRIMIBLE) ---
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
+    
     with st.container(border=True):
         c1, c2 = st.columns(2)
         with c1:
@@ -157,58 +185,69 @@ with tab3:
             nombre_cli = st.text_input("Nombre y Apellido", value=nombre_init)
         with c2:
             vehiculo = st.text_input("Vehículo (Marca, Modelo, Año)")
-            ejecutivo_firma = st.selectbox("Ejecutivo que firma", ["Roque de Freitas", "Joe", "Andre"])
+            zona = st.selectbox("Zona de Circulación", ["Montevideo", "Canelones", "Maldonado", "Interior"])
 
-    st.markdown("#### 💰 Comparativa")
-    df_cot_base = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"}])
+    st.markdown("#### 💰 Comparativa de Aseguradoras")
+    df_cot_base = pd.DataFrame([
+        {"Aseguradora": "BSE", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"},
+        {"Aseguradora": "SBI", "Contado": 0, "6 Cuotas": 0, "10 Cuotas": 0, "Deducible": "Global"}
+    ])
     cot_editada = st.data_editor(df_cot_base, num_rows="dynamic", use_container_width=True)
 
     col_izq, col_der = st.columns(2)
     with col_izq:
-        def_inc = "• Auxilio mecánico 24hs.\n• Cristales, cerraduras y espejos sin deducible.\n• Responsabilidad Civil USD 500.000."
-        beneficios_inc = st.text_area("✅ Beneficios Incluidos", value=def_inc, height=150)
+        beneficios_inc = st.text_area("✅ Beneficios Incluidos", 
+                                     value="• Auxilio mecánico 24hs.\n• Cristales, cerraduras y espejos sin deducible.\n• Responsabilidad Civil USD 500.000.", 
+                                     height=200)
     with col_der:
-        def_opc = "• Vehículo de Alquiler por 15 días: UYU 3.900\n• Seguro de Hogar (Incendio/Hurto): USD 150 anual."
-        beneficios_opc = st.text_area("➕ Adicionales/Opcionales", value=def_opc, height=150)
+        beneficios_opc = st.text_area("➕ Adicionales Sugeridos", 
+                                     value="INCLUYA SEGURO DE HOGAR:\n- Incendio Edificio USD 100.000\n- Hurto Contenido USD 5.000\n\nINCLUYA VEHÍCULO DE ALQUILER:\n- 15 días por choque.", 
+                                     height=200)
 
-    if st.button("👁️ Generar Vista de Impresión"):
-        st.session_state['imprimir_cot'] = {
+    if st.button("👁️ Generar Vista para PDF", use_container_width=True):
+        st.session_state['cot_activa'] = {
             "Fecha": date.today().strftime("%d/%m/%Y"),
-            "Cliente": nombre_cli, "Vehiculo": vehiculo, "Ejecutivo": ejecutivo_firma,
+            "Cliente": nombre_cli, "CI": ci_bus, "Vehiculo": vehiculo, "Zona": zona,
             "Tabla": cot_editada.to_html(index=False, classes='tabla-impresion'),
             "Inc": beneficios_inc, "Opc": beneficios_opc
         }
 
-    if 'imprimir_cot' in st.session_state:
-        ic = st.session_state['imprimir_cot']
+    if 'cot_activa' in st.session_state:
+        c = st.session_state['cot_activa']
+        st.markdown("---")
         st.markdown(f"""
             <div class="print-only">
-                <div style="display: flex; justify-content: space-between;">
-                    <h1 style="margin:0;">🛡️ EDF SEGUROS</h1>
-                    <p><b>Fecha:</b> {ic['Fecha']}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1 style="color: #1E1E1E; margin: 0;">🛡️ EDF SEGUROS</h1>
+                    <p style="margin: 0;"><b>Fecha:</b> {c['Fecha']}</p>
                 </div>
-                <hr>
-                <p><b>Asegurado:</b> {ic['Cliente']} | <b>Vehículo:</b> {ic['Vehiculo']}</p>
-                <p><b>Ejecutivo:</b> {ic['Ejecutivo']}</p>
-                {ic['Tabla']}
-                <div class="titulo-cuadro">BENEFICIOS INCLUIDOS</div>
-                <div class="cuadro-beneficios" style="white-space: pre-wrap;">{ic['Inc']}</div>
-                <div class="titulo-cuadro">COBERTURAS ADICIONALES</div>
-                <div class="cuadro-beneficios" style="white-space: pre-wrap;">{ic['Opc']}</div>
+                <hr style="border: 1px solid #1E1E1E;">
+                <p style="font-size: 18px;"><b>Propuesta para:</b> {c['Cliente']} | <b>CI:</b> {c['CI']}</p>
+                <p><b>Vehículo:</b> {c['Vehiculo']} | <b>Zona:</b> {c['Zona']}</p>
+                <br>
+                <h4 style="margin-bottom: 5px;">Comparativa de Aseguradoras:</h4>
+                {c['Tabla']}
+                <br>
+                <div class="titulo-cuadro">✅ BENEFICIOS INCLUIDOS EN TU PÓLIZA</div>
+                <div class="cuadro-beneficios" style="white-space: pre-wrap;">{c['Inc']}</div>
+                <div class="titulo-cuadro">➕ DETALLE DE COBERTURA (OPCIONALES)</div>
+                <div class="cuadro-beneficios" style="white-space: pre-wrap;">{c['Opc']}</div>
             </div>
         """, unsafe_allow_html=True)
-        st.success("✅ Propuesta generada abajo. Presiona **Ctrl + P** para guardar como PDF.")
+        st.success("✅ Propuesta generada abajo. Presiona **Control + P** para guardar como PDF.")
 
 # --- TAB 4: ANÁLISIS ---
 with tab4:
+    st.subheader("📈 Resumen de Cartera")
     if not df_f.empty:
         c1, c2, c3 = st.columns(3)
-        c1.metric("Cartera Total", f"USD {df_f['Premio_Total_USD'].sum():,.0f}")
-        c2.metric("Pólizas", len(df_f))
-        c3.metric("Ticket Promedio", f"USD {df_f['Premio_Total_USD'].mean():,.0f}")
+        c1.metric("Cartera Total", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
+        c2.metric("Pólizas Vigentes", len(df_f[df_f['Fin_V_dt'] >= date.today()]))
+        c3.metric("Ticket Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
         
+        st.divider()
         col_a, col_b = st.columns(2)
         with col_a:
-            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía"), use_container_width=True)
+            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía", hole=0.4), use_container_width=True)
         with col_b:
-            st.plotly_chart(px.bar(df_f['Ramo'].value_counts().reset_index(), x='Ramo', y='count', title="Pólizas por Ramo"), use_container_width=True)
+            st.plotly_chart(px.bar(df_f['Ramo'].value_counts().reset_index(), x='Ramo', y='count', title="Pólizas por Ramo", color='Ramo'), use_container_width=True)
