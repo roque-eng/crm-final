@@ -25,7 +25,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 SEGURIDAD
+# 🔐 SEGURIDAD (GESTIÓN DE USUARIOS)
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025",
@@ -60,17 +60,17 @@ def cargar_datos_completos():
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
         
-        # Limpieza de Premios (Sin decimales)
+        # Premios sin decimales
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = (df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)).round(0)
         
-        # Formato de Fechas (Solo fecha, sin hora 00:00:00)
+        # Fechas limpias (sin hora 00:00:00)
         df['Inicio de Vigencia'] = pd.to_datetime(df['Inicio de Vigencia'], dayfirst=True, errors='coerce').dt.date
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
         
         return df
-    except Exception as e:
+    except:
         return pd.DataFrame()
 
 df_raw = cargar_datos_completos()
@@ -82,11 +82,12 @@ with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
     
-    st.subheader("📅 Filtro por Vencimiento")
+    st.subheader("📅 Filtro de Tiempo")
     if not df_raw.empty:
+        # Filtro de tiempo por fecha de fin de vigencia
         f_min = df_raw['Fin de Vigencia'].min()
         f_max = df_raw['Fin de Vigencia'].max()
-        rango = st.date_input("Seleccionar rango:", [f_min, f_max])
+        rango_sidebar = st.date_input("Vencimientos entre:", [f_min, f_max])
     
     st.subheader("🔍 Otros Filtros")
     f_ej = st.selectbox("Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
@@ -98,10 +99,10 @@ with st.sidebar:
         st.session_state['logueado'] = False
         st.rerun()
 
-# Aplicar Filtros Globales
+# Aplicación de filtros globales
 df_f = df_raw.copy()
-if not df_raw.empty and isinstance(rango, list) and len(rango) == 2:
-    df_f = df_f[(df_f['Fin de Vigencia'] >= rango[0]) & (df_f['Fin de Vigencia'] <= rango[1])]
+if not df_raw.empty and isinstance(rango_sidebar, list) and len(rango_sidebar) == 2:
+    df_f = df_f[(df_f['Fin de Vigencia'] >= rango_sidebar[0]) & (df_f['Fin de Vigencia'] <= rango_sidebar[1])]
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
@@ -127,7 +128,7 @@ with tab1:
 
 # --- TAB 2: VENCIMIENTOS ---
 with tab2:
-    st.subheader("🔄 Control de Vencimientos")
+    st.subheader("📅 Control de Vencimientos")
     st.dataframe(df_f.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True)
 
 # --- TAB 3: COTIZADOR ---
@@ -147,7 +148,7 @@ with tab3:
         vehi_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
         ejecutivo_cot = c3.selectbox("Hecha por:", sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
 
-    st.write("### 💰 Comparativa de Costos")
+    st.write("### 💰 Tabla Comparativa")
     df_init = pd.DataFrame([
         {"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"},
         {"Aseguradora": "SBI", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"}
@@ -166,32 +167,33 @@ with tab3:
         c_alq = st.text_input("Auto Alquiler (Precio/Detalle)", "15 días por choque")
         c_bici = st.text_input("Seguro Bici", "Opcional")
 
-    # Función Excel Profesional
-    def generar_excel_cot():
+    def generar_excel_format():
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            workbook = writer.book
-            ws = workbook.add_worksheet('Cotización')
-            f_h = workbook.add_format({'bold': True, 'bg_color': '#1a4a7a', 'font_color': 'white', 'border': 1})
-            f_tit = workbook.add_format({'bold': True, 'font_size': 14})
-            ws.write('A1', '🛡️ EDF SEGUROS - PROPUESTA', f_tit)
-            ws.write('A3', f'Asegurado: {nombre_cot}')
-            ws.write('A4', f'Vehículo: {vehi_cot}')
-            ws.write('A5', f'Hecha por: {ejecutivo_cot}')
-            # Escribir Tabla
-            for c, col in enumerate(tabla_edit.columns): ws.write(7, c, col, f_h)
-            for r, row in enumerate(tabla_edit.values):
-                for c, val in enumerate(row): ws.write(r+8, c, val, workbook.add_format({'border':1}))
-            # Coberturas
-            curr = 8 + len(tabla_edit) + 2
-            ws.write(curr, 0, '✅ BENEFICIOS:', f_h)
-            ws.write(curr+1, 0, beneficios_cot)
-            ws.write(curr+6, 0, '🏠 COMPLEMENTARIAS:', f_h)
-            ws.write(curr+7, 0, f"Hogar: {c_hogar} | Alquiler: {c_alq} | Bici: {c_bici}")
-            ws.set_column('A:E', 25)
-        return output.getvalue()
+        try:
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                workbook = writer.book
+                ws = workbook.add_worksheet('Cotización')
+                f_h = workbook.add_format({'bold': True, 'bg_color': '#1a4a7a', 'font_color': 'white', 'border': 1})
+                f_tit = workbook.add_format({'bold': True, 'font_size': 14})
+                ws.write('A1', '🛡️ EDF SEGUROS - PROPUESTA', f_tit)
+                ws.write('A3', f'Asegurado: {nombre_cot}')
+                ws.write('A4', f'Vehículo: {vehi_cot}')
+                ws.write('A5', f'Hecha por: {ejecutivo_cot}')
+                for c, col in enumerate(tabla_edit.columns): ws.write(7, c, col, f_h)
+                for r, row in enumerate(tabla_edit.values):
+                    for c, val in enumerate(row): ws.write(r+8, c, val, workbook.add_format({'border':1}))
+                curr = 8 + len(tabla_edit) + 2
+                ws.write(curr, 0, '✅ BENEFICIOS:', f_h)
+                ws.write(curr+1, 0, beneficios_cot)
+                ws.write(curr+6, 0, '🏠 COMPLEMENTARIAS:', f_h)
+                ws.write(curr+7, 0, f"Hogar: {c_hogar} | Alquiler: {c_alq} | Bici: {c_bici}")
+                ws.set_column('A:E', 25)
+            return output.getvalue()
+        except Exception as e:
+            st.error(f"Error al generar Excel: {e}")
+            return None
 
-    st.download_button("📥 Descargar Propuesta (Excel)", data=generar_excel_cot(), file_name=f"Cotizacion_{nombre_cot}.xlsx", use_container_width=True)
+    st.download_button("📥 Descargar Propuesta (Excel)", data=generar_excel_format(), file_name=f"Cotizacion_{nombre_cot}.xlsx", use_container_width=True)
 
 # --- TAB 4: ANÁLISIS ---
 with tab4:
