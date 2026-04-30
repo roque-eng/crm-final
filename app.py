@@ -33,7 +33,6 @@ USUARIOS = {
 }
 
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
-
 if not st.session_state['logueado']:
     st.markdown("<h1 style='text-align: center;'>🛡️ EDF SEGUROS</h1>", unsafe_allow_html=True)
     _, col, _ = st.columns([1, 1, 1])
@@ -50,7 +49,7 @@ if not st.session_state['logueado']:
     st.stop()
 
 # ==========================================
-# ⚙️ CARGA Y PROCESAMIENTO DE DATOS
+# ⚙️ CARGA Y PROCESAMIENTO
 # ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -69,30 +68,18 @@ def cargar_datos_completos():
 
 df_raw = cargar_datos_completos()
 
-# ==========================================
-# 🎯 SIDEBAR (FILTROS Y TIEMPO)
-# ==========================================
+# --- SIDEBAR SIN FILTRO DE FECHA (PARA EVITAR ERRORES) ---
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
-    st.subheader("📅 Rango de Vencimientos")
-    if not df_raw.empty:
-        f_min = df_raw['Fin de Vigencia'].min()
-        f_max = df_raw['Fin de Vigencia'].max()
-        rango_s = st.date_input("Filtrar fechas:", [f_min, f_max])
-    
-    st.subheader("🔍 Otros Filtros")
-    f_ej = st.selectbox("Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
-    f_as = st.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
-    f_ra = st.selectbox("Ramo", ["Todos"] + sorted(df_raw['Ramo'].dropna().unique().tolist()))
-    
+    f_ej = st.selectbox("Filtrar Ejecutivo", ["Todos"] + sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
+    f_as = st.selectbox("Filtrar Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].dropna().unique().tolist()))
+    f_ra = st.selectbox("Filtrar Ramo", ["Todos"] + sorted(df_raw['Ramo'].dropna().unique().tolist()))
     if st.button("Cerrar Sesión", use_container_width=True):
         st.session_state['logueado'] = False
         st.rerun()
 
 df_f = df_raw.copy()
-if not df_raw.empty and isinstance(rango_s, list) and len(rango_s) == 2:
-    df_f = df_f[(df_f['Fin de Vigencia'] >= rango_s[0]) & (df_f['Fin de Vigencia'] <= rango_s[1])]
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
@@ -112,12 +99,23 @@ with tab1:
         column_config={"Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂")}
     )
 
-# --- TAB 2: VENCIMIENTOS ---
+# --- TAB 2: VENCIMIENTOS (FILTRO DE TIEMPO AQUÍ) ---
 with tab2:
     st.subheader("🔄 Control de Vencimientos")
-    st.dataframe(df_f.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True)
+    
+    # Filtro de fecha interno para no romper la app si hay errores en el Excel
+    if not df_f.empty:
+        col_f1, col_f2 = st.columns([1, 2])
+        with col_f1:
+            f_inicio = st.date_input("Vencimientos desde:", df_f['Fin de Vigencia'].min())
+            f_final = st.date_input("Vencimientos hasta:", df_f['Fin de Vigencia'].max())
+        
+        df_venc = df_f[(df_f['Fin de Vigencia'] >= f_inicio) & (df_f['Fin de Vigencia'] <= f_final)]
+        st.dataframe(df_venc.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True)
+    else:
+        st.warning("No hay datos para mostrar en el rango seleccionado.")
 
-# --- TAB 3: COTIZADOR (AJUSTADO SEGÚN TUS PEDIDOS) ---
+# --- TAB 3: COTIZADOR ---
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
     
@@ -125,7 +123,6 @@ with tab3:
         c1, c2, c3 = st.columns(3)
         doc_in = c1.text_input("Documento (CI / RUT)")
         
-        # Autocompletado inteligente
         nom_sug = ""
         if doc_in:
             match = df_raw[df_raw['Documento de Identidad (Rut/Cédula/Otros)'].astype(str).str.contains(doc_in)]
@@ -136,16 +133,14 @@ with tab3:
         vehi_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
         ejecutivo_cot = c3.selectbox("Hecha por:", sorted(df_raw['Ejecutivo'].dropna().unique().tolist()))
 
-    st.write("### 💰 Tabla Comparativa de Costos")
+    st.write("### 💰 Tabla Comparativa")
     df_init = pd.DataFrame([
         {"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"},
         {"Aseguradora": "SBI", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"}
     ])
     tabla_edit = st.data_editor(df_init, num_rows="dynamic", use_container_width=True)
 
-    st.write("### ✅ Beneficios y Coberturas Complementarias")
     col_a, col_b = st.columns(2)
-    
     with col_a:
         st.write("**Beneficios Incluidos:**")
         beneficios_cot = st.text_area("Editar Beneficios", 
@@ -153,41 +148,28 @@ with tab3:
     
     with col_b:
         st.write("**Coberturas Complementarias:**")
-        c_hogar = st.text_input("Seguro Hogar (Precio/Detalle)", "Incluido")
-        c_alq = st.text_input("Auto Alquiler (Precio/Detalle)", "15 días por choque")
-        c_bici = st.text_input("Seguro Bici", "Opcional")
+        c_hogar = st.text_input("Hogar (Precio/Detalle)", "Incluido")
+        c_alq = st.text_input("Alquiler (Precio/Detalle)", "15 días")
+        c_bici = st.text_input("Bici", "Opcional")
 
-    # Función para generar el Excel Profesional
     def generar_excel_format():
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             workbook = writer.book
             ws = workbook.add_worksheet('Cotización')
-            
-            # Formatos de diseño
+            f_h = workbook.add_format({'bold': True, 'bg_color': '#1a4a7a', 'font_color': 'white', 'border': 1})
             f_tit = workbook.add_format({'bold': True, 'font_size': 14})
-            f_header = workbook.add_format({'bold': True, 'bg_color': '#1a4a7a', 'font_color': 'white', 'border': 1})
-            f_sub = workbook.add_format({'bold': True, 'bg_color': '#D9EAD3', 'border': 1})
-            f_border = workbook.add_format({'border': 1})
-
             ws.write('A1', '🛡️ EDF SEGUROS - PROPUESTA', f_tit)
             ws.write('A3', f'Asegurado: {nombre_cot}')
             ws.write('A4', f'Vehículo: {vehi_cot}')
             ws.write('A5', f'Hecha por: {ejecutivo_cot}')
-
-            # Tabla de Precios
-            start_row = 7
-            for col_num, value in enumerate(tabla_edit.columns.values):
-                ws.write(start_row, col_num, value, f_header)
-            for row_num, row_data in enumerate(tabla_edit.values):
-                for col_num, cell_data in enumerate(row_data):
-                    ws.write(start_row + 1 + row_num, col_num, cell_data, f_border)
-
-            # Coberturas
-            curr = start_row + len(tabla_edit) + 2
-            ws.write(curr, 0, '✅ BENEFICIOS:', f_sub)
+            for c, col in enumerate(tabla_edit.columns): ws.write(7, c, col, f_h)
+            for r, row in enumerate(tabla_edit.values):
+                for c, val in enumerate(row): ws.write(r+8, c, val, workbook.add_format({'border':1}))
+            curr = 8 + len(tabla_edit) + 2
+            ws.write(curr, 0, '✅ BENEFICIOS:', f_h)
             ws.write(curr + 1, 0, beneficios_cot)
-            ws.write(curr + 6, 0, '🏠 COMPLEMENTARIAS:', f_sub)
+            ws.write(curr + 6, 0, '🏠 COMPLEMENTARIAS:', f_h)
             ws.write(curr + 7, 0, f"Hogar: {c_hogar} | Alquiler: {c_alq} | Bici: {c_bici}")
             ws.set_column('A:E', 25)
         return output.getvalue()
@@ -204,7 +186,7 @@ with tab4:
     if not df_f.empty:
         m1, m2, m3 = st.columns(3)
         m1.metric("Cartera Total (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
-        m2.metric("Pólizas", f"{len(df_f)} u.")
+        m2.metric("Cantidad de Pólizas", f"{len(df_f)} u.")
         m3.metric("Ticket Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
         
         st.divider()
