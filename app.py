@@ -242,4 +242,18 @@ with tab3:
                 <p style="text-align: center; font-size: 0.8rem; color: #666;">Cotización sujeta a inspección y políticas de la aseguradora.</p>
             </div>
         """, unsafe_allow_html=True)
-        st.success("Propuesta lista. Presiona **Control + P** para guardar PDF
+        st.success("Propuesta lista. Presiona **Control + P** para guardar PDF.")
+
+# --- TAB 4: ANÁLISIS ---
+with tab4:
+    if not df_f.empty:
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Cartera Total", f"USD {df_f['Premio_Total_USD'].sum():,.0f}")
+        c2.metric("Pólizas", len(df_f))
+        c3.metric("Promedio", f"USD {df_f['Premio_Total_USD'].mean():,.0f}")
+        
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Distribución por Cía", hole=0.3), use_container_width=True)
+        with col_b:
+            st.plotly_chart(px.bar(df_f['Ramo'].value_counts().reset_index(), x='Ramo', y='count', title="Pólizas por Ramo"), use_container_width=True)
