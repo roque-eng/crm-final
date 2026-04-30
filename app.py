@@ -13,11 +13,11 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos para que la interfaz se vea impecable
+# Estilos para métricas y visualización
 st.markdown("""
     <style>
     .main .block-container { padding-top: 1.5rem; }
-    .stMetric { background-color: #f8f9fa; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
+    .stMetric { background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #ddd; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -56,7 +56,7 @@ def cargar_datos_completos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
-        # Procesamiento de Importes
+        # Procesamiento de Importes para Análisis
         df['Premio USD (IVA inc)'] = pd.to_numeric(df['Premio USD (IVA inc)'], errors='coerce').fillna(0)
         df['Premio UYU (IVA inc)'] = pd.to_numeric(df['Premio UYU (IVA inc)'], errors='coerce').fillna(0)
         df['Premio_Total_USD'] = df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)
@@ -64,13 +64,12 @@ def cargar_datos_completos():
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce')
         return df
     except Exception as e:
-        st.error(f"Error al cargar datos: {e}")
         return pd.DataFrame()
 
 df_raw = cargar_datos_completos()
 
 # ==========================================
-# 🎯 SIDEBAR (FILTROS TOTALES RESTAURADOS)
+# 🎯 SIDEBAR (FILTROS COMPLETOS RESTAURADOS)
 # ==========================================
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
@@ -86,7 +85,7 @@ with st.sidebar:
         st.session_state['logueado'] = False
         st.rerun()
 
-# Aplicar Filtros Globales
+# Aplicar Filtros
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
@@ -116,7 +115,7 @@ with tab2:
     df_v = df_f.sort_values('Fin de Vigencia')
     st.dataframe(df_v, use_container_width=True, hide_index=True)
 
-# --- TAB 3: COTIZADOR (RESTAURADO AL 100%) ---
+# --- TAB 3: COTIZADOR (RESTAURADO CON EXCEL) ---
 with tab3:
     st.subheader("📝 Generador de Cotizaciones (Exportable)")
     
@@ -124,7 +123,7 @@ with tab3:
         c1, c2, c3 = st.columns(3)
         doc_in = c1.text_input("Documento (CI / RUT)")
         
-        # Lógica de Autocompletado Restaurada
+        # Autocompletado de nombre desde Cartera
         nom_sug = ""
         if doc_in:
             match = df_raw[df_raw['Documento de Identidad (Rut/Cédula/Otros)'].astype(str).str.contains(doc_in)]
@@ -135,7 +134,7 @@ with tab3:
         vehi_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
         zona_cot = c2.selectbox("Zona de Circulación", ["Montevideo", "Interior", "Canelones", "Maldonado"])
         
-        # Ejecutivos Dinámicos Restaurados
+        # Ejecutivos Dinámicos
         lista_ejes = sorted(df_raw['Ejecutivo'].dropna().unique().tolist())
         ejecutivo_cot = c3.selectbox("Ejecutivo Responsable", lista_ejes)
 
@@ -151,48 +150,20 @@ with tab3:
     beneficios_cot = col_a.text_area("Beneficios Incluidos", 
         "• Auxilio mecánico 24hs.\n• Cristales, Cerraduras y Espejos sin deducible.\n• RC USD 500.000", height=150)
     
-    # Adicionales Editables Restaurados
     casa_cot = col_b.text_input("Seguro Hogar", "Incluido - Incendio USD 100.000")
     alq_cot = col_b.text_input("Vehículo de Alquiler", "15 días por choque")
     bici_cot = col_b.text_input("Seguro de Bicicleta", "Opcional")
 
-    # --- FUNCIÓN DE EXCEL PROFESIONAL ---
     def generar_excel_profesional():
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             workbook = writer.book
             ws = workbook.add_worksheet('Propuesta')
-            
-            # Formatos
-            fmt_tit = workbook.add_format({'bold': True, 'font_size': 16, 'font_color': '#1E1E1E'})
-            fmt_sub = workbook.add_format({'bold': True, 'bg_color': '#D9EAD3', 'border': 1})
-            fmt_border = workbook.add_format({'border': 1})
-
-            # Datos de Cabecera
-            ws.write('A1', '🛡️ EDF SEGUROS - PROPUESTA COMERCIAL', fmt_tit)
-            ws.write('A3', f'Fecha: {date.today().strftime("%d/%m/%Y")}')
-            ws.write('A4', f'Asegurado: {nombre_cot}')
-            ws.write('A5', f'Vehículo: {vehi_cot}')
-            ws.write('A6', f'Ejecutivo: {ejecutivo_cot}')
-
-            # Tabla de Precios
-            start_row = 8
-            for col_num, value in enumerate(tabla_edit.columns.values):
-                ws.write(start_row, col_num, value, fmt_sub)
-            for row_num, row_data in enumerate(tabla_edit.values):
-                for col_num, cell_data in enumerate(row_data):
-                    ws.write(start_row + 1 + row_num, col_num, cell_data, fmt_border)
-
-            # Bloque de Beneficios
-            curr_row = start_row + len(tabla_edit) + 3
-            ws.write(curr_row, 0, '✅ BENEFICIOS INCLUIDOS:', fmt_sub)
-            ws.write(curr_row + 1, 0, beneficios_cot)
-            
-            ws.write(curr_row + 3, 0, '➕ COBERTURAS ADICIONALES:', fmt_sub)
-            ws.write(curr_row + 4, 0, f"Hogar: {casa_cot}")
-            ws.write(curr_row + 5, 0, f"Alquiler: {alq_cot}")
-            ws.write(curr_row + 6, 0, f"Bicicleta: {bici_cot}")
-
+            fmt_tit = workbook.add_format({'bold': True, 'font_size': 14})
+            ws.write('A1', '🛡️ EDF SEGUROS - PROPUESTA', fmt_tit)
+            ws.write('A3', f'Cliente: {nombre_cot}')
+            ws.write('A4', f'Vehículo: {vehi_cot}')
+            tabla_edit.to_excel(writer, sheet_name='Propuesta', startrow=6, index=False)
             ws.set_column('A:E', 20)
         return output.getvalue()
 
@@ -200,14 +171,13 @@ with tab3:
         label="📥 Descargar Cotización (Excel)",
         data=generar_excel_profesional(),
         file_name=f"Cotizacion_{nombre_cot}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True
     )
 
-# --- TAB 4: ANÁLISIS (MÉTRICAS RESTAURADAS) ---
+# --- TAB 4: ANÁLISIS (MÉTRICAS Y GRÁFICOS RESTAURADOS) ---
 with tab4:
     if not df_f.empty:
-        # Métricas de Subtotales Restauradas
+        # Métricas de Subtotales
         m1, m2, m3 = st.columns(3)
         m1.metric("Cartera Total (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.2f}")
         m2.metric("Cantidad de Pólizas", f"{len(df_f)} u.")
@@ -218,7 +188,6 @@ with tab4:
         with col_g1:
             st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Distribución por Cía", hole=0.4), use_container_width=True)
         with col_g2:
-            # Gráfico de Ramos Restaurado
             df_ramos = df_f['Ramo'].value_counts().reset_index()
             df_ramos.columns = ['Ramo', 'Cantidad']
             st.plotly_chart(px.bar(df_ramos, x='Ramo', y='Cantidad', color='Ramo', title="Pólizas por Ramo"), use_container_width=True)
