@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 import io
 import json
 import base64
+import urllib.request
 
 # ==========================================
 # ⚙️ CONFIGURACIÓN Y ESTILOS
@@ -28,7 +29,6 @@ st.markdown("""
     }
     .titulo-bordo { color: #800020; font-size: 22px; font-weight: bold; border-bottom: 3px solid #800020; padding-bottom: 8px; margin-bottom: 20px; text-transform: uppercase; white-space: nowrap; }
     .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; white-space: pre-wrap; font-family: sans-serif; font-size: 14px; }
-    /* Alineación a la derecha para números en tablas de vista cliente */
     [data-testid="stTable"] td { text-align: right !important; }
     [data-testid="stTable"] td:first-child { text-align: left !important; }
     </style>
@@ -70,28 +70,11 @@ if "q" in query_params:
             st.info("**Bici**"); st.caption(q_data['cb'])
 
         st.markdown("---")
-        if st.button("🔗 GENERAR LINK PARA CLIENTE", use_container_width=True, type="primary"):
-        datos_enviar = {
-            "n": n_cot, "v": v_cot, "e": e_cot, 
-            "tab": t_edit.to_dict(orient='records'), 
-            "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b
-        }
-        b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
-        link_largo = f"https://dfseguros.streamlit.app/?q={b64_data}"
-        
-        # Intentamos acortarlo automáticamente con TinyURL
-        try:
-            import urllib.request
-            api_url = "http://tinyurl.com/api-create.php?url=" + link_largo
-            with urllib.request.urlopen(api_url) as response:
-                link_corto = response.read().decode('utf-8')
-        except:
-            link_corto = link_largo # Si falla, usa el largo por las dudas
-
-        st.success("¡Link generado!")
-        st.write("**Link para enviar al cliente:**")
-        st.code(link_corto, language=None)
-        st.info("Copiá este link corto. Es mucho más amigable para mandar por WhatsApp.")
+        if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
+            st.components.v1.html("<script>window.parent.print();</script>", height=0)
+        st.stop() 
+    except:
+        st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
 # 🔐 SEGURIDAD E INGRESO EQUIPO
@@ -111,9 +94,6 @@ if not st.session_state['logueado']:
                 else: st.error("❌ Credenciales incorrectas")
     st.stop()
 
-# ==========================================
-# ⚙️ CARGA DE DATOS (PROTEGIDA)
-# ==========================================
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 @st.cache_data(ttl=60)
@@ -129,6 +109,7 @@ def cargar_datos():
     except: return pd.DataFrame()
 
 df_raw = cargar_datos()
+# --- SIDEBAR Y FILTROS ---
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -215,8 +196,15 @@ with tab3:
     if st.button("🔗 GENERAR LINK PARA CLIENTE", use_container_width=True, type="primary"):
         datos_enviar = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
         b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
+        link_largo = f"https://dfseguros.streamlit.app/?q={b64_data}"
+        try:
+            api_url = "http://tinyurl.com/api-create.php?url=" + link_largo
+            with urllib.request.urlopen(api_url) as response:
+                link_final = response.read().decode('utf-8')
+        except: link_final = link_largo
         st.success("¡Link generado!")
-        st.code(f"https://dfseguros.streamlit.app/?q={b64_data}", language=None)
+        st.code(link_final, language=None)
+        st.info("Copiá este link corto para WhatsApp.")
 
 with tab4:
     if not df_f.empty:
