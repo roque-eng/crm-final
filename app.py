@@ -202,7 +202,7 @@ with tab3:
         }
         b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
         # Generamos la URL (Streamlit Cloud detecta su propia URL base)
-        url_cliente = f"https://edf-seguros.streamlit.app/?q={b64_data}" # Reemplaza con tu URL real si es distinta
+        url_cliente = f"https://dfseguros.streamlit.app/?q={b64_data}" # Reemplaza con tu URL real si es distinta
         
         st.success("¡Link generado con éxito!")
         st.code(url_cliente, language=None)
