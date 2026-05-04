@@ -26,8 +26,7 @@ if not st.session_state['logueado']:
     _, col, _ = st.columns([1, 1, 1])
     with col:
         with st.form("login"):
-            u = st.text_input("Usuario")
-            p = st.text_input("Contraseña", type="password")
+            u = st.text_input("Usuario"); p = st.text_input("Contraseña", type="password")
             if st.form_submit_button("Ingresar", use_container_width=True):
                 if u in USUARIOS and USUARIOS[u] == p:
                     st.session_state['logueado'] = True
@@ -45,16 +44,12 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def cargar_datos_completos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
-        df.columns = df.columns.str.strip() # Limpiamos espacios en nombres de columnas
-        
-        # Identificar columnas de premios de forma flexible
+        df.columns = df.columns.str.strip()
         col_usd = next((c for c in df.columns if "Premio USD" in c), None)
         col_uyu = next((c for c in df.columns if "Premio UYU" in c), None)
         col_fin = next((c for c in df.columns if "Fin de Vigencia" in c), "Fin de Vigencia")
-        
         if col_usd: df[col_usd] = pd.to_numeric(df[col_usd], errors='coerce').fillna(0)
         if col_uyu: df[col_uyu] = pd.to_numeric(df[col_uyu], errors='coerce').fillna(0)
-        
         df['Premio_Total_USD'] = (df[col_usd if col_usd else df.columns[0]] + (df[col_uyu if col_uyu else df.columns[0]] / TC_USD)).round(0)
         df['Fin de Vigencia'] = pd.to_datetime(df[col_fin], dayfirst=True, errors='coerce').dt.date
         return df
@@ -65,7 +60,6 @@ df_raw = cargar_datos_completos()
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
-    # Listas seguras para filtros
     def get_list(col): return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
     f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
     f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
@@ -73,8 +67,7 @@ with st.sidebar:
     f_co = st.selectbox("Corredor", get_list('Corredor'))
     f_ag = st.selectbox("Agente", get_list('Agente'))
     if st.button("Cerrar Sesión", use_container_width=True):
-        st.session_state['logueado'] = False
-        st.rerun()
+        st.session_state['logueado'] = False; st.rerun()
 
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
@@ -83,7 +76,7 @@ if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 
-# --- CONFIGURACIÓN DE COLUMNAS SEGURA ---
+# --- CONFIGURACIÓN DE COLUMNAS (DEFINIDA AQUÍ PARA AMBAS PARTES) ---
 COL_QUEREMOS = ["Asegurado (Nombre/Razón Social)", "Ramo", "Aseguradora", "Fin de Vigencia", "Detalle (Matricula o Referencia)", "Premio USD (IVA inc)", "Premio UYU (IVA inc)", "Premio_Total_USD", "Adjunto (póliza)"]
 config_final = {col: st.column_config.Column(visible=(col in COL_QUEREMOS)) for col in df_f.columns}
 if "Adjunto (póliza)" in config_final: config_final["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
@@ -105,7 +98,7 @@ with tab1:
 with tab2:
     st.subheader("🔄 Control de Vencimientos")
     if not df_f.empty:
-        # Usamos la columna calculada de forma segura en la Parte 1
+        # Usamos la columna calculada de forma segura
         df_v = df_f.dropna(subset=['Fin de Vigencia'])
         # Limite de seguridad para evitar años erróneos del Excel
         df_v = df_v[(df_v['Fin de Vigencia'] >= date(2020, 1, 1)) & (df_v['Fin de Vigencia'] <= date(2040, 12, 31))]
@@ -114,15 +107,15 @@ with tab2:
             c_f1, c_f2 = st.columns([1, 2])
             hoy = date.today()
             with c_f1:
-                f_ini = st.date_input("Desde:", hoy.replace(day=1))
-                f_fin = st.date_input("Hasta:", hoy + timedelta(days=90))
+                f_ini = st.date_input("Vencimientos desde:", hoy.replace(day=1))
+                f_fin = st.date_input("Vencimientos hasta:", hoy + timedelta(days=90))
             
             df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)]
             st.dataframe(df_venc_final.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True, column_config=config_final)
     else:
-        st.info("No hay datos disponibles para filtrar.")
+        st.info("No hay datos de vencimientos disponibles.")
 
-# --- TAB 3: COTIZADOR (TEXTOS LARGOS Y PRE-ESCRITOS) ---
+# --- TAB 3: COTIZADOR (CON TEXTOS PRE-ESCRITOS) ---
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
     with st.container(border=True):
@@ -135,7 +128,7 @@ with tab3:
                 nom_sug = match.iloc[0].get('Asegurado (Nombre/Razón Social)', "")
         
         n_cot = c1.text_input("Asegurado", value=nom_sug)
-        v_cot = c2.text_input("Vehículo")
+        v_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
         e_cot = c3.selectbox("Hecha por:", sorted(df_raw['Ejecutivo'].dropna().unique().tolist()) if 'Ejecutivo' in df_raw.columns else ["RDF"])
 
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"}]), num_rows="dynamic", use_container_width=True)
@@ -151,9 +144,9 @@ with tab3:
         a_txt = "• Auto de cortesía por 15 días en caso de siniestro con un tercero identificado."
         b_txt = "• Hurto e Incendio de bicicleta en República Oriental del Uruguay y el mundo.\n• Responsabilidad Civil."
         
-        c_h = st.text_area("Hogar (5 renglones):", value=h_txt, height=150)
-        c_a = st.text_area("Alquiler (3 renglones):", value=a_txt, height=100)
-        c_b = st.text_area("Bici (4 renglones):", value=b_txt, height=130)
+        c_h = st.text_area("Hogar:", value=h_txt, height=150)
+        c_a = st.text_area("Alquiler:", value=a_txt, height=100)
+        c_b = st.text_area("Bici:", value=b_txt, height=130)
 
     def gen_ex():
         output = io.BytesIO()
@@ -190,4 +183,5 @@ with tab4:
         with c_g2:
             if 'Ramo' in df_f.columns:
                 r_counts = df_f['Ramo'].value_counts().reset_index()
-                st.plotly_chart(px.bar(r_counts, x='Ramo', y='count', title="Pólizas por Ramo", color='Ramo'), use_container_width=True)
+                r_counts.columns = ['Ramo', 'Cantidad']
+                st.plotly_chart(px.bar(r_counts, x='Ramo', y='Cantidad', title="Pólizas por Ramo", color='Ramo'), use_container_width=True)
