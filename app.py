@@ -78,7 +78,7 @@ if "q" in query_params:
         st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD (CON TODOS LOS USUARIOS)
+# 🔐 SEGURIDAD (TODOS LOS USUARIOS)
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", 
@@ -156,14 +156,25 @@ with tab2:
     if not df_f.empty and "Fin de Vigencia" in df_f.columns:
         df_v = df_f.dropna(subset=['Fin de Vigencia'])
         df_v = df_v[(df_v['Fin de Vigencia'] >= date(2020, 1, 1)) & (df_v['Fin de Vigencia'] <= date(2040, 12, 31))]
-        if not df_v.empty:
-            c_f1, c_f2 = st.columns([1, 2])
-            hoy = date.today()
-            with c_f1:
-                f_ini = st.date_input("Desde:", hoy.replace(day=1))
-                f_fin = st.date_input("Hasta:", hoy + timedelta(days=90))
-            df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)]
-            st.dataframe(df_venc_final.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True, column_config=config_simple)
+        
+        c_f1, c_f2, c_btn = st.columns([1.5, 1.5, 1])
+        hoy = date.today()
+        with c_f1: f_ini = st.date_input("Desde:", hoy.replace(day=1))
+        with c_f2: f_fin = st.date_input("Hasta:", hoy + timedelta(days=90))
+        
+        df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
+        
+        # BOTÓN EXCEL (NUEVO)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_venc_final.to_excel(writer, index=False, sheet_name='Vencimientos')
+        processed_data = output.getvalue()
+        
+        with c_btn:
+            st.write("") # Espacio para alinear con los inputs
+            st.download_button(label="📥 EXCEL", data=processed_data, file_name=f'vencimientos_{f_ini}_al_{f_fin}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+
+        st.dataframe(df_venc_final, use_container_width=True, hide_index=True, column_config=config_simple)
 
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
@@ -192,7 +203,6 @@ with tab3:
     st.write("### ✅ Detalles de Cobertura")
     col_a, col_b = st.columns(2)
     with col_a:
-        # CORREGIDO: Usando triples comillas para alinear todo a la izquierda perfectamente
         txt_ben = """• Auxilio mecánico 24hs:
 - Todas las aseguradoras
 
@@ -225,8 +235,7 @@ with tab3:
     datos = {"n": n_cot, "v": v_cot, "cob": cob_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
     b64 = base64.b64encode(json.dumps(datos).encode()).decode()
     l_final = f"https://dfseguros.streamlit.app/?q={b64}"
-    wa_msg = f"🛡️ *EDF SEGUROS - Propuesta Comercial*\n\nHola {n_cot}, adjunto la cotización para tu vehículo {v_cot}. Podés verla aquí:\n\n{l_final}"
-    wa_url = f"https://wa.me/?text={urllib.parse.quote(wa_msg)}"
+    wa_url = f"https://wa.me/?text={urllib.parse.quote(f'🛡️ *EDF SEGUROS - Propuesta Comercial*\n\nHola {n_cot}, adjunto la cotización para tu vehículo {v_cot}. Podés verla aquí:\n\n{l_final}')}"
 
     c_btn1, c_btn2, _ = st.columns([1, 1, 2])
     with c_btn1:
