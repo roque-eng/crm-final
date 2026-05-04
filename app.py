@@ -77,9 +77,15 @@ if "q" in query_params:
         st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD
+# 🔐 SEGURIDAD (LISTA DE USUARIOS ACTUALIZADA)
 # ==========================================
-USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025"}
+USUARIOS = {
+    "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", 
+    "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025",
+    "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025",
+    "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025",
+    "EC": "ECabral2025", "PG": "PGagliardi2025"
+}
 
 if 'logueado' not in st.session_state: st.session_state['logueado'] = False
 if not st.session_state['logueado']:
@@ -107,6 +113,9 @@ def cargar_datos():
     except: return pd.DataFrame()
 
 df_raw = cargar_datos()
+# ==========================================
+# 📊 INTERFAZ PRINCIPAL (DASHBOARD)
+# ==========================================
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -166,7 +175,7 @@ with tab3:
             if not match.empty: nom_sug = match.iloc[0].get('Asegurado (Nombre/Razón Social)', "")
         n_cot = c1.text_input("Asegurado", value=nom_sug)
         v_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
-        e_cot = c3.selectbox("Hecha por:", sorted(df_raw['Ejecutivo'].dropna().unique().tolist()) if 'Ejecutivo' in df_raw.columns else ["RDF"])
+        e_cot = c3.selectbox("Hecha por:", sorted(list(USUARIOS.keys())))
 
     t_edit = st.data_editor(
         pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), 
@@ -193,7 +202,7 @@ with tab3:
 
     st.divider()
     
-    # Lógica de links y WhatsApp
+    # Lógica de generación de links
     datos = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
     b64 = base64.b64encode(json.dumps(datos).encode()).decode()
     l_final = f"https://dfseguros.streamlit.app/?q={b64}"
