@@ -193,20 +193,21 @@ with tab3:
     st.divider()
     
     # BOTÓN PARA GENERAR EL LINK
+    # REEMPLAZO PARA EL BOTÓN DE GENERAR LINK
     if st.button("🔗 GENERAR LINK PARA CLIENTE", use_container_width=True, type="primary"):
-        # Empaquetamos todo en un JSON y luego a Base64
         datos_enviar = {
             "n": n_cot, "v": v_cot, "e": e_cot,
             "tab": t_edit.to_dict(orient='records'),
             "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b
         }
         b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
-        # Generamos la URL (Streamlit Cloud detecta su propia URL base)
-        url_cliente = f"https://dfseguros.streamlit.app/?q={b64_data}" # Reemplaza con tu URL real si es distinta
         
-        st.success("¡Link generado con éxito!")
+        # Esta línea ahora es "inteligente" y usa la URL real donde estés parado
+        url_actual = "https://dfseguros.streamlit.app" 
+        url_cliente = f"{url_actual}/?q={b64_data}"
+        
+        st.success("¡Link generado!")
         st.code(url_cliente, language=None)
-        st.info("Copiá el link de arriba y envíaselo al cliente por WhatsApp.")
 
 # --- TAB 4: ANÁLISIS ---
 with tab4:
