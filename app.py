@@ -192,13 +192,30 @@ with tab3:
     st.write("### ✅ Detalles de Cobertura")
     col_a, col_b = st.columns(2)
     with col_a:
-        # CORREGIDO: Sin espacios extra después del \n
-        txt_ben = "• Auxilio mecánico 24hs:\n- Todas las aseguradoras\n\n• Ayuda económica para cristales:\n- SBI: USD 200\n- BSE: USD 200\n- SURA: USD 100\n- SANCOR: USD 300\n- MAPFRE: Ilimitado\n\n• Ayuda económica para granizo:\n- PORTO: Sin deducible"
+        # CORREGIDO: Usando triples comillas para alinear todo a la izquierda perfectamente
+        txt_ben = """• Auxilio mecánico 24hs:
+- Todas las aseguradoras
+
+• Ayuda económica para cristales:
+- SBI: USD 200
+- BSE: USD 200
+- SURA: USD 100
+- SANCOR: USD 300
+- MAPFRE: Ilimitado
+
+• Ayuda económica para granizo:
+- PORTO: Sin deducible"""
         b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=350)
     with col_b:
-        txt_hog = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 20.000\n• Hurto Contenido: USD 5.000\n• COSTO ANUAL: USD 120"
-        txt_alq = "• Auto de cortesía por 15 días en caso de siniestro y que el vehículo tenga que ingresar al taller.\n• COSTO ANUAL: UYU 3.900"
-        txt_bic = "• Hurto de tu Bici (en la calle o en tu casa) valor declarado hasta USD 1.000\n• Responsabilidad Civil: USD 10.000\n• COSTO ANUAL: USD 70"
+        txt_hog = """• Incendio Edificio: USD 100.000
+• Incendio Contenido: USD 20.000
+• Hurto Contenido: USD 5.000
+• COSTO ANUAL: USD 120"""
+        txt_alq = """• Auto de cortesía por 15 días en caso de siniestro y que el vehículo tenga que ingresar al taller.
+• COSTO ANUAL: UYU 3.900"""
+        txt_bic = """• Hurto de tu Bici (en la calle o en tu casa) valor declarado hasta USD 1.000
+• Responsabilidad Civil: USD 10.000
+• COSTO ANUAL: USD 70"""
         c_h = st.text_area("Hogar:", value=txt_hog, height=140)
         c_a = st.text_area("Alquiler:", value=txt_alq, height=100)
         c_b = st.text_area("Bici:", value=txt_bic, height=125)
