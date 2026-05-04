@@ -47,7 +47,7 @@ if "q" in query_params:
         with c1:
             st.markdown(f"**Asegurado:** {q_data['n']}")
             st.markdown(f"**Vehículo:** {q_data['v']}")
-            if 'cob' in q_data: st.markdown(f"**Cobertura:** {q_data['cob']}")
+            if 'cob' in q_data and q_data['cob']: st.markdown(f"**Cobertura:** {q_data['cob']}")
         with c2:
             st.markdown(f"**Fecha:** {date.today().strftime('%d/%m/%Y')}")
             st.markdown(f"**Asesor:** {q_data['e']}")
@@ -78,7 +78,7 @@ if "q" in query_params:
         st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD
+# 🔐 SEGURIDAD (CON TODOS LOS USUARIOS)
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", 
@@ -176,7 +176,7 @@ with tab3:
             if not match.empty: nom_sug = match.iloc[0].get('Asegurado (Nombre/Razón Social)', "")
         n_cot = c1.text_input("Asegurado", value=nom_sug)
         v_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
-        cob_cot = c2.text_input("Cobertura") # CAMBIO: Nuevo campo Cobertura
+        cob_cot = c2.text_input("Cobertura")
         e_cot = c3.selectbox("Hecha por:", sorted(list(USUARIOS.keys())), index=sorted(list(USUARIOS.keys())).index(st.session_state['usuario_actual']) if st.session_state['usuario_actual'] in USUARIOS else 0)
 
     t_edit = st.data_editor(
@@ -192,11 +192,10 @@ with tab3:
     st.write("### ✅ Detalles de Cobertura")
     col_a, col_b = st.columns(2)
     with col_a:
-        # CAMBIO: Texto exacto de Beneficios
+        # CORREGIDO: Sin espacios extra después del \n
         txt_ben = "• Auxilio mecánico 24hs:\n- Todas las aseguradoras\n\n• Ayuda económica para cristales:\n- SBI: USD 200\n- BSE: USD 200\n- SURA: USD 100\n- SANCOR: USD 300\n- MAPFRE: Ilimitado\n\n• Ayuda económica para granizo:\n- PORTO: Sin deducible"
         b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=350)
     with col_b:
-        # CAMBIO: Textos exactos de Hogar, Alquiler y Bici
         txt_hog = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 20.000\n• Hurto Contenido: USD 5.000\n• COSTO ANUAL: USD 120"
         txt_alq = "• Auto de cortesía por 15 días en caso de siniestro y que el vehículo tenga que ingresar al taller.\n• COSTO ANUAL: UYU 3.900"
         txt_bic = "• Hurto de tu Bici (en la calle o en tu casa) valor declarado hasta USD 1.000\n• Responsabilidad Civil: USD 10.000\n• COSTO ANUAL: USD 70"
