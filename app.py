@@ -70,11 +70,28 @@ if "q" in query_params:
             st.info("**Bici**"); st.caption(q_data['cb'])
 
         st.markdown("---")
-        if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
-            st.components.v1.html("<script>window.parent.print();</script>", height=0)
-        st.stop() 
-    except:
-        st.error("Error al cargar la cotización."); st.stop()
+        if st.button("🔗 GENERAR LINK PARA CLIENTE", use_container_width=True, type="primary"):
+        datos_enviar = {
+            "n": n_cot, "v": v_cot, "e": e_cot, 
+            "tab": t_edit.to_dict(orient='records'), 
+            "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b
+        }
+        b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
+        link_largo = f"https://dfseguros.streamlit.app/?q={b64_data}"
+        
+        # Intentamos acortarlo automáticamente con TinyURL
+        try:
+            import urllib.request
+            api_url = "http://tinyurl.com/api-create.php?url=" + link_largo
+            with urllib.request.urlopen(api_url) as response:
+                link_corto = response.read().decode('utf-8')
+        except:
+            link_corto = link_largo # Si falla, usa el largo por las dudas
+
+        st.success("¡Link generado!")
+        st.write("**Link para enviar al cliente:**")
+        st.code(link_corto, language=None)
+        st.info("Copiá este link corto. Es mucho más amigable para mandar por WhatsApp.")
 
 # ==========================================
 # 🔐 SEGURIDAD E INGRESO EQUIPO
