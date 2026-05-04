@@ -193,7 +193,7 @@ with tab3:
     col_a, col_b = st.columns(2)
     with col_a:
         # CAMBIO: Texto exacto de Beneficios
-        txt_ben = "• Auxilio mecánico 24hs:\n- Todas las aseguradoras\n\n• Ayuda económica para cristales:\n- SBI: USD 200\n- BSE: USD 200\n- SURA: USD 100\n- SANCOR: USD 300\n- MAPFRE: Ilimitado\n\n• Ayuda económica para cristales:\n- PORTO: Sin deducible"
+        txt_ben = "• Auxilio mecánico 24hs:\n- Todas las aseguradoras\n\n• Ayuda económica para cristales:\n- SBI: USD 200\n- BSE: USD 200\n- SURA: USD 100\n- SANCOR: USD 300\n- MAPFRE: Ilimitado\n\n• Ayuda económica para granizo:\n- PORTO: Sin deducible"
         b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=350)
     with col_b:
         # CAMBIO: Textos exactos de Hogar, Alquiler y Bici
