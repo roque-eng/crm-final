@@ -13,7 +13,12 @@ import base64
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5 
 
-st.set_page_config(page_title="EDF SEGUROS - Cotización", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
+
+# Función para formatear moneda sin decimales
+def fmt_curr(val):
+    try: return f"$ {int(float(val)):,}".replace(",", ".")
+    except: return val
 
 st.markdown("""
     <style>
@@ -21,23 +26,23 @@ st.markdown("""
         .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header { display: none !important; }
         .main .block-container { padding: 0 !important; margin: 0 !important; }
     }
-    .titulo-bordo { color: #800020; font-size: 30px; font-weight: bold; border-bottom: 3px solid #800020; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; }
-    .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; white-space: pre-wrap; font-family: sans-serif; }
+    .titulo-bordo { color: #800020; font-size: 22px; font-weight: bold; border-bottom: 3px solid #800020; padding-bottom: 8px; margin-bottom: 20px; text-transform: uppercase; white-space: nowrap; }
+    .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; white-space: pre-wrap; font-family: sans-serif; font-size: 14px; }
+    /* Alineación a la derecha para números en tablas de vista cliente */
+    [data-testid="stTable"] td { text-align: right !important; }
+    [data-testid="stTable"] td:first-child { text-align: left !important; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🕵️ LÓGICA DE VISTA DE CLIENTE (Landing Page)
+# 🕵️ LÓGICA DE VISTA DE CLIENTE
 # ==========================================
 query_params = st.query_params
 if "q" in query_params:
     try:
         data_raw = base64.b64decode(query_params["q"]).decode()
         q_data = json.loads(data_raw)
-        
-        # TÍTULO SOLICITADO
         st.markdown("<div class='titulo-bordo'>🛡️ EDF SEGUROS - COTIZACIÓN SEGURO DE VEHÍCULOS</div>", unsafe_allow_html=True)
-        
         c1, c2 = st.columns(2)
         with c1:
             st.markdown(f"**Asegurado:** {q_data['n']}")
@@ -47,7 +52,10 @@ if "q" in query_params:
             st.markdown(f"**Asesor:** {q_data['e']}")
         
         st.write("### 💰 Comparativa de Opciones")
-        st.table(pd.DataFrame(q_data['tab'])) 
+        df_view = pd.DataFrame(q_data['tab'])
+        for col in ["Contado", "10 Cuotas", "Deducible"]:
+            if col in df_view.columns: df_view[col] = df_view[col].apply(fmt_curr)
+        st.table(df_view) 
         
         st.write("### ✅ Beneficios Incluidos")
         st.markdown(f"<div class='quote-card'>{q_data['ben']}</div>", unsafe_allow_html=True)
@@ -55,27 +63,21 @@ if "q" in query_params:
         st.write("### 🏠 Coberturas Complementarias")
         col_comp = st.columns(3)
         with col_comp[0]:
-            st.info("**Hogar**")
-            st.caption(q_data['ch'])
+            st.info("**Hogar**"); st.caption(q_data['ch'])
         with col_comp[1]:
-            st.info("**Alquiler**")
-            st.caption(q_data['ca'])
+            st.info("**Alquiler**"); st.caption(q_data['ca'])
         with col_comp[2]:
-            st.info("**Bici**")
-            st.caption(q_data['cb'])
+            st.info("**Bici**"); st.caption(q_data['cb'])
 
         st.markdown("---")
-        # Botón de impresión con script inyectado para que funcione en cualquier navegador
         if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
             st.components.v1.html("<script>window.parent.print();</script>", height=0)
-        
         st.stop() 
-    except Exception as e:
-        st.error("Error al cargar la cotización.")
-        st.stop()
+    except:
+        st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD E INGRESO (SOLO PARA RDF/EQUIPO)
+# 🔐 SEGURIDAD E INGRESO EQUIPO
 # ==========================================
 USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025"}
 
@@ -88,9 +90,7 @@ if not st.session_state['logueado']:
             u = st.text_input("Usuario"); p = st.text_input("Contraseña", type="password")
             if st.form_submit_button("Ingresar", use_container_width=True):
                 if u in USUARIOS and USUARIOS[u] == p:
-                    st.session_state['logueado'] = True
-                    st.session_state['usuario_actual'] = u
-                    st.rerun()
+                    st.session_state['logueado'] = True; st.session_state['usuario_actual'] = u; st.rerun()
                 else: st.error("❌ Credenciales incorrectas")
     st.stop()
 
@@ -104,13 +104,14 @@ def cargar_datos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
-        df['Premio_Total_USD'] = (pd.to_numeric(df.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + (pd.to_numeric(df.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / TC_USD)).round(0)
+        df['Premio USD (IVA inc)'] = pd.to_numeric(df.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0)
+        df['Premio UYU (IVA inc)'] = pd.to_numeric(df.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0)
+        df['Premio_Total_USD'] = (df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)).round(0)
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
         return df
     except: return pd.DataFrame()
 
 df_raw = cargar_datos()
-# --- SIDEBAR Y FILTROS (Arreglado para evitar el NameError) ---
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -158,7 +159,6 @@ with tab2:
             df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)]
             st.dataframe(df_venc_final.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True, column_config=config_simple)
 
-# --- TAB 3: COTIZADOR PROFESIONAL ---
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
     with st.container(border=True):
@@ -172,34 +172,35 @@ with tab3:
         v_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
         e_cot = c3.selectbox("Hecha por:", sorted(df_raw['Ejecutivo'].dropna().unique().tolist()) if 'Ejecutivo' in df_raw.columns else ["RDF"])
 
-    t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": "Global"}]), num_rows="dynamic", use_container_width=True)
+    t_edit = st.data_editor(
+        pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), 
+        num_rows="dynamic", use_container_width=True,
+        column_config={
+            "Contado": st.column_config.NumberColumn(format="$ %d"),
+            "10 Cuotas": st.column_config.NumberColumn(format="$ %d"),
+            "Deducible": st.column_config.NumberColumn(format="$ %d")
+        }
+    )
 
     st.write("### ✅ Detalles de Cobertura")
     col_a, col_b = st.columns(2)
     with col_a:
-        b_cot = st.text_area("Beneficios Incluidos:", "• Auxilio mecánico 24hs.\n• Ayuda económica para cristales:\n  - USD 200 SBI / USD 200 BSE\n  - USD 100 SURA / USD 300 SANCOR\n  - Ilimitado MAPFRE\n• RC USD 500.000", height=250)
+        txt_ben = "• Auxilio mecánico 24hs.\n• Ayuda económica para cristales:\n  - USD 200 SBI / USD 200 BSE\n  - USD 100 SURA / USD 300 SANCOR\n  - Ilimitado MAPFRE\n• RC USD 500.000"
+        b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=250)
     with col_b:
-        h_txt = "• Incendio Edificio e Incendio Contenido.\n• Hurto Contenido.\n• Cristales.\n• Responsabilidad Civil.\n• Daños por Agua."
-        a_txt = "• Auto de cortesía por 15 días en caso de siniestro con un tercero identificado."
-        b_txt = "• Hurto e Incendio de bicicleta en República Oriental del Uruguay y el mundo.\n• Responsabilidad Civil."
-        c_h = st.text_area("Hogar:", value=h_txt, height=150)
-        c_a = st.text_area("Alquiler:", value=a_txt, height=100)
-        c_b = st.text_area("Bici:", value=b_txt, height=120)
+        txt_hog = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 20.000\n• Hurto Contenido: USD 5.000\n• COSTO ANUAL: USD 120"
+        txt_alq = "• Auto de cortesía por 15 días en caso de siniestro y que el vehículo tenga que ingresar al taller.\n• COSTO ANUAL: UYU 3.900"
+        txt_bic = "• Hurto de tu Bici (en la calle o en tu casa) valor declarado hasta USD 1.000\n• Responsabilidad Civil: USD 10.000\n• COSTO ANUAL: USD 70"
+        c_h = st.text_area("Hogar:", value=txt_hog, height=130)
+        c_a = st.text_area("Alquiler:", value=txt_alq, height=100)
+        c_b = st.text_area("Bici:", value=txt_bic, height=110)
 
     if st.button("🔗 GENERAR LINK PARA CLIENTE", use_container_width=True, type="primary"):
-        datos_enviar = {
-            "n": n_cot, "v": v_cot, "e": e_cot,
-            "tab": t_edit.to_dict(orient='records'),
-            "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b
-        }
+        datos_enviar = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
         b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
-        url_cliente = f"https://dfseguros.streamlit.app/?q={b64_data}"
-        
-        st.success("¡Link generado exitosamente!")
-        st.code(url_cliente, language=None)
-        st.info("Copiá este link y envíaselo al cliente.")
+        st.success("¡Link generado!")
+        st.code(f"https://dfseguros.streamlit.app/?q={b64_data}", language=None)
 
-# --- TAB 4: ANÁLISIS ---
 with tab4:
     if not df_f.empty:
         m1, m2, m3 = st.columns(3)
