@@ -28,16 +28,19 @@ st.markdown("""
         .main .block-container { padding: 0 !important; margin: 0 !important; }
     }
     .titulo-bordo { color: #800020; font-size: 22px; font-weight: bold; border-bottom: 3px solid #800020; padding-bottom: 8px; margin-bottom: 20px; text-transform: uppercase; white-space: nowrap; }
-    .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; white-space: pre-wrap; font-family: sans-serif; font-size: 14px; }
+    .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; white-space: pre-wrap; font-family: sans-serif; font-size: 14px; line-height: 1.6; }
     [data-testid="stTable"] td { text-align: right !important; }
     [data-testid="stTable"] td:first-child { text-align: left !important; }
-    /* Estilo para el botón de Excel pequeño */
+    
+    /* Botón Excel estilo compacto */
     .stDownloadButton button {
-        width: auto !important;
-        padding-left: 20px !important;
-        padding-right: 20px !important;
         background-color: #1D6F42 !important;
         color: white !important;
+        border-radius: 8px !important;
+        padding: 8px 20px !important;
+        font-weight: bold !important;
+        border: none !important;
+        width: auto !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -164,25 +167,21 @@ with tab2:
     if not df_f.empty and "Fin de Vigencia" in df_f.columns:
         df_v = df_f.dropna(subset=['Fin de Vigencia'])
         df_v = df_v[(df_v['Fin de Vigencia'] >= date(2020, 1, 1)) & (df_v['Fin de Vigencia'] <= date(2040, 12, 31))]
-        
         c_f1, c_f2 = st.columns(2)
         hoy = date.today()
         with c_f1: f_ini = st.date_input("Desde:", hoy.replace(day=1))
         with c_f2: f_fin = st.date_input("Hasta:", hoy + timedelta(days=90))
-        
         df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
-        
         st.dataframe(df_venc_final, use_container_width=True, hide_index=True, column_config=config_simple)
-
-        # BOTÓN EXCEL ABAJO Y CHICO
+        
+        # EXCEL ABAJO Y CHICO
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df_venc_final.to_excel(writer, index=False, sheet_name='Vencimientos')
         processed_data = output.getvalue()
-        
-        col_ex, _ = st.columns([1, 4]) # Para tirarlo a la izquierda
-        with col_ex:
-            st.download_button(label="📥 EXPORTAR EXCEL", data=processed_data, file_name=f'vencimientos_{f_ini}_al_{f_fin}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        c_ex, _ = st.columns([1, 3])
+        with c_ex:
+            st.download_button(label="📥 EXCEL", data=processed_data, file_name=f'vencimientos.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
@@ -198,72 +197,38 @@ with tab3:
         cob_cot = c2.text_input("Cobertura")
         e_cot = c3.selectbox("Hecha por:", sorted(list(USUARIOS.keys())), index=sorted(list(USUARIOS.keys())).index(st.session_state['usuario_actual']) if st.session_state['usuario_actual'] in USUARIOS else 0)
 
-    t_edit = st.data_editor(
-        pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), 
-        num_rows="dynamic", use_container_width=True,
-        column_config={
-            "Contado": st.column_config.NumberColumn(format="$ %d"),
-            "10 Cuotas": st.column_config.NumberColumn(format="$ %d"),
-            "Deducible": st.column_config.NumberColumn(format="$ %d")
-        }
-    )
+    t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
 
     st.write("### ✅ Detalles de Cobertura")
     col_a, col_b = st.columns(2)
     with col_a:
-        # TEXTO PEGADO AL MARGEN IZQUIERDO PARA EVITAR SANGRIAS
-        txt_ben = """• Auxilio mecánico 24hs:
-- Todas las aseguradoras
-
-• Ayuda económica para cristales:
-- SBI: USD 200
-- BSE: USD 200
-- SURA: USD 100
-- SANCOR: USD 300
-- MAPFRE: Ilimitado
-
-• Ayuda económica para granizo:
-- PORTO: Sin deducible"""
+        # CAMBIO: Quitamos los guiones para forzar alineación izquierda
+        txt_ben = "• Auxilio mecánico 24hs:\nTodas las aseguradoras\n\n• Ayuda económica para cristales:\nSBI: USD 200\nBSE: USD 200\nSURA: USD 100\nSANCOR: USD 300\nMAPFRE: Ilimitado\n\n• Ayuda económica para granizo:\nPORTO: Sin deducible"
         b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=350)
     with col_b:
-        txt_hog = """• Incendio Edificio: USD 100.000
-• Incendio Contenido: USD 20.000
-• Hurto Contenido: USD 5.000
-• COSTO ANUAL: USD 120"""
-        txt_alq = """• Auto de cortesía por 15 días en caso de siniestro y que el vehículo tenga que ingresar al taller.
-• COSTO ANUAL: UYU 3.900"""
-        txt_bic = """• Hurto de tu Bici (en la calle o en tu casa) valor declarado hasta USD 1.000
-• Responsabilidad Civil: USD 10.000
-• COSTO ANUAL: USD 70"""
+        txt_hog = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 20.000\n• Hurto Contenido: USD 5.000\n• COSTO ANUAL: USD 120"
+        txt_alq = "• Auto cortesía 15 días por siniestro.\n• COSTO ANUAL: UYU 3.900"
+        txt_bic = "• Hurto Bici valor hasta USD 1.000\n• Responsabilidad Civil: USD 10.000\n• COSTO ANUAL: USD 70"
         c_h = st.text_area("Hogar:", value=txt_hog, height=140)
         c_a = st.text_area("Alquiler:", value=txt_alq, height=100)
         c_b = st.text_area("Bici:", value=txt_bic, height=125)
 
     st.divider()
-    
     datos = {"n": n_cot, "v": v_cot, "cob": cob_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
     b64 = base64.b64encode(json.dumps(datos).encode()).decode()
     l_final = f"https://dfseguros.streamlit.app/?q={b64}"
-    wa_url = f"https://wa.me/?text={urllib.parse.quote(f'🛡️ *EDF SEGUROS - Propuesta Comercial*\n\nHola {n_cot}, adjunto la cotización para tu vehículo {v_cot}. Podés verla aquí:\n\n{l_final}')}"
-
+    wa_url = f"https://wa.me/?text={urllib.parse.quote(f'🛡️ *EDF SEGUROS*\n\nHola {n_cot}, adjunto cotización para {v_cot}:\n\n{l_final}')}"
     c_btn1, c_btn2, _ = st.columns([1, 1, 2])
-    with c_btn1:
-        st.write("**1. Copiá el link:**")
-        st.code(l_final, language=None)
-    with c_btn2:
-        st.write("**2. O envialo:**")
-        st.markdown(f'<a href="{wa_url}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;">🟢 WHATSAPP</button></a>', unsafe_allow_html=True)
+    with c_btn1: st.code(l_final, language=None)
+    with c_btn2: st.markdown(f'<a href="{wa_url}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;">🟢 WHATSAPP</button></a>', unsafe_allow_html=True)
 
 with tab4:
     if not df_f.empty:
         m1, m2, m3 = st.columns(3)
-        m1.metric("Cartera Total (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
+        m1.metric("Cartera (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
         m2.metric("Pólizas", f"{len(df_f)} u.")
-        m3.metric("Ticket Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
+        m3.metric("Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
         st.divider()
         c_g1, c_g2 = st.columns(2)
-        with c_g1: st.plotly_chart(px.pie(df_f, names='Aseguradora' if 'Aseguradora' in df_f.columns else df_f.columns[0], values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
-        with c_g2:
-            if 'Ramo' in df_f.columns:
-                r_counts = df_f['Ramo'].value_counts().reset_index(); r_counts.columns = ['Ramo', 'Cantidad']
-                st.plotly_chart(px.bar(r_counts, x='Ramo', y='Cantidad', title="Pólizas por Ramo", color='Ramo'), use_container_width=True)
+        with c_g1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
+        with c_g2: st.plotly_chart(px.bar(df_f['Ramo'].value_counts().reset_index(), x='Ramo', y='count', title="Pólizas por Ramo"), use_container_width=True)
