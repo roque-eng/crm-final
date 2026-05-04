@@ -31,6 +31,14 @@ st.markdown("""
     .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; white-space: pre-wrap; font-family: sans-serif; font-size: 14px; }
     [data-testid="stTable"] td { text-align: right !important; }
     [data-testid="stTable"] td:first-child { text-align: left !important; }
+    /* Estilo para el botón de Excel pequeño */
+    .stDownloadButton button {
+        width: auto !important;
+        padding-left: 20px !important;
+        padding-right: 20px !important;
+        background-color: #1D6F42 !important;
+        color: white !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -78,7 +86,7 @@ if "q" in query_params:
         st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD (TODOS LOS USUARIOS)
+# 🔐 SEGURIDAD
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", 
@@ -157,24 +165,24 @@ with tab2:
         df_v = df_f.dropna(subset=['Fin de Vigencia'])
         df_v = df_v[(df_v['Fin de Vigencia'] >= date(2020, 1, 1)) & (df_v['Fin de Vigencia'] <= date(2040, 12, 31))]
         
-        c_f1, c_f2, c_btn = st.columns([1.5, 1.5, 1])
+        c_f1, c_f2 = st.columns(2)
         hoy = date.today()
         with c_f1: f_ini = st.date_input("Desde:", hoy.replace(day=1))
         with c_f2: f_fin = st.date_input("Hasta:", hoy + timedelta(days=90))
         
         df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
         
-        # BOTÓN EXCEL (NUEVO)
+        st.dataframe(df_venc_final, use_container_width=True, hide_index=True, column_config=config_simple)
+
+        # BOTÓN EXCEL ABAJO Y CHICO
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df_venc_final.to_excel(writer, index=False, sheet_name='Vencimientos')
         processed_data = output.getvalue()
         
-        with c_btn:
-            st.write("") # Espacio para alinear con los inputs
-            st.download_button(label="📥 EXCEL", data=processed_data, file_name=f'vencimientos_{f_ini}_al_{f_fin}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
-
-        st.dataframe(df_venc_final, use_container_width=True, hide_index=True, column_config=config_simple)
+        col_ex, _ = st.columns([1, 4]) # Para tirarlo a la izquierda
+        with col_ex:
+            st.download_button(label="📥 EXPORTAR EXCEL", data=processed_data, file_name=f'vencimientos_{f_ini}_al_{f_fin}.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
@@ -203,6 +211,7 @@ with tab3:
     st.write("### ✅ Detalles de Cobertura")
     col_a, col_b = st.columns(2)
     with col_a:
+        # TEXTO PEGADO AL MARGEN IZQUIERDO PARA EVITAR SANGRIAS
         txt_ben = """• Auxilio mecánico 24hs:
 - Todas las aseguradoras
 
