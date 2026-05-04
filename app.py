@@ -9,14 +9,22 @@ import base64
 import urllib.request
 
 # ==========================================
-# ⚙️ CONFIGURACIÓN Y ESTILOS
+# ⚙️ CONFIGURACIÓN Y METADATOS (Para WhatsApp)
 # ==========================================
+st.set_page_config(page_title="EDF SEGUROS - Cotización", layout="wide", page_icon="🛡️")
+
+# Inyectamos metadatos para que WhatsApp muestre una vista previa linda
+st.markdown("""
+    <head>
+        <meta property="og:title" content="EDF SEGUROS - Cotización de Seguro">
+        <meta property="og:description" content="Propuesta comercial personalizada para tu vehículo.">
+        <meta property="og:image" content="https://raw.githubusercontent.com/streamlit/docs/main/public/images/logo.png">
+    </head>
+    """, unsafe_allow_html=True)
+
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5 
 
-st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
-
-# Función para formatear moneda sin decimales
 def fmt_curr(val):
     try: return f"$ {int(float(val)):,}".replace(",", ".")
     except: return val
@@ -77,7 +85,7 @@ if "q" in query_params:
         st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD E INGRESO EQUIPO
+# 🔐 SEGURIDAD
 # ==========================================
 USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025"}
 
@@ -109,11 +117,11 @@ def cargar_datos():
     except: return pd.DataFrame()
 
 df_raw = cargar_datos()
-# --- SIDEBAR Y FILTROS ---
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
-    def get_list(col): return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
+    def get_list(col): 
+        return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
     f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
     f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
     f_ra = st.selectbox("Ramo", get_list('Ramo'))
@@ -196,15 +204,10 @@ with tab3:
     if st.button("🔗 GENERAR LINK PARA CLIENTE", use_container_width=True, type="primary"):
         datos_enviar = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
         b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
-        link_largo = f"https://dfseguros.streamlit.app/?q={b64_data}"
-        try:
-            api_url = "http://tinyurl.com/api-create.php?url=" + link_largo
-            with urllib.request.urlopen(api_url) as response:
-                link_final = response.read().decode('utf-8')
-        except: link_final = link_largo
+        link_final = f"https://dfseguros.streamlit.app/?q={b64_data}"
         st.success("¡Link generado!")
         st.code(link_final, language=None)
-        st.info("Copiá este link corto para WhatsApp.")
+        st.info("Copiá este link. En WhatsApp aparecerá con el nombre de EDF SEGUROS.")
 
 with tab4:
     if not df_f.empty:
