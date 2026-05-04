@@ -15,20 +15,19 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS - Cotización", layout="wide", page_icon="🛡️")
 
-# Estilos para cliente (Bordó y Diseño Limpio)
 st.markdown("""
     <style>
     @media print {
         .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header { display: none !important; }
-        .main .block-container { padding: 0; }
+        .main .block-container { padding: 0 !important; margin: 0 !important; }
     }
-    .titulo-bordo { color: #800020; font-size: 32px; font-weight: bold; border-bottom: 3px solid #800020; padding-bottom: 10px; margin-bottom: 20px; }
-    .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; }
+    .titulo-bordo { color: #800020; font-size: 30px; font-weight: bold; border-bottom: 3px solid #800020; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; }
+    .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; white-space: pre-wrap; font-family: sans-serif; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🕵️ LÓGICA DE VISTA DE CLIENTE
+# 🕵️ LÓGICA DE VISTA DE CLIENTE (Landing Page)
 # ==========================================
 query_params = st.query_params
 if "q" in query_params:
@@ -36,8 +35,8 @@ if "q" in query_params:
         data_raw = base64.b64decode(query_params["q"]).decode()
         q_data = json.loads(data_raw)
         
-        # TÍTULO EN BORDÓ ACTUALIZADO
-        st.markdown(f"<div class='titulo-bordo'>🛡️ EDF SEGUROS - COTIZACIÓN DE VEHÍCULOS</div>", unsafe_allow_html=True)
+        # TÍTULO SOLICITADO
+        st.markdown("<div class='titulo-bordo'>🛡️ EDF SEGUROS - COTIZACIÓN SEGURO DE VEHÍCULOS</div>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
         with c1:
@@ -48,12 +47,10 @@ if "q" in query_params:
             st.markdown(f"**Asesor:** {q_data['e']}")
         
         st.write("### 💰 Comparativa de Opciones")
-        df_view = pd.DataFrame(q_data['tab'])
-        st.table(df_view) 
+        st.table(pd.DataFrame(q_data['tab'])) 
         
         st.write("### ✅ Beneficios Incluidos")
-        # Usamos markdown para que respete los saltos de línea del texto editable
-        st.markdown(f"<div class='quote-card'>{q_data['ben'].replace('\\n', '<br>')}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='quote-card'>{q_data['ben']}</div>", unsafe_allow_html=True)
         
         st.write("### 🏠 Coberturas Complementarias")
         col_comp = st.columns(3)
@@ -68,29 +65,52 @@ if "q" in query_params:
             st.caption(q_data['cb'])
 
         st.markdown("---")
-        # BOTÓN DE IMPRESIÓN CORREGIDO (Usando HTML directo para asegurar funcionalidad)
-        st.button("🖨️ Imprimir / Guardar PDF", on_click=None, help="Click para abrir diálogo de impresión")
-        st.components.v1.html("""
-            <script>
-            const btn = window.parent.document.querySelectorAll('button');
-            btn.forEach(b => {
-                if(b.innerText.includes('🖨️')) {
-                    b.onclick = function() { window.parent.print(); }
-                }
-            });
-            </script>
-        """, height=0)
+        # Botón de impresión con script inyectado para que funcione en cualquier navegador
+        if st.button("🖨️ Imprimir / Guardar PDF", use_container_width=True):
+            st.components.v1.html("<script>window.parent.print();</script>", height=0)
         
         st.stop() 
     except Exception as e:
-        st.error("Error al cargar la cotización. Asegúrate de que el link sea el correcto.")
+        st.error("Error al cargar la cotización.")
         st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD E INGRESO (Lo que sigue igual...)
+# 🔐 SEGURIDAD E INGRESO (SOLO PARA RDF/EQUIPO)
 # ==========================================
-# (Continuación después del Login y Carga de Datos)
+USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025"}
 
+if 'logueado' not in st.session_state: st.session_state['logueado'] = False
+if not st.session_state['logueado']:
+    st.markdown("<h1 style='text-align: center;'>🛡️ EDF SEGUROS</h1>", unsafe_allow_html=True)
+    _, col, _ = st.columns([1, 1, 1])
+    with col:
+        with st.form("login"):
+            u = st.text_input("Usuario"); p = st.text_input("Contraseña", type="password")
+            if st.form_submit_button("Ingresar", use_container_width=True):
+                if u in USUARIOS and USUARIOS[u] == p:
+                    st.session_state['logueado'] = True
+                    st.session_state['usuario_actual'] = u
+                    st.rerun()
+                else: st.error("❌ Credenciales incorrectas")
+    st.stop()
+
+# ==========================================
+# ⚙️ CARGA DE DATOS (PROTEGIDA)
+# ==========================================
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+@st.cache_data(ttl=60)
+def cargar_datos():
+    try:
+        df = conn.read(spreadsheet=URL_HOJA, ttl=0)
+        df.columns = df.columns.str.strip()
+        df['Premio_Total_USD'] = (pd.to_numeric(df.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + (pd.to_numeric(df.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / TC_USD)).round(0)
+        df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
+        return df
+    except: return pd.DataFrame()
+
+df_raw = cargar_datos()
+# --- SIDEBAR Y FILTROS (Arreglado para evitar el NameError) ---
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -116,7 +136,6 @@ if "Premio_Total_USD" in df_f.columns: config_simple["Premio_Total_USD"] = st.co
 
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "📊 ANÁLISIS"])
 
-# --- TAB 1 y 2 ---
 with tab1:
     busq = st.text_input("🔍 Buscar cliente o matrícula...")
     df_cartera = df_f.copy()
@@ -173,13 +192,12 @@ with tab3:
             "tab": t_edit.to_dict(orient='records'),
             "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b
         }
-        # Codificamos a base64 para el link
         b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
         url_cliente = f"https://dfseguros.streamlit.app/?q={b64_data}"
         
         st.success("¡Link generado exitosamente!")
         st.code(url_cliente, language=None)
-        st.info("Copiá este link y envíaselo al cliente. Al abrirlo, verá la versión bordó imprimible.")
+        st.info("Copiá este link y envíaselo al cliente.")
 
 # --- TAB 4: ANÁLISIS ---
 with tab4:
