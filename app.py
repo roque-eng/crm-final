@@ -7,13 +7,20 @@ import io
 import json
 import base64
 import urllib.request
+import urllib.parse
 
 # ==========================================
-# ⚙️ CONFIGURACIÓN Y VISTA PREVIA
+# ⚙️ CONFIGURACIÓN Y ESTILOS
 # ==========================================
+URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
+TC_USD = 40.5 
+
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos visuales
+def fmt_curr(val):
+    try: return f"$ {int(float(val)):,}".replace(",", ".")
+    except: return val
+
 st.markdown("""
     <style>
     @media print {
@@ -26,13 +33,6 @@ st.markdown("""
     [data-testid="stTable"] td:first-child { text-align: left !important; }
     </style>
     """, unsafe_allow_html=True)
-
-URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
-TC_USD = 40.5 
-
-def fmt_curr(val):
-    try: return f"$ {int(float(val)):,}".replace(",", ".")
-    except: return val
 
 # ==========================================
 # 🕵️ LÓGICA DE VISTA DE CLIENTE
@@ -107,6 +107,9 @@ def cargar_datos():
     except: return pd.DataFrame()
 
 df_raw = cargar_datos()
+# ==========================================
+# 📊 INTERFAZ PRINCIPAL (DASHBOARD)
+# ==========================================
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -190,18 +193,15 @@ with tab3:
         c_a = st.text_area("Alquiler:", value=txt_alq, height=100)
         c_b = st.text_area("Bici:", value=txt_bic, height=110)
 
-    if st.button("🔗 GENERAR LINK PARA CLIENTE", use_container_width=True, type="primary"):
+    if st.button("📲 ENVIAR POR WHATSAPP", use_container_width=True, type="primary"):
         datos = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
         b64 = base64.b64encode(json.dumps(datos).encode()).decode()
-        l_largo = f"https://dfseguros.streamlit.app/?q={b64}"
-        try:
-            api = "http://tinyurl.com/api-create.php?url=" + l_largo
-            with urllib.request.urlopen(api) as res:
-                l_corto = res.read().decode('utf-8')
-        except:
-            l_corto = l_largo
-        st.success("¡Link generado!")
-        st.code(l_corto, language=None)
+        link_final = f"https://dfseguros.streamlit.app/?q={b64}"
+        mensaje_wa = f"🛡️ *EDF SEGUROS - Propuesta Comercial*\n\nHola {n_cot}, adjunto la cotización para tu vehículo {v_cot}. Podés verla aquí:\n\n{link_final}"
+        wa_url = f"https://wa.me/?text={urllib.parse.quote(mensaje_wa)}"
+        st.markdown(f'<a href="{wa_url}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer;">🟢 ABRIR WHATSAPP PARA ENVIAR</button></a>', unsafe_allow_html=True)
+        st.info("O podés copiar este link para usar tu acortador:")
+        st.code(link_final)
 
 with tab4:
     if not df_f.empty:
