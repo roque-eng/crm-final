@@ -107,13 +107,11 @@ def cargar_datos():
     except: return pd.DataFrame()
 
 df_raw = cargar_datos()
-# ==========================================
-# 📊 INTERFAZ PRINCIPAL (DASHBOARD)
-# ==========================================
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
-    def get_list(col): return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
+    def get_list(col): 
+        return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
     f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
     f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
     f_ra = st.selectbox("Ramo", get_list('Ramo'))
@@ -193,15 +191,22 @@ with tab3:
         c_a = st.text_area("Alquiler:", value=txt_alq, height=100)
         c_b = st.text_area("Bici:", value=txt_bic, height=110)
 
-    if st.button("📲 ENVIAR POR WHATSAPP", use_container_width=True, type="primary"):
-        datos = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
-        b64 = base64.b64encode(json.dumps(datos).encode()).decode()
-        link_final = f"https://dfseguros.streamlit.app/?q={b64}"
-        mensaje_wa = f"🛡️ *EDF SEGUROS - Propuesta Comercial*\n\nHola {n_cot}, adjunto la cotización para tu vehículo {v_cot}. Podés verla aquí:\n\n{link_final}"
-        wa_url = f"https://wa.me/?text={urllib.parse.quote(mensaje_wa)}"
-        st.markdown(f'<a href="{wa_url}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer;">🟢 ABRIR WHATSAPP PARA ENVIAR</button></a>', unsafe_allow_html=True)
-        st.info("O podés copiar este link para usar tu acortador:")
-        st.code(link_final)
+    st.divider()
+    
+    # Lógica de links y WhatsApp
+    datos = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
+    b64 = base64.b64encode(json.dumps(datos).encode()).decode()
+    l_final = f"https://dfseguros.streamlit.app/?q={b64}"
+    wa_msg = f"🛡️ *EDF SEGUROS - Propuesta Comercial*\n\nHola {n_cot}, adjunto la cotización para tu vehículo {v_cot}. Podés verla aquí:\n\n{l_final}"
+    wa_url = f"https://wa.me/?text={urllib.parse.quote(wa_msg)}"
+
+    c_btn1, c_btn2, _ = st.columns([1, 1, 2])
+    with c_btn1:
+        st.write("**1. Copiá el link:**")
+        st.code(l_final, language=None)
+    with c_btn2:
+        st.write("**2. O envialo:**")
+        st.markdown(f'<a href="{wa_url}" target="_blank"><button style="width:100%;background-color:#25D366;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;">🟢 WHATSAPP</button></a>', unsafe_allow_html=True)
 
 with tab4:
     if not df_f.empty:
