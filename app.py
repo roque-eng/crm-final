@@ -47,6 +47,7 @@ if "q" in query_params:
         with c1:
             st.markdown(f"**Asegurado:** {q_data['n']}")
             st.markdown(f"**Vehículo:** {q_data['v']}")
+            if 'cob' in q_data: st.markdown(f"**Cobertura:** {q_data['cob']}")
         with c2:
             st.markdown(f"**Fecha:** {date.today().strftime('%d/%m/%Y')}")
             st.markdown(f"**Asesor:** {q_data['e']}")
@@ -77,7 +78,7 @@ if "q" in query_params:
         st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD (LISTA DE USUARIOS ACTUALIZADA)
+# 🔐 SEGURIDAD
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", 
@@ -114,7 +115,7 @@ def cargar_datos():
 
 df_raw = cargar_datos()
 # ==========================================
-# 📊 INTERFAZ PRINCIPAL (DASHBOARD)
+# 📊 INTERFAZ PRINCIPAL
 # ==========================================
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
@@ -175,7 +176,8 @@ with tab3:
             if not match.empty: nom_sug = match.iloc[0].get('Asegurado (Nombre/Razón Social)', "")
         n_cot = c1.text_input("Asegurado", value=nom_sug)
         v_cot = c2.text_input("Vehículo (Marca/Modelo/Año)")
-        e_cot = c3.selectbox("Hecha por:", sorted(list(USUARIOS.keys())))
+        cob_cot = c2.text_input("Cobertura") # CAMBIO: Nuevo campo Cobertura
+        e_cot = c3.selectbox("Hecha por:", sorted(list(USUARIOS.keys())), index=sorted(list(USUARIOS.keys())).index(st.session_state['usuario_actual']) if st.session_state['usuario_actual'] in USUARIOS else 0)
 
     t_edit = st.data_editor(
         pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), 
@@ -190,20 +192,21 @@ with tab3:
     st.write("### ✅ Detalles de Cobertura")
     col_a, col_b = st.columns(2)
     with col_a:
-        txt_ben = "• Auxilio mecánico 24hs.\n• Ayuda económica para cristales:\n  - USD 200 SBI / USD 200 BSE\n  - USD 100 SURA / USD 300 SANCOR\n  - Ilimitado MAPFRE\n• RC USD 500.000"
-        b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=250)
+        # CAMBIO: Texto exacto de Beneficios
+        txt_ben = "• Auxilio mecánico 24hs:\n- Todas las aseguradoras\n\n• Ayuda económica para cristales:\n- SBI: USD 200\n- BSE: USD 200\n- SURA: USD 100\n- SANCOR: USD 300\n- MAPFRE: Ilimitado\n\n• Ayuda económica para cristales:\n- PORTO: Sin deducible"
+        b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=350)
     with col_b:
+        # CAMBIO: Textos exactos de Hogar, Alquiler y Bici
         txt_hog = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 20.000\n• Hurto Contenido: USD 5.000\n• COSTO ANUAL: USD 120"
         txt_alq = "• Auto de cortesía por 15 días en caso de siniestro y que el vehículo tenga que ingresar al taller.\n• COSTO ANUAL: UYU 3.900"
         txt_bic = "• Hurto de tu Bici (en la calle o en tu casa) valor declarado hasta USD 1.000\n• Responsabilidad Civil: USD 10.000\n• COSTO ANUAL: USD 70"
-        c_h = st.text_area("Hogar:", value=txt_hog, height=130)
+        c_h = st.text_area("Hogar:", value=txt_hog, height=140)
         c_a = st.text_area("Alquiler:", value=txt_alq, height=100)
-        c_b = st.text_area("Bici:", value=txt_bic, height=110)
+        c_b = st.text_area("Bici:", value=txt_bic, height=125)
 
     st.divider()
     
-    # Lógica de generación de links
-    datos = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
+    datos = {"n": n_cot, "v": v_cot, "cob": cob_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
     b64 = base64.b64encode(json.dumps(datos).encode()).decode()
     l_final = f"https://dfseguros.streamlit.app/?q={b64}"
     wa_msg = f"🛡️ *EDF SEGUROS - Propuesta Comercial*\n\nHola {n_cot}, adjunto la cotización para tu vehículo {v_cot}. Podés verla aquí:\n\n{l_final}"
