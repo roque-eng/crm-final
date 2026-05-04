@@ -9,26 +9,11 @@ import base64
 import urllib.request
 
 # ==========================================
-# ⚙️ CONFIGURACIÓN Y METADATOS (Para WhatsApp)
+# ⚙️ CONFIGURACIÓN Y VISTA PREVIA
 # ==========================================
-st.set_page_config(page_title="EDF SEGUROS - Cotización", layout="wide", page_icon="🛡️")
+st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Inyectamos metadatos para que WhatsApp muestre una vista previa linda
-st.markdown("""
-    <head>
-        <meta property="og:title" content="EDF SEGUROS - Cotización de Seguro">
-        <meta property="og:description" content="Propuesta comercial personalizada para tu vehículo.">
-        <meta property="og:image" content="https://raw.githubusercontent.com/streamlit/docs/main/public/images/logo.png">
-    </head>
-    """, unsafe_allow_html=True)
-
-URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
-TC_USD = 40.5 
-
-def fmt_curr(val):
-    try: return f"$ {int(float(val)):,}".replace(",", ".")
-    except: return val
-
+# Estilos visuales
 st.markdown("""
     <style>
     @media print {
@@ -41,6 +26,13 @@ st.markdown("""
     [data-testid="stTable"] td:first-child { text-align: left !important; }
     </style>
     """, unsafe_allow_html=True)
+
+URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
+TC_USD = 40.5 
+
+def fmt_curr(val):
+    try: return f"$ {int(float(val)):,}".replace(",", ".")
+    except: return val
 
 # ==========================================
 # 🕵️ LÓGICA DE VISTA DE CLIENTE
@@ -109,9 +101,7 @@ def cargar_datos():
     try:
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
-        df['Premio USD (IVA inc)'] = pd.to_numeric(df.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0)
-        df['Premio UYU (IVA inc)'] = pd.to_numeric(df.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0)
-        df['Premio_Total_USD'] = (df['Premio USD (IVA inc)'] + (df['Premio UYU (IVA inc)'] / TC_USD)).round(0)
+        df['Premio_Total_USD'] = (pd.to_numeric(df.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + (pd.to_numeric(df.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / TC_USD)).round(0)
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
         return df
     except: return pd.DataFrame()
@@ -120,8 +110,7 @@ df_raw = cargar_datos()
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
-    def get_list(col): 
-        return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
+    def get_list(col): return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
     f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
     f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
     f_ra = st.selectbox("Ramo", get_list('Ramo'))
@@ -202,12 +191,17 @@ with tab3:
         c_b = st.text_area("Bici:", value=txt_bic, height=110)
 
     if st.button("🔗 GENERAR LINK PARA CLIENTE", use_container_width=True, type="primary"):
-        datos_enviar = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
-        b64_data = base64.b64encode(json.dumps(datos_enviar).encode()).decode()
-        link_final = f"https://dfseguros.streamlit.app/?q={b64_data}"
+        datos = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
+        b64 = base64.b64encode(json.dumps(datos).encode()).decode()
+        l_largo = f"https://dfseguros.streamlit.app/?q={b64}"
+        try:
+            api = "http://tinyurl.com/api-create.php?url=" + l_largo
+            with urllib.request.urlopen(api) as res:
+                l_corto = res.read().decode('utf-8')
+        except:
+            l_corto = l_largo
         st.success("¡Link generado!")
-        st.code(link_final, language=None)
-        st.info("Copiá este link. En WhatsApp aparecerá con el nombre de EDF SEGUROS.")
+        st.code(l_corto, language=None)
 
 with tab4:
     if not df_f.empty:
