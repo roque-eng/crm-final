@@ -68,7 +68,7 @@ def cargar_datos_completos():
 
 df_raw = cargar_datos_completos()
 
-# --- SIDEBAR CON FILTROS RECUPERADOS ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -89,6 +89,18 @@ if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 
+# Definición de columnas visibles (según tu imagen)
+COL_VISIBLES = [
+    "Asegurado (Nombre/Razón Social)", "Ramo", "Aseguradora", "Fin de Vigencia", 
+    "Detalle (Matricula o Referencia)", "Premio USD (IVA inc)", "Premio UYU (IVA inc)", 
+    "Premio_Total_USD", "Adjunto (póliza)"
+]
+
+# Configuración de columnas para que el resto esté oculto
+config_columnas = {col: st.column_config.Column(visible=False) for col in df_f.columns if col not in COL_VISIBLES}
+config_columnas["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
+config_columnas["Premio_Total_USD"] = st.column_config.NumberColumn("Total USD", format="U$S %d")
+
 st.markdown("# 🛡️ EDF SEGUROS")
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "📊 ANÁLISIS"])
 # --- TAB 1: CARTERA ---
@@ -99,9 +111,12 @@ with tab1:
         mask = df_cartera.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)
         df_cartera = df_cartera[mask]
     
+    # Aplicamos la configuración de columnas (oculta las sobrantes y pone el icono)
     st.dataframe(
-        df_cartera, use_container_width=True, hide_index=True,
-        column_config={"Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂")}
+        df_cartera, 
+        use_container_width=True, 
+        hide_index=True,
+        column_config=config_columnas
     )
 
 # --- TAB 2: VENCIMIENTOS ---
@@ -119,9 +134,16 @@ with tab2:
                 f_final = st.date_input("Vencimientos hasta:", hoy + timedelta(days=90))
             
             df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_inicio) & (df_v['Fin de Vigencia'] <= f_final)]
-            st.dataframe(df_venc_final.sort_values('Fin de Vigencia'), use_container_width=True, hide_index=True)
+            
+            # Aplicamos la misma configuración de columnas para ver solo lo importante y el ícono 📂
+            st.dataframe(
+                df_venc_final.sort_values('Fin de Vigencia'), 
+                use_container_width=True, 
+                hide_index=True,
+                column_config=config_columnas
+            )
 
-# --- TAB 3: COTIZADOR (CON TEXTOS PRE-ESCRITOS) ---
+# --- TAB 3: COTIZADOR ---
 with tab3:
     st.subheader("📝 Generador de Cotizaciones")
     with st.container(border=True):
@@ -149,12 +171,9 @@ with tab3:
     
     with col_b:
         st.write("**Coberturas Complementarias:**")
-        
-        # TEXTOS PRE-ESCRITOS SEGÚN TU IMAGEN
         txt_hogar = "• Incendio Edificio e Incendio Contenido.\n• Hurto Contenido.\n• Cristales.\n• Responsabilidad Civil.\n• Daños por Agua."
         txt_alq = "• Auto de cortesía por 15 días en caso de siniestro con un tercero identificado."
         txt_bici = "• Hurto e Incendio de bicicleta en República Oriental del Uruguay y el mundo.\n• Responsabilidad Civil."
-
         c_hogar = st.text_area("Hogar:", value=txt_hogar, height=150)
         c_alq = st.text_area("Alquiler:", value=txt_alq, height=90)
         c_bici = st.text_area("Bici:", value=txt_bici, height=120)
@@ -192,7 +211,6 @@ with tab4:
         m1.metric("Cartera Total (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
         m2.metric("Pólizas", f"{len(df_f)} u.")
         m3.metric("Ticket Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
-        
         st.divider()
         col_g1, col_g2 = st.columns(2)
         with col_g1:
