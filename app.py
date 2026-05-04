@@ -68,7 +68,6 @@ def cargar_datos_completos():
 
 df_raw = cargar_datos_completos()
 
-# --- SIDEBAR ---
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -77,7 +76,6 @@ with st.sidebar:
     f_ra = st.selectbox("Ramo", ["Todos"] + sorted(df_raw['Ramo'].dropna().unique().tolist()))
     f_co = st.selectbox("Corredor", ["Todos"] + sorted(df_raw['Corredor'].dropna().unique().tolist()))
     f_ag = st.selectbox("Agente", ["Todos"] + sorted(df_raw['Agente'].dropna().unique().tolist()))
-    
     if st.button("Cerrar Sesión", use_container_width=True):
         st.session_state['logueado'] = False
         st.rerun()
@@ -89,17 +87,23 @@ if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 
-# Definición de columnas visibles (según tu imagen)
-COL_VISIBLES = [
+# --- NUEVA LÓGICA DE COLUMNAS (MÁS SEGURA) ---
+COL_QUEREMOS = [
     "Asegurado (Nombre/Razón Social)", "Ramo", "Aseguradora", "Fin de Vigencia", 
     "Detalle (Matricula o Referencia)", "Premio USD (IVA inc)", "Premio UYU (IVA inc)", 
     "Premio_Total_USD", "Adjunto (póliza)"
 ]
 
-# Configuración de columnas para que el resto esté oculto
-config_columnas = {col: st.column_config.Column(visible=False) for col in df_f.columns if col not in COL_VISIBLES}
-config_columnas["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
-config_columnas["Premio_Total_USD"] = st.column_config.NumberColumn("Total USD", format="U$S %d")
+# Creamos la configuración SOLO para las columnas que existen en el dataframe actual
+config_final = {}
+for col in df_f.columns:
+    if col in COL_QUEREMOS:
+        if col == "Adjunto (póliza)":
+            config_final[col] = st.column_config.LinkColumn("Póliza", display_text="📂")
+        elif col == "Premio_Total_USD":
+            config_final[col] = st.column_config.NumberColumn("Total USD", format="U$S %d")
+    else:
+        config_final[col] = st.column_config.Column(visible=False)
 
 st.markdown("# 🛡️ EDF SEGUROS")
 tab1, tab2, tab3, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "📊 ANÁLISIS"])
@@ -111,12 +115,11 @@ with tab1:
         mask = df_cartera.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)
         df_cartera = df_cartera[mask]
     
-    # Aplicamos la configuración de columnas (oculta las sobrantes y pone el icono)
     st.dataframe(
         df_cartera, 
         use_container_width=True, 
         hide_index=True,
-        column_config=config_columnas
+        column_config=config_final
     )
 
 # --- TAB 2: VENCIMIENTOS ---
@@ -124,6 +127,7 @@ with tab2:
     st.subheader("🔄 Control de Vencimientos")
     if not df_f.empty:
         df_v = df_f.dropna(subset=['Fin de Vigencia'])
+        # Filtro de seguridad para años
         df_v = df_v[(df_v['Fin de Vigencia'] >= date(2020, 1, 1)) & (df_v['Fin de Vigencia'] <= date(2040, 12, 31))]
         
         if not df_v.empty:
@@ -135,12 +139,12 @@ with tab2:
             
             df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_inicio) & (df_v['Fin de Vigencia'] <= f_final)]
             
-            # Aplicamos la misma configuración de columnas para ver solo lo importante y el ícono 📂
+            # Usamos la misma configuración segura que en Cartera
             st.dataframe(
                 df_venc_final.sort_values('Fin de Vigencia'), 
                 use_container_width=True, 
                 hide_index=True,
-                column_config=config_columnas
+                column_config=config_final
             )
 
 # --- TAB 3: COTIZADOR ---
@@ -171,12 +175,12 @@ with tab3:
     
     with col_b:
         st.write("**Coberturas Complementarias:**")
-        txt_hogar = "• Incendio Edificio e Incendio Contenido.\n• Hurto Contenido.\n• Cristales.\n• Responsabilidad Civil.\n• Daños por Agua."
-        txt_alq = "• Auto de cortesía por 15 días en caso de siniestro con un tercero identificado."
-        txt_bici = "• Hurto e Incendio de bicicleta en República Oriental del Uruguay y el mundo.\n• Responsabilidad Civil."
-        c_hogar = st.text_area("Hogar:", value=txt_hogar, height=150)
-        c_alq = st.text_area("Alquiler:", value=txt_alq, height=90)
-        c_bici = st.text_area("Bici:", value=txt_bici, height=120)
+        txt_h = "• Incendio Edificio e Incendio Contenido.\n• Hurto Contenido.\n• Cristales.\n• Responsabilidad Civil.\n• Daños por Agua."
+        txt_a = "• Auto de cortesía por 15 días en caso de siniestro con un tercero identificado."
+        txt_b = "• Hurto e Incendio de bicicleta en República Oriental del Uruguay y el mundo.\n• Responsabilidad Civil."
+        c_hogar = st.text_area("Hogar:", value=txt_h, height=150)
+        c_alq = st.text_area("Alquiler:", value=txt_a, height=90)
+        c_bici = st.text_area("Bici:", value=txt_b, height=120)
 
     def generar_excel():
         output = io.BytesIO()
