@@ -36,28 +36,26 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🕵️ LÓGICA DE VISTA DE CLIENTE (Individual y Flotas)
+# 🕵️ VISTA DE CLIENTE (Link que recibe el asegurado)
 # ==========================================
 query_params = st.query_params
 if "q" in query_params or "f" in query_params:
-    is_flota = "f" in query_params
-    param = "f" if is_flota else "q"
+    p_tipo = "f" if "f" in query_params else "q"
     try:
-        data_raw = base64.b64decode(query_params[param]).decode()
+        data_raw = base64.b64decode(query_params[p_tipo]).decode()
         q_data = json.loads(data_raw)
-        st.markdown(f"<div class='titulo-bordo'>🛡️ EDF SEGUROS - {'PROPUESTA FLOTA' if is_flota else 'COTIZACIÓN VEHÍCULO'}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='titulo-bordo'>🛡️ EDF SEGUROS - {'PROPUESTA FLOTA' if p_tipo=='f' else 'COTIZACIÓN VEHÍCULO'}</div>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
         with c1:
             st.markdown(f"**Asegurado:** {q_data['n']}")
-            if not is_flota:
+            if p_tipo == "q": 
                 st.markdown(f"**Vehículo:** {q_data.get('v', 'S/D')}")
                 if q_data.get('cob'): st.markdown(f"**Cobertura:** {q_data['cob']}")
         with c2:
             st.markdown(f"**Fecha:** {date.today().strftime('%d/%m/%Y')}")
             st.markdown(f"**Asesor:** {q_data['e']}")
         
-        st.write("### 💰 Detalle de la Propuesta")
         df_view = pd.DataFrame(q_data['tab'])
         for col in df_view.columns:
             if any(p in col.lower() for p in ["precio", "contado", "cuotas", "deducible"]):
@@ -67,7 +65,7 @@ if "q" in query_params or "f" in query_params:
         st.write("### ✅ Beneficios Incluidos")
         st.markdown(f"<div class='quote-card'>{q_data['ben']}</div>", unsafe_allow_html=True)
         
-        if not is_flota and q_data.get('ch'):
+        if p_tipo == "q" and q_data.get('ch'):
             st.write("### 🏠 Coberturas Complementarias")
             col_comp = st.columns(3)
             with col_comp[0]: st.info("**Hogar**"); st.caption(q_data['ch'])
@@ -82,7 +80,7 @@ if "q" in query_params or "f" in query_params:
         st.error("Error al cargar la cotización."); st.stop()
 
 # ==========================================
-# 🔐 SEGURIDAD
+# 🔐 LOGIN
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", 
@@ -104,12 +102,14 @@ if not st.session_state['logueado']:
                     st.session_state['logueado'] = True; st.session_state['usuario_actual'] = u; st.rerun()
                 else: st.error("❌ Credenciales incorrectas")
     st.stop()
-    conn = st.connection("gsheets", type=GSheetsConnection)
+    # ==========================================
+# 📊 CARGA DE DATOS Y FILTROS
+# ==========================================
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=5) # Refresco rápido para asegurar lectura completa
+@st.cache_data(ttl=10)
 def cargar_datos():
     try:
-        # TTL=0 para forzar lectura de todas las filas nuevas
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
         df = df.dropna(how='all') 
@@ -120,7 +120,7 @@ def cargar_datos():
 
 df_raw = cargar_datos()
 
-# Configuración de columnas (📂 Carpetitas Restauradas)
+# Configuración de tablas (📂 Iconos)
 conf_cols = {}
 if "Adjunto (póliza)" in df_raw.columns:
     conf_cols["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
@@ -142,12 +142,15 @@ if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 
+# ==========================================
+# 🏢 INTERFAZ DE PESTAÑAS
+# ==========================================
 tab1, tab2, tab3, tab_flota, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📊 ANÁLISIS"])
 
 with tab1:
     busq = st.text_input("🔍 Buscar cliente o matrícula...")
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
-    st.write(f"Mostrando {len(df_c)} registros")
+    st.write(f"**Registros encontrados:** {len(df_c)}")
     st.dataframe(df_c, use_container_width=True, hide_index=True, column_config=conf_cols)
 
 with tab2:
@@ -161,29 +164,28 @@ with tab2:
         st.dataframe(df_venc_final, use_container_width=True, hide_index=True, column_config=conf_cols)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_final.to_excel(writer, index=False)
-        col_ex, _ = st.columns([1, 4])
-        with col_ex: st.download_button(label="📥 EXCEL", data=output.getvalue(), file_name='vencimientos.xlsx')
+        st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
 
 with tab3:
-    st.subheader("📝 Generador Individual")
+    st.subheader("📝 Cotizador Individual")
     with st.container(border=True):
         c1, c2, c3 = st.columns(3)
         n_cot = c1.text_input("Asegurado")
         v_cot = c2.text_input("Vehículo")
-        cob_cot = c2.text_input("Cobertura")
+        cob_cot = c2.text_input("Cobertura", value="TODO RIESGO")
         e_cot = c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
     
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
     
-    st.write("### ✅ Detalles de Cobertura")
+    st.write("### ✅ Beneficios y Adicionales")
     col_a, col_b = st.columns(2)
     with col_a:
-        txt_ben = "• Auxilio mecánico 24hs:\nTodas las aseguradoras\n\n• Ayuda económica para cristales:\nSBI: USD 200\nBSE: USD 200\nSURA: USD 100\nSANCOR: USD 300\nMAPFRE: Ilimitado\n\n• Ayuda económica para granizo:\nPORTO: Sin deducible"
-        b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=300)
+        txt_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: SBI/BSE USD 200, SURA USD 100\n• Granizo: PORTO sin deducible"
+        b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=250)
     with col_b:
-        c_h = st.text_area("Hogar:", value="• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 20.000\n• COSTO ANUAL: USD 120", height=100)
-        c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días por siniestro.\n• COSTO ANUAL: UYU 3.900", height=100)
-        c_b = st.text_area("Bici:", value="• Hurto Bici valor declarado hasta USD 1.000\n• COSTO ANUAL: USD 70", height=100)
+        c_h = st.text_area("Hogar:", value="• Incendio Edificio: USD 100.000\n• COSTO ANUAL: USD 120", height=80)
+        c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días.\n• COSTO ANUAL: UYU 3.900", height=80)
+        c_b = st.text_area("Bici:", value="• Hurto hasta USD 1.000\n• COSTO ANUAL: USD 70", height=80)
     
     if st.button("Generar Link Individual"):
         datos = {"n": n_cot, "v": v_cot, "cob": cob_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
@@ -195,13 +197,13 @@ with tab_flota:
     with st.container(border=True):
         c1, fc2, c3 = st.columns(3)
         f_nom = c1.text_input("Asegurado Flota")
-        f_as1 = fc2.text_input("Aseguradora 1", value="SURA")
-        f_as2 = fc2.text_input("Aseguradora 2", value="BSE")
+        f_as1 = fc2.text_input("Aseguradora A", value="SURA")
+        f_as2 = fc2.text_input("Aseguradora B", value="BSE")
         f_ase = c3.selectbox("Asesor Flota", sorted(list(USUARIOS.keys())), key="ase_flota")
     
-    df_flota_init = pd.DataFrame([{"Vehículo": "Auto 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0}])
+    df_flota_init = pd.DataFrame([{"Vehículo": "Unidad 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0}])
     t_flota = st.data_editor(df_flota_init, num_rows="dynamic", use_container_width=True)
-    f_ben = st.text_area("Beneficios Incluidos (Flota):", value=txt_ben, height=200, key="ben_flota")
+    f_ben = st.text_area("Beneficios Flota:", value=txt_ben, height=150, key="ben_flota")
     
     if st.button("Generar Link Flota"):
         datos_f = {"n": f_nom, "e": f_ase, "tab": t_flota.to_dict(orient='records'), "ben": f_ben}
@@ -210,14 +212,10 @@ with tab_flota:
 
 with tab4:
     if not df_f.empty:
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Cartera (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
-        m2.metric("Pólizas", f"{len(df_f)} u.")
-        m3.metric("Ticket Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
-        
-        st.divider()
+        st.subheader("📊 Análisis de Cartera")
         c_g1, c_g2 = st.columns(2)
-        with c_g1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
+        with c_g1: 
+            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Compañía", hole=0.4), use_container_width=True)
         with c_g2:
             if 'Ramo' in df_f.columns:
                 r_counts = df_f['Ramo'].value_counts().reset_index()
