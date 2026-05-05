@@ -36,7 +36,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🕵️ LÓGICA DE VISTA DE CLIENTE (Individual y Flotas)
+# 🕵️ LÓGICA DE VISTA DE CLIENTE
 # ==========================================
 query_params = st.query_params
 if "q" in query_params or "f" in query_params:
@@ -45,28 +45,27 @@ if "q" in query_params or "f" in query_params:
     try:
         data_raw = base64.b64decode(query_params[param]).decode()
         q_data = json.loads(data_raw)
-        st.markdown(f"<div class='titulo-bordo'>🛡️ EDF SEGUROS - {'PROPUESTA FLOTA' if is_flota else 'COTIZACIÓN VEHÍCULOS'}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='titulo-bordo'>🛡️ EDF SEGUROS - {'PROPUESTA FLOTA' if is_flota else 'COTIZACIÓN VEHÍCULO'}</div>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
         with c1:
             st.markdown(f"**Asegurado:** {q_data['n']}")
-            if not is_flota: st.markdown(f"**Vehículo:** {q_data['v']}")
+            if not is_flota: st.markdown(f"**Vehículo:** {q_data.get('v', 'S/D')}")
         with c2:
             st.markdown(f"**Fecha:** {date.today().strftime('%d/%m/%Y')}")
             st.markdown(f"**Asesor:** {q_data['e']}")
         
         st.write("### 💰 Detalle de la Propuesta")
         df_view = pd.DataFrame(q_data['tab'])
-        # Formatear columnas de precio si existen
         for col in df_view.columns:
-            if any(palabra in col.lower() for palabra in ["precio", "contado", "cuotas", "deducible"]):
+            if any(p in col.lower() for p in ["precio", "contado", "cuotas", "deducible"]):
                 df_view[col] = df_view[col].apply(fmt_curr)
         st.table(df_view) 
         
         st.write("### ✅ Beneficios Incluidos")
         st.markdown(f"<div class='quote-card'>{q_data['ben']}</div>", unsafe_allow_html=True)
         
-        if not is_flota: # Coberturas extras solo en individual
+        if not is_flota and q_data.get('ch'):
             st.write("### 🏠 Coberturas Complementarias")
             col_comp = st.columns(3)
             with col_comp[0]: st.info("**Hogar**"); st.caption(q_data['ch'])
@@ -79,9 +78,8 @@ if "q" in query_params or "f" in query_params:
         st.stop() 
     except:
         st.error("Error al cargar la cotización."); st.stop()
-
-# ==========================================
-# 🔐 SEGURIDAD
+        # ==========================================
+# 🔐 SEGURIDAD Y DATOS
 # ==========================================
 USUARIOS = {
     "RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", 
@@ -117,9 +115,14 @@ def cargar_datos():
     except: return pd.DataFrame()
 
 df_raw = cargar_datos()
-# ==========================================
-# 📊 INTERFAZ PRINCIPAL
-# ==========================================
+
+# Configuración de columnas con icono de carpeta
+conf_cols = {}
+if "Adjunto (póliza)" in df_raw.columns:
+    conf_cols["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
+if "Premio_Total_USD" in df_raw.columns:
+    conf_cols["Premio_Total_USD"] = st.column_config.NumberColumn("Total USD", format="U$S %d")
+
 with st.sidebar:
     st.title(f"👤 {st.session_state['usuario_actual']}")
     st.divider()
@@ -134,13 +137,12 @@ df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
+    tab1, tab2, tab3, tab_flota, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📊 ANÁLISIS"])
 
-tab1, tab2, tab3, tab_flota, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📊 ANÁLISIS"])
-
-# --- TAB 1 Y 2 SE MANTIENEN IGUAL QUE ANTES ---
 with tab1:
-    busq = st.text_input("🔍 Buscar cliente...")
-    st.dataframe(df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f, use_container_width=True, hide_index=True)
+    busq = st.text_input("🔍 Buscar cliente o matrícula...")
+    df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
+    st.dataframe(df_c, use_container_width=True, hide_index=True, column_config=conf_cols)
 
 with tab2:
     st.subheader("🔄 Control de Vencimientos")
@@ -150,59 +152,58 @@ with tab2:
         f_ini = c_f1.date_input("Desde:", date.today().replace(day=1))
         f_fin = c_f2.date_input("Hasta:", date.today() + timedelta(days=90))
         df_venc_final = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
-        st.dataframe(df_venc_final, use_container_width=True, hide_index=True)
+        st.dataframe(df_venc_final, use_container_width=True, hide_index=True, column_config=conf_cols)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_final.to_excel(writer, index=False)
         st.download_button(label="📥 EXCEL", data=output.getvalue(), file_name='vencimientos.xlsx')
 
-# --- TAB 3: COTIZADOR INDIVIDUAL ---
 with tab3:
     st.subheader("📝 Generador Individual")
     with st.container(border=True):
         c1, c2, c3 = st.columns(3)
-        doc_in = c1.text_input("CI / RUT")
         n_cot = c1.text_input("Asegurado")
         v_cot = c2.text_input("Vehículo")
-        cob_cot = c2.text_input("Cobertura")
         e_cot = c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
-    txt_ben = "• Auxilio mecánico 24hs:\nTodas las aseguradoras\n\n• Ayuda económica para cristales:\nSBI: USD 200\nBSE: USD 200\nSURA: USD 100\nSANCOR: USD 300\nMAPFRE: Ilimitado\n\n• Ayuda económica para granizo:\nPORTO: Sin deducible"
-    b_cot = st.text_area("Beneficios:", value=txt_ben, height=200)
-    datos = {"n": n_cot, "v": v_cot, "cob": cob_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": "", "ca": "", "cb": ""}
+    
+    st.write("### ✅ Detalles de Cobertura")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        txt_ben = "• Auxilio mecánico 24hs:\nTodas las aseguradoras\n\n• Ayuda económica para cristales:\nSBI: USD 200\nBSE: USD 200\nSURA: USD 100\nSANCOR: USD 300\nMAPFRE: Ilimitado\n\n• Ayuda económica para granizo:\nPORTO: Sin deducible"
+        b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=300)
+    with col_b:
+        c_h = st.text_area("Hogar:", value="• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 20.000\n• COSTO ANUAL: USD 120", height=100)
+        c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días por siniestro.\n• COSTO ANUAL: UYU 3.900", height=100)
+        c_b = st.text_area("Bici:", value="• Hurto Bici valor declarado hasta USD 1.000\n• COSTO ANUAL: USD 70", height=100)
+    
     if st.button("Generar Link Individual"):
+        datos = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
         b64 = base64.b64encode(json.dumps(datos).encode()).decode()
         st.code(f"https://dfseguros.streamlit.app/?q={b64}", language=None)
 
-# --- NUEVA TAB: COTIZADOR FLOTAS ---
 with tab_flota:
-    st.subheader("🚛 Generador de Propuestas para Flotas")
+    st.subheader("🚛 Generador Flotas")
     with st.container(border=True):
         c1, c2, c3 = st.columns(3)
-        f_doc = c1.text_input("CI / RUT Flota")
         f_nom = c1.text_input("Asegurado Flota")
         f_as1 = c2.text_input("Aseguradora 1", value="SURA")
         f_as2 = c2.text_input("Aseguradora 2", value="BSE")
         f_as3 = c3.text_input("Aseguradora 3", value="PORTO")
         f_ase = c3.selectbox("Asesor Flota", sorted(list(USUARIOS.keys())), key="ase_flota")
-
-    # Creamos la tabla dinámica para flotas
-    df_flota_init = pd.DataFrame([
-        {"Vehículo": "Auto 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded. {f_as3}": 0}
-    ])
-    
+    df_flota_init = pd.DataFrame([{"Vehículo": "Auto 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0}])
     t_flota = st.data_editor(df_flota_init, num_rows="dynamic", use_container_width=True)
-    
-    f_ben = st.text_area("Beneficios Incluidos (Flota):", value=txt_ben, height=250)
-    
-    if st.button("Generar Link de Flota"):
+    f_ben = st.text_area("Beneficios Incluidos (Flota):", value=txt_ben, height=200, key="ben_flota")
+    if st.button("Generar Link Flota"):
         datos_f = {"n": f_nom, "e": f_ase, "tab": t_flota.to_dict(orient='records'), "ben": f_ben}
         b64_f = base64.b64encode(json.dumps(datos_f).encode()).decode()
-        l_f = f"https://dfseguros.streamlit.app/?f={b64_f}"
-        st.write("**Link para el Cliente:**")
-        st.code(l_f, language=None)
-        wa_flota = f"https://wa.me/?text={urllib.parse.quote(f'🛡️ *EDF SEGUROS - Propuesta Flota*\n\nHola {f_nom}, adjunto la comparativa:\n\n{l_f}')}"
-        st.markdown(f'<a href="{wa_flota}" target="_blank"><button style="background-color:#25D366;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;">🟢 ENVIAR WHATSAPP</button></a>', unsafe_allow_html=True)
+        st.code(f"https://dfseguros.streamlit.app/?f={b64_f}", language=None)
 
 with tab4:
     if not df_f.empty:
-        st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía"), use_container_width=True)
+        c_g1, c_g2 = st.columns(2)
+        with c_g1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
+        with c_g2:
+            if 'Ramo' in df_f.columns:
+                r_counts = df_f['Ramo'].value_counts().reset_index()
+                r_counts.columns = ['Ramo', 'Cantidad']
+                st.plotly_chart(px.bar(r_counts, x='Ramo', y='Cantidad', title="Pólizas por Ramo", color='Ramo'), use_container_width=True)
