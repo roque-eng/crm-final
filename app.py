@@ -18,7 +18,7 @@ TC_USD = 40.5
 
 # Credenciales de Supabase
 SUPABASE_URL = "https://flizerdhoxxoekaczihm.supabase.co"
-SUPABASE_KEY = "TU_KEY_AQUI" # Reemplaza con tu clave larga
+SUPABASE_KEY = "TU_KEY_LARGA_AQUI" 
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
@@ -76,6 +76,9 @@ if "q" in query_params or "f" in query_params:
             with col_comp[0]: st.info("**Hogar**"); st.caption(q_data['ch'])
             with col_comp[1]: st.info("**Alquiler**"); st.caption(q_data['ca'])
             with col_comp[2]: st.info("**Bici**"); st.caption(q_data['cb'])
+        st.stop() 
+    except:
+        st.error("Error al cargar la cotización.")
         st.stop()
         # ==========================================
 # 🔐 SEGURIDAD Y CARTERA
@@ -129,7 +132,7 @@ if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
     # ==========================================
-# 🏢 PESTAÑAS Y COTIZADORES
+# 🏢 PESTAÑAS Y FUNCIONALIDADES
 # ==========================================
 tab1, tab2, tab3, tab_flota, tab_hist, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"])
 
@@ -155,7 +158,7 @@ with tab3:
         if doc_in and not df_raw.empty:
             match = df_raw[df_raw.astype(str).apply(lambda x: x.str.contains(doc_in, na=False)).any(axis=1)]
             if not match.empty:
-                for c in ["Asegurado", "Cliente"]:
+                for c in ["Asegurado", "Asegurado (Nombre/Razón Social)", "Cliente"]:
                     if c in df_raw.columns: nombre_sug = match.iloc[0][c]; break
         n_cot = c_nom.text_input("Asegurado", value=nombre_sug)
         v_cot = c_veh.text_input("Vehículo")
@@ -163,14 +166,11 @@ with tab3:
         cont_cot = c_con.text_input("Nombre y Contacto Asesor")
     
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
-    
     col_a, col_b = st.columns(2)
     with col_a:
-        # TEXTO BENEFICIOS INCLUIDOS CORREGIDO
         txt_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible\nCosto Anual para Apartamentos: USD 120 \nCosto Anual para Casas: USD 190 \nCosto Anual para Casas de construcción alternativas: USD 175"
         b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=250)
     with col_b:
-        # TEXTOS HOGAR, ALQUILER, BICI CORREGIDOS
         txt_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000"
         txt_a = "• Auto cortesía 15 días en caso de que tu vehículo tenga un siniestro y vaya a un taller\nCosto Anual: UYU 3.500"
         txt_b = "• Hurto hasta USD 1.000\n• Responsabilidad Civil (daños a terceros): USD 10.000\nCosto Anual: USD 110"
@@ -194,7 +194,7 @@ with tab_flota:
         f_nom = f1.text_input("Asegurado Flota")
         f_as1 = f2.text_input("As1", value="SURA"); f_as2 = f3.text_input("As2", value="BSE"); f_as3 = f4.text_input("As3", value="SBI")
         f_ase = f5.selectbox("Asesor Flota", sorted(list(USUARIOS.keys()))); f_cont = f6.text_input("Contacto Asesor", key="c_flota_t")
-    t_flota = st.data_editor(pd.DataFrame([{"Vehículo": "Unidad 1", f"P.{f_as1}": 0, f"P.{f_as2}": 0, f"P.{f_as3}": 0}]), num_rows="dynamic", use_container_width=True)
+    t_flota = st.data_editor(pd.DataFrame([{"Vehículo": "Unidad 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded. {f_as3}": 0}]), num_rows="dynamic", use_container_width=True)
     if st.button("💾 Guardar y Ver Vista Previa", key="btn_flota"):
         datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": txt_ben}
         b64_f = base64.b64encode(json.dumps(datos_f).encode()).decode()
@@ -202,6 +202,7 @@ with tab_flota:
         db_data = {"tipo": "flota", "asegurado": f_nom, "vehiculo_o_flota": "Flota", "asesor": f_ase, "datos_json": datos_f, "link_cotizacion": l_f}
         if guardar_en_db(db_data):
             st.success("¡Guardado!"); st.components.v1.html(f'<script>window.open("{l_f}", "_blank").focus();</script>', height=0)
+            st.code(l_f, language=None)
 
 with tab_hist:
     df_h = leer_historial()
