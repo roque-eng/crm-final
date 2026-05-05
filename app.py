@@ -14,8 +14,9 @@ import requests
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5 
 
+# Credenciales de Supabase - USANDO TUS CLAVES PASADAS
 SUPABASE_URL = "https://flizerdhoxxoekaczihm.supabase.co"
-SUPABASE_KEY = "TU_KEY_ANON_PUBLICA" 
+SUPABASE_KEY = "sb_publishable_lkSd6DNhiwifC-qCMkYNdQ_U97XIxog" 
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
@@ -107,13 +108,18 @@ with st.sidebar:
     f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
     f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
     f_ra = st.selectbox("Ramo", get_list('Ramo'))
+    # RESTAURADOS LOS FILTROS QUE FALTABAN
+    f_co = st.selectbox("Corredor", get_list('Corredor'))
+    f_ag = st.selectbox("Agente", get_list('Agente'))
     if st.button("Cerrar Sesión"): st.session_state['logueado'] = False; st.rerun()
 
 df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
- # ==========================================
+if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
+if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
+    # ==========================================
 # 🏢 PESTAÑAS Y FUNCIONALIDADES
 # ==========================================
 tab_car, tab_ven, tab_cot, tab_flota, tab_hist, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"])
@@ -153,18 +159,18 @@ with tab_cot:
         cont_cot = c_con.text_input("Nombre y Contacto Asesor")
 
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
-    
     col_a, col_b = st.columns(2)
     with col_a:
-        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300"
+        # TEXTO BENEFICIOS ACTUALIZADO
+        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible"
         b_cot = st.text_area("Beneficios:", value=t_ben, height=200)
     with col_b:
+        # TEXTOS COMPLEMENTARIOS ACTUALIZADOS
         t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
         c_h = st.text_area("Hogar:", value=t_h, height=130)
         c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días en caso de que tu vehículo choque y vaya al taller\nCosto: UYU 3.500", height=70)
         c_b = st.text_area("Bici:", value="• Hurto USD 1.000\n• Daños a Terceros: USD 10.000\nCosto: USD 110", height=70)
 
-    # LÓGICA DE BOTÓN ÚNICO
     datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
     l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
     
@@ -184,7 +190,6 @@ with tab_flota:
     df_f_init = pd.DataFrame([{"Vehículo": "Unidad 1", f"Precio {f_as1}": 0, f"Ded {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded {f_as3}": 0}])
     t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True)
     
-    # LÓGICA DE BOTÓN ÚNICO FLOTA
     datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": t_ben}
     l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
     
