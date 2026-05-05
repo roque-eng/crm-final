@@ -113,7 +113,7 @@ df_f = df_raw.copy()
 if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
 if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
-    # ==========================================
+ # ==========================================
 # 🏢 PESTAÑAS Y FUNCIONALIDADES
 # ==========================================
 tab_car, tab_ven, tab_cot, tab_flota, tab_hist, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"])
@@ -134,7 +134,7 @@ with tab_ven:
         st.dataframe(df_venc_f, use_container_width=True, hide_index=True)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False)
-        st.download_button(label="📥 EXCEL", data=output.getvalue(), file_name='vencimientos.xlsx')
+        st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
 
 with tab_cot:
     st.subheader("📝 Cotizador Individual")
@@ -153,28 +153,25 @@ with tab_cot:
         cont_cot = c_con.text_input("Nombre y Contacto Asesor")
 
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
+    
     col_a, col_b = st.columns(2)
     with col_a:
-        txt_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible"
-        b_cot = st.text_area("Beneficios:", value=txt_ben, height=200)
+        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
+        b_cot = st.text_area("Beneficios:", value=t_ben, height=200)
     with col_b:
-        txt_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
-        c_h = st.text_area("Hogar:", value=txt_h, height=130); c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días", height=70); c_b = st.text_area("Bici:", value="• Hurto USD 1.000", height=70)
+        t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000"
+        c_h = st.text_area("Hogar:", value=t_h, height=130)
+        c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días\nCosto: UYU 3.500", height=70)
+        c_b = st.text_area("Bici:", value="• Hurto USD 1.000\nCosto: USD 110", height=70)
 
-    btn_c1, btn_c2 = st.columns(2)
-    if btn_c1.button("💾 GUARDAR EN HISTORIAL"):
-        datos = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
-        l_temp = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos).encode()).decode()}"
-        db_data = {"tipo": "individual", "documento": doc_in, "asegurado": n_cot, "vehiculo_o_flota": v_cot, "asesor": e_cot, "datos_json": datos, "link_cotizacion": l_temp}
-        if guardar_en_db(db_data): st.success("Guardado en Supabase")
-        else: st.error("Error al guardar")
-
-    if btn_c2.button("🔗 GENERAR LINK VISTA CLIENTE"):
-        datos = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
-        l_final = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos).encode()).decode()}"
-        st.info("Link generado con éxito")
-        st.code(l_final, language=None)
-        st.link_button("👉 ABRIR VISTA PREVIA", l_final)
+    # LÓGICA DE BOTÓN ÚNICO
+    datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
+    l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
+    
+    st.markdown("---")
+    if st.link_button("🚀 GUARDAR Y VER VISTA PREVIA", l_i, use_container_width=True):
+        db_i = {"tipo": "individual", "documento": doc_in, "asegurado": n_cot, "vehiculo_o_flota": v_cot, "asesor": e_cot, "datos_json": datos_i, "link_cotizacion": l_i}
+        guardar_en_db(db_i)
 
 with tab_flota:
     st.subheader("🚛 Cotizador de Flotas Pro")
@@ -183,30 +180,29 @@ with tab_flota:
         f_nom = f1.text_input("Asegurado Flota")
         f_as1 = f2.text_input("Cía 1", value="SURA"); f_as2 = f3.text_input("Cía 2", value="BSE"); f_as3 = f4.text_input("Cía 3", value="SBI")
         f_ase = f5.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="f_ase_sel"); f_cont = f6.text_input("Contacto", key="f_con_sel")
-    t_flota = st.data_editor(pd.DataFrame([{"Vehículo": "Unidad 1", f"Precio {f_as1}": 0, f"Ded {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded {f_as3}": 0}]), num_rows="dynamic", use_container_width=True)
     
-    bf_c1, bf_c2 = st.columns(2)
-    if bf_c1.button("💾 GUARDAR FLOTA"):
-        datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
-        l_f_temp = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
-        db_data = {"tipo": "flota", "asegurado": f_nom, "vehiculo_o_flota": "Flota", "asesor": f_ase, "datos_json": datos_f, "link_cotizacion": l_f_temp}
-        if guardar_en_db(db_data): st.success("Flota guardada")
+    df_f_init = pd.DataFrame([{"Vehículo": "Unidad 1", f"Precio {f_as1}": 0, f"Ded {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded {f_as3}": 0}])
+    t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True)
     
-    if bf_c2.button("🔗 GENERAR LINK FLOTA"):
-        datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
-        l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
-        st.code(l_f, language=None)
-        st.link_button("👉 ABRIR VISTA FLOTA", l_f)
+    # LÓGICA DE BOTÓN ÚNICO FLOTA
+    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": t_ben}
+    l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
+    
+    st.markdown("---")
+    if st.link_button("🚀 GUARDAR Y VER VISTA PREVIA FLOTA", l_f, use_container_width=True):
+        db_f = {"tipo": "flota", "asegurado": f_nom, "vehiculo_o_flota": "Flota", "asesor": f_ase, "datos_json": datos_f, "link_cotizacion": l_f}
+        guardar_en_db(db_f)
 
 with tab_hist:
-    st.subheader("📜 Historial")
-    if st.button("🔄 ACTUALIZAR"): st.rerun()
+    st.subheader("📜 Historial de Cotizaciones")
+    if st.button("🔄 ACTUALIZAR LISTADO"): st.rerun()
     df_h = leer_historial()
     if not df_h.empty:
         df_h['created_at'] = pd.to_datetime(df_h['created_at']).dt.strftime('%d/%m/%Y %H:%M')
         st.dataframe(df_h[['created_at', 'tipo', 'asegurado', 'asesor', 'link_cotizacion']], use_container_width=True, hide_index=True)
+    else: st.info("No hay registros en el historial.")
 
 with tab_an:
     c1, c2 = st.columns(2)
-    with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Cía", hole=0.4), use_container_width=True)
+    with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="USD por Compañía", hole=0.4), use_container_width=True)
     with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="USD por Ramo", hole=0.4), use_container_width=True)
