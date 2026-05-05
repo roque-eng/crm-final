@@ -106,11 +106,14 @@ if not st.session_state['logueado']:
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=10) # Bajamos el tiempo para que refresque más seguido
 def cargar_datos():
     try:
+        # Leemos forzando que traiga todas las filas con datos
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
+        # Limpiamos filas que realmente estén vacías en campos clave
+        df = df.dropna(how='all') 
         df['Premio_Total_USD'] = (pd.to_numeric(df.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + (pd.to_numeric(df.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / TC_USD)).round(0)
         df['Fin de Vigencia'] = pd.to_datetime(df['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
         return df
@@ -118,7 +121,7 @@ def cargar_datos():
 
 df_raw = cargar_datos()
 
-# Configuración de columnas (Carpetita 📂 Restaurada)
+# Configuración de columnas (📂 Restaurada)
 conf_cols = {}
 if "Adjunto (póliza)" in df_raw.columns:
     conf_cols["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
@@ -169,7 +172,6 @@ with tab3:
         cob_cot = c2.text_input("Cobertura")
         e_cot = c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
-    
     st.write("### ✅ Detalles de Cobertura")
     col_a, col_b = st.columns(2)
     with col_a:
@@ -179,7 +181,6 @@ with tab3:
         c_h = st.text_area("Hogar:", value="• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 20.000\n• COSTO ANUAL: USD 120", height=100)
         c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días por siniestro.\n• COSTO ANUAL: UYU 3.900", height=100)
         c_b = st.text_area("Bici:", value="• Hurto Bici valor declarado hasta USD 1.000\n• COSTO ANUAL: USD 70", height=100)
-    
     if st.button("Generar Link Individual"):
         datos = {"n": n_cot, "v": v_cot, "cob": cob_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
         b64 = base64.b64encode(json.dumps(datos).encode()).decode()
@@ -188,10 +189,10 @@ with tab3:
 with tab_flota:
     st.subheader("🚛 Generador Flotas")
     with st.container(border=True):
-        c1, f_c2, c3 = st.columns(3)
+        c1, fc2, c3 = st.columns(3)
         f_nom = c1.text_input("Asegurado Flota")
-        f_as1 = f_c2.text_input("Aseguradora 1", value="SURA")
-        f_as2 = f_c2.text_input("Aseguradora 2", value="BSE")
+        f_as1 = fc2.text_input("Aseguradora 1", value="SURA")
+        f_as2 = fc2.text_input("Aseguradora 2", value="BSE")
         f_ase = c3.selectbox("Asesor Flota", sorted(list(USUARIOS.keys())), key="ase_flota")
     df_flota_init = pd.DataFrame([{"Vehículo": "Auto 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0}])
     t_flota = st.data_editor(df_flota_init, num_rows="dynamic", use_container_width=True)
