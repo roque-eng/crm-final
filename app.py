@@ -167,12 +167,12 @@ with tab3:
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
     col_a, col_b = st.columns(2)
     with col_a:
-        txt_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible\nCosto Anual para Apartamentos: USD 120 \nCosto Anual para Casas: USD 190 \nCosto Anual para Casas de construcción alternativas: USD 175"
+        txt_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible"
         b_cot = st.text_area("Beneficios Incluidos:", value=txt_ben, height=250)
     with col_b:
         txt_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000"
         txt_a = "• Auto cortesía 15 días en caso de que tu vehículo tenga un siniestro y vaya a un taller\nCosto Anual: UYU 3.500"
-        txt_b = "• Hurto hasta USD 1.000\n• Responsabilidad Civil (daños a terceros): USD 10.000\nCosto Anual: USD 110"
+        txt_b = "• Hurto hasta USD 1.000\n• Responsabilidad Civil (daños a terceros): USD 10.000\nCosto Anual: USD 110\nCosto Anual para Apartamentos: USD 120 \nCosto Anual para Casas: USD 190 \nCosto Anual para Casas de construcción alternativas: USD 175"
         c_h = st.text_area("Hogar:", value=txt_h, height=130); c_a = st.text_area("Alquiler:", value=txt_a, height=90); c_b = st.text_area("Bici:", value=txt_b, height=100)
     
     if st.button("💾 Guardar y Ver Vista Previa", key="btn_ind"):
