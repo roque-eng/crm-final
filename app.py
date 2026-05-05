@@ -36,7 +36,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🕵️ LÓGICA DE VISTA DE CLIENTE (Q=Individual, F=Flota)
+# 🕵️ LÓGICA DE VISTA DE CLIENTE (Q=Indiv, F=Flota)
 # ==========================================
 query_params = st.query_params
 if "q" in query_params or "f" in query_params:
@@ -56,7 +56,6 @@ if "q" in query_params or "f" in query_params:
             st.markdown(f"**Fecha:** {date.today().strftime('%d/%m/%Y')}")
             st.markdown(f"**Asesor:** {q_data['e']}")
         
-        st.write("### 💰 Detalle de la Propuesta")
         df_view = pd.DataFrame(q_data['tab'])
         for col in df_view.columns:
             if any(p in col.lower() for p in ["precio", "contado", "cuotas", "deducible"]):
@@ -105,10 +104,9 @@ if not st.session_state['logueado']:
     st.stop()
     conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=5) # Casi tiempo real para asegurar que lea las 240+ filas
 def cargar_datos():
     try:
-        # Forzamos lectura completa para recuperar las 240+ filas
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
         df = df.dropna(how='all') 
@@ -119,7 +117,6 @@ def cargar_datos():
 
 df_raw = cargar_datos()
 
-# Configuración de columnas con icono de carpeta 📂
 conf_cols = {}
 if "Adjunto (póliza)" in df_raw.columns:
     conf_cols["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
