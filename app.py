@@ -118,7 +118,7 @@ def cargar_datos():
 
 df_raw = cargar_datos()
 
-# Configuración de columnas con icono de carpeta
+# Configuración de columnas (Carpetita 📂 Restaurada)
 conf_cols = {}
 if "Adjunto (póliza)" in df_raw.columns:
     conf_cols["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
@@ -188,10 +188,10 @@ with tab3:
 with tab_flota:
     st.subheader("🚛 Generador Flotas")
     with st.container(border=True):
-        c1, c2, c3 = st.columns(3)
+        c1, f_c2, c3 = st.columns(3)
         f_nom = c1.text_input("Asegurado Flota")
-        f_as1 = c2.text_input("Aseguradora 1", value="SURA")
-        f_as2 = c2.text_input("Aseguradora 2", value="BSE")
+        f_as1 = f_c2.text_input("Aseguradora 1", value="SURA")
+        f_as2 = f_c2.text_input("Aseguradora 2", value="BSE")
         f_ase = c3.selectbox("Asesor Flota", sorted(list(USUARIOS.keys())), key="ase_flota")
     df_flota_init = pd.DataFrame([{"Vehículo": "Auto 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0}])
     t_flota = st.data_editor(df_flota_init, num_rows="dynamic", use_container_width=True)
