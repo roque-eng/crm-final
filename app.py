@@ -161,11 +161,9 @@ with tab_cot:
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
     col_a, col_b = st.columns(2)
     with col_a:
-        # TEXTO BENEFICIOS ACTUALIZADO
-        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300n• Granizo: SANCOR sin deducible"
+        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible"
         b_cot = st.text_area("Beneficios:", value=t_ben, height=200)
     with col_b:
-        # TEXTOS COMPLEMENTARIOS ACTUALIZADOS
         t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
         c_h = st.text_area("Hogar:", value=t_h, height=130)
         c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días en caso de que tu vehículo choque y vaya al taller\nCosto: UYU 3.500", height=70)
@@ -190,7 +188,7 @@ with tab_flota:
     df_f_init = pd.DataFrame([{"Vehículo": "Unidad 1", f"Precio {f_as1}": 0, f"Ded {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded {f_as3}": 0}])
     t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True)
     
-    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": t_ben}
+    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible"}
     l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
     
     st.markdown("---")
@@ -204,7 +202,18 @@ with tab_hist:
     df_h = leer_historial()
     if not df_h.empty:
         df_h['created_at'] = pd.to_datetime(df_h['created_at']).dt.strftime('%d/%m/%Y %H:%M')
-        st.dataframe(df_h[['created_at', 'tipo', 'asegurado', 'asesor', 'link_cotizacion']], use_container_width=True, hide_index=True)
+        st.dataframe(
+            df_h[['created_at', 'tipo', 'asegurado', 'asesor', 'link_cotizacion']], 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "link_cotizacion": st.column_config.LinkColumn("Propuesta", display_text="📂"),
+                "created_at": "Fecha/Hora",
+                "tipo": "Tipo",
+                "asegurado": "Cliente",
+                "asesor": "Asesor"
+            }
+        )
     else: st.info("No hay registros en el historial.")
 
 with tab_an:
