@@ -50,7 +50,9 @@ if "q" in query_params or "f" in query_params:
         c1, c2 = st.columns(2)
         with c1:
             st.markdown(f"**Asegurado:** {q_data['n']}")
-            if not is_flota: st.markdown(f"**Vehículo:** {q_data.get('v', 'S/D')}")
+            if not is_flota:
+                st.markdown(f"**Vehículo:** {q_data.get('v', 'S/D')}")
+                if q_data.get('cob'): st.markdown(f"**Cobertura:** {q_data['cob']}")
         with c2:
             st.markdown(f"**Fecha:** {date.today().strftime('%d/%m/%Y')}")
             st.markdown(f"**Asesor:** {q_data['e']}")
@@ -155,7 +157,8 @@ with tab2:
         st.dataframe(df_venc_final, use_container_width=True, hide_index=True, column_config=conf_cols)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_final.to_excel(writer, index=False)
-        st.download_button(label="📥 EXCEL", data=output.getvalue(), file_name='vencimientos.xlsx')
+        col_ex, _ = st.columns([1, 4])
+        with col_ex: st.download_button(label="📥 EXCEL", data=output.getvalue(), file_name='vencimientos.xlsx')
 
 with tab3:
     st.subheader("📝 Generador Individual")
@@ -163,6 +166,7 @@ with tab3:
         c1, c2, c3 = st.columns(3)
         n_cot = c1.text_input("Asegurado")
         v_cot = c2.text_input("Vehículo")
+        cob_cot = c2.text_input("Cobertura")
         e_cot = c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
     t_edit = st.data_editor(pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), num_rows="dynamic", use_container_width=True)
     
@@ -177,7 +181,7 @@ with tab3:
         c_b = st.text_area("Bici:", value="• Hurto Bici valor declarado hasta USD 1.000\n• COSTO ANUAL: USD 70", height=100)
     
     if st.button("Generar Link Individual"):
-        datos = {"n": n_cot, "v": v_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
+        datos = {"n": n_cot, "v": v_cot, "cob": cob_cot, "e": e_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
         b64 = base64.b64encode(json.dumps(datos).encode()).decode()
         st.code(f"https://dfseguros.streamlit.app/?q={b64}", language=None)
 
@@ -188,7 +192,6 @@ with tab_flota:
         f_nom = c1.text_input("Asegurado Flota")
         f_as1 = c2.text_input("Aseguradora 1", value="SURA")
         f_as2 = c2.text_input("Aseguradora 2", value="BSE")
-        f_as3 = c3.text_input("Aseguradora 3", value="PORTO")
         f_ase = c3.selectbox("Asesor Flota", sorted(list(USUARIOS.keys())), key="ase_flota")
     df_flota_init = pd.DataFrame([{"Vehículo": "Auto 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0}])
     t_flota = st.data_editor(df_flota_init, num_rows="dynamic", use_container_width=True)
