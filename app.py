@@ -36,26 +36,28 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 🕵️ LÓGICA DE VISTA DE CLIENTE (Q=Indiv, F=Flota)
+# 🕵️ LÓGICA DE VISTA DE CLIENTE (Individual y Flotas)
 # ==========================================
 query_params = st.query_params
 if "q" in query_params or "f" in query_params:
-    p_tipo = "f" if "f" in query_params else "q"
+    is_flota = "f" in query_params
+    param = "f" if is_flota else "q"
     try:
-        data_raw = base64.b64decode(query_params[p_tipo]).decode()
+        data_raw = base64.b64decode(query_params[param]).decode()
         q_data = json.loads(data_raw)
-        st.markdown(f"<div class='titulo-bordo'>🛡️ EDF SEGUROS - {'PROPUESTA FLOTA' if p_tipo=='f' else 'COTIZACIÓN VEHÍCULO'}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='titulo-bordo'>🛡️ EDF SEGUROS - {'PROPUESTA FLOTA' if is_flota else 'COTIZACIÓN VEHÍCULO'}</div>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
         with c1:
             st.markdown(f"**Asegurado:** {q_data['n']}")
-            if p_tipo == "q": 
+            if not is_flota:
                 st.markdown(f"**Vehículo:** {q_data.get('v', 'S/D')}")
                 if q_data.get('cob'): st.markdown(f"**Cobertura:** {q_data['cob']}")
         with c2:
             st.markdown(f"**Fecha:** {date.today().strftime('%d/%m/%Y')}")
             st.markdown(f"**Asesor:** {q_data['e']}")
         
+        st.write("### 💰 Detalle de la Propuesta")
         df_view = pd.DataFrame(q_data['tab'])
         for col in df_view.columns:
             if any(p in col.lower() for p in ["precio", "contado", "cuotas", "deducible"]):
@@ -65,7 +67,7 @@ if "q" in query_params or "f" in query_params:
         st.write("### ✅ Beneficios Incluidos")
         st.markdown(f"<div class='quote-card'>{q_data['ben']}</div>", unsafe_allow_html=True)
         
-        if p_tipo == "q" and q_data.get('ch'):
+        if not is_flota and q_data.get('ch'):
             st.write("### 🏠 Coberturas Complementarias")
             col_comp = st.columns(3)
             with col_comp[0]: st.info("**Hogar**"); st.caption(q_data['ch'])
@@ -104,9 +106,10 @@ if not st.session_state['logueado']:
     st.stop()
     conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=5) # Casi tiempo real para asegurar que lea las 240+ filas
+@st.cache_data(ttl=5) # Refresco rápido para asegurar lectura completa
 def cargar_datos():
     try:
+        # TTL=0 para forzar lectura de todas las filas nuevas
         df = conn.read(spreadsheet=URL_HOJA, ttl=0)
         df.columns = df.columns.str.strip()
         df = df.dropna(how='all') 
@@ -117,6 +120,7 @@ def cargar_datos():
 
 df_raw = cargar_datos()
 
+# Configuración de columnas (📂 Carpetitas Restauradas)
 conf_cols = {}
 if "Adjunto (póliza)" in df_raw.columns:
     conf_cols["Adjunto (póliza)"] = st.column_config.LinkColumn("Póliza", display_text="📂")
@@ -157,7 +161,8 @@ with tab2:
         st.dataframe(df_venc_final, use_container_width=True, hide_index=True, column_config=conf_cols)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_final.to_excel(writer, index=False)
-        st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
+        col_ex, _ = st.columns([1, 4])
+        with col_ex: st.download_button(label="📥 EXCEL", data=output.getvalue(), file_name='vencimientos.xlsx')
 
 with tab3:
     st.subheader("📝 Generador Individual")
@@ -188,12 +193,12 @@ with tab3:
 with tab_flota:
     st.subheader("🚛 Cotizador de Flotas")
     with st.container(border=True):
-        c1, c2, c3 = st.columns(3)
+        c1, fc2, c3 = st.columns(3)
         f_nom = c1.text_input("Asegurado Flota")
-        f_as1 = c2.text_input("Aseguradora 1", value="SURA")
-        f_as2 = c2.text_input("Aseguradora 2", value="BSE")
+        f_as1 = fc2.text_input("Aseguradora 1", value="SURA")
+        f_as2 = fc2.text_input("Aseguradora 2", value="BSE")
         f_ase = c3.selectbox("Asesor Flota", sorted(list(USUARIOS.keys())), key="ase_flota")
-
+    
     df_flota_init = pd.DataFrame([{"Vehículo": "Auto 1", "Cobertura": "Todo Riesgo", f"Precio {f_as1}": 0, f"Ded. {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded. {f_as2}": 0}])
     t_flota = st.data_editor(df_flota_init, num_rows="dynamic", use_container_width=True)
     f_ben = st.text_area("Beneficios Incluidos (Flota):", value=txt_ben, height=200, key="ben_flota")
@@ -205,6 +210,12 @@ with tab_flota:
 
 with tab4:
     if not df_f.empty:
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Cartera (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
+        m2.metric("Pólizas", f"{len(df_f)} u.")
+        m3.metric("Ticket Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
+        
+        st.divider()
         c_g1, c_g2 = st.columns(2)
         with c_g1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
         with c_g2:
