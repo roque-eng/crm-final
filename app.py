@@ -129,7 +129,7 @@ if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
 if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
-    # ==========================================
+# ==========================================
 # 🏢 PESTAÑAS Y FUNCIONALIDADES
 # ==========================================
 tab1, tab2, tab3, tab_flota, tab4 = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📊 ANÁLISIS"])
@@ -157,7 +157,6 @@ with tab3:
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_cob, c_ase, c_con = st.columns([1.5, 2, 2, 2, 1, 2])
         doc_in = c_doc.text_input("Documento")
-        # Lógica de autocompletado por documento
         nombre_sugerido = ""
         if doc_in and "Documento" in df_raw.columns:
             match = df_raw[df_raw["Documento"].astype(str).str.contains(doc_in, na=False)]
@@ -179,6 +178,7 @@ with tab3:
         txt_a = "• Auto cortesía 15 días en caso de que tu vehículo tenga un siniestro y vaya a un taller\nCosto Anual: UYU 3.500"
         txt_b = "• Hurto hasta USD 1.000\n• Responsabilidad Civil (daños a terceros): USD 10.000\nCosto Anual: USD 110"
         c_h = st.text_area("Hogar:", value=txt_h, height=180); c_a = st.text_area("Alquiler:", value=txt_a, height=100); c_b = st.text_area("Bici:", value=txt_b, height=100)
+    
     if st.button("Generar Link Individual"):
         datos = {"n": n_cot, "v": v_cot, "cob": cob_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
         b64 = base64.b64encode(json.dumps(datos).encode()).decode(); st.code(f"https://dfseguros.streamlit.app/?q={b64}", language=None)
@@ -204,12 +204,15 @@ with tab_flota:
 with tab4:
     if not df_f.empty:
         m1, m2, m3 = st.columns(3)
-        m1.metric("Cartera (USD)", f"U$S {df_f['Premio_Total_USD'].sum():,.0f}")
+        total_cartera = df_f['Premio_Total_USD'].sum()
+        m1.metric("Cartera (USD)", f"U$S {total_cartera:,.0f}")
         m2.metric("Pólizas", f"{len(df_f)} u.")
         m3.metric("Ticket Promedio", f"U$S {df_f['Premio_Total_USD'].mean():,.0f}")
+        
         c_g1, c_g2 = st.columns(2)
-        with c_g1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía", hole=0.4), use_container_width=True)
+        with c_g1: 
+            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Cartera por Cía (USD)", hole=0.4), use_container_width=True)
         with c_g2:
             if 'Ramo' in df_f.columns:
-                r_counts = df_f['Ramo'].value_counts().reset_index(); r_counts.columns = ['Ramo', 'Cantidad']
-                st.plotly_chart(px.bar(r_counts, x='Ramo', y='Cantidad', title="Pólizas por Ramo", color='Ramo'), use_container_width=True)
+                # Gráfico de Ramos por Monto USD
+                st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Cartera por Ramo (USD)", hole=0.4), use_container_width=True)
