@@ -202,7 +202,7 @@ with st.sidebar:
             st.rerun()
 
     # Importante: Esta línea debe estar al mismo nivel que el "with st.sidebar:" de arriba
-    df_f = df_raw.copy()
+df_f = df_raw.copy()
 
     # --- Lógica de filtrado (Pegar debajo de df_f = df_raw.copy()) ---
     if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
