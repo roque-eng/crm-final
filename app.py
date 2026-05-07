@@ -52,75 +52,92 @@ st.markdown("""
 query_params = st.query_params
 # Esta parte suele ir arriba del todo en tu código principal
 if "q" in st.query_params or "f" in st.query_params:
-    # ... (mantené tu lógica de extracción de datos p_raw y p) ...
+    # Extracción de datos
+    try:
+        if "q" in st.query_params:
+            p_raw = base64.b64decode(st.query_params["q"]).decode()
+        else:
+            p_raw = base64.b64decode(st.query_params["f"]).decode()
+        p = json.loads(p_raw)
+    except:
+        st.error("Error al cargar los datos de la cotización.")
+        st.stop()
 
-    # --- 1. TÍTULO Y ESTILOS CSS REFORZADOS ---
-    st.markdown(f"""
+    # --- 1. TÍTULO Y ESTILOS CSS ---
+    st.markdown("""
         <style>
-            .titulo-cotizacion {{
+            .titulo-cotizacion {
                 color: #000000 !important;
                 font-size: 42px !important;
                 font-weight: 800;
                 margin-bottom: 5px;
-            }}
-            .linea-negra {{
+            }
+            .linea-negra {
                 border-bottom: 3px solid #000000;
                 margin-bottom: 30px;
-            }}
-            /* ENSANCHAR TABLA: Forzamos el ancho completo y más padding */
-            .tabla-ancha {{
+            }
+            .tabla-ancha {
                 width: 100% !important;
                 margin-top: 20px;
                 margin-bottom: 30px;
-            }}
-            thead tr th {{
+            }
+            thead tr th {
                 background-color: rgba(0, 102, 204, 0.1) !important;
                 color: #000000 !important;
-                padding: 18px !important; /* Más espacio arriba/abajo */
+                padding: 18px !important;
                 font-size: 18px;
-            }}
-            tbody td {{
-                padding: 15px !important; /* Más espacio en las celdas */
+            }
+            tbody td {
+                padding: 15px !important;
                 font-size: 17px;
                 border-bottom: 1px solid #eee;
-            }}
-            tbody td:first-child {{
+            }
+            tbody td:first-child {
                 text-align: left !important;
                 font-weight: bold;
-                width: 30%; /* Le damos buen espacio a la aseguradora */
-            }}
-            /* Estilo para los beneficios en filas */
-            .beneficio-fila {{
+                width: 30%;
+            }
+            .beneficio-fila {
                 background-color: #f8f9fa;
-                padding: 10px 15px;
-                border-radius: 5px;
-                margin-bottom: 8px;
-                border-left: 5px solid #28a745;
+                padding: 12px 18px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                border-left: 6px solid #28a745;
                 font-size: 16px;
-            }}
+                color: #333;
+            }
+            .costo-resaltado {
+                color: #0066cc;
+                font-weight: bold;
+                margin-top: 5px;
+                display: block;
+            }
         </style>
         <div class="titulo-cotizacion">🛡️ EDF SEGUROS - Cotización de Seguro</div>
         <div class="linea-negra"></div>
     """, unsafe_allow_html=True)
 
-    # --- 2. INFORMACIÓN ASEGURADO ---
+    # --- 2. INFORMACIÓN ASEGURADO (Aquí estaba el error, ya corregido) ---
     c1, c2 = st.columns(2)
-    c1.markdown(f"### 👤 Asegurado: {p['n']}")
-    if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p['v']}")
+    with c1:
+        st.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
+    with c2:
+        if "v" in p:
+            st.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
     
     st.write("") 
 
     # --- 3. CUADRO DE PRECIOS ENSANCHADO ---
     df_p = pd.DataFrame(p["tab"])
-    # Usamos la clase 'tabla-ancha' definida en el CSS
     st.markdown(f'<div class="tabla-ancha">{df_p.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
 
     # --- 4. BENEFICIOS EN FILAS SEPARADAS ---
     st.markdown("### ✅ Beneficios Incluidos")
-    beneficios_lista = p["ben"].split('\n') # Separa el texto por cada enter
+    beneficios_texto = p.get("ben", "")
+    beneficios_lista = beneficios_texto.split('\n')
     for b in beneficios_lista:
-        if b.strip(): # Si la línea no está vacía
-            st.markdown(f'<div class="beneficio-fila">{b}</div>', unsafe_allow_html=True)
+        if b.strip():
+            st.markdown(f'<div class="beneficio-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
     st.write("")
 
@@ -128,22 +145,22 @@ if "q" in st.query_params or "f" in st.query_params:
     st.markdown("### 🏠 Coberturas Complementarias")
     col1, col2, col3 = st.columns(3)
     
-    # Función para limpiar y separar texto de costo
     def mostrar_cobertura(titulo, icono, texto):
-        # Separamos el contenido por la palabra "Costo:" para mandarlo abajo
-        partes = texto.split("Costo:")
         st.markdown(f"**{icono} {titulo}**")
-        st.write(partes[0].strip()) # El detalle arriba
-        if len(partes) > 1:
-            st.markdown(f"**💰 Costo:** {partes[1].strip()}") # El costo abajo en negrita
+        if "Costo:" in texto:
+            partes = texto.split("Costo:")
+            st.write(partes[0].strip())
+            st.markdown(f'<span class="costo-resaltado">💰 Costo: {partes[1].strip()}</span>', unsafe_allow_html=True)
+        else:
+            st.write(texto)
 
-    with col1: mostrar_cobertura("Hogar", "🏠", p["ch"])
-    with col2: mostrar_cobertura("Alquiler", "🚗", p["ca"])
-    with col3: mostrar_cobertura("Bici", "🚲", p["cb"])
+    with col1: mostrar_cobertura("Hogar", "🏠", p.get("ch", ""))
+    with col2: mostrar_cobertura("Alquiler", "🚗", p.get("ca", ""))
+    with col3: mostrar_cobertura("Bici", "🚲", p.get("cb", ""))
 
     # --- 6. FIRMA ---
     st.markdown("---")
-    st.markdown(f"**Asesor:** {p['e']} | **Contacto:** {p['cont']}")
+    st.markdown(f"**Asesor:** {p.get('e', '')} | **Contacto:** {p.get('cont', '')}")
     
     st.stop()
         # ==========================================
