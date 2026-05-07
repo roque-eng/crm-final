@@ -50,34 +50,90 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 query_params = st.query_params
-if "q" in query_params or "f" in query_params:
-    p_tipo = "f" if "f" in query_params else "q"
-    try:
-        data_raw = base64.b64decode(query_params[p_tipo]).decode()
-        q_data = json.loads(data_raw)
-        st.markdown(f"<div class='titulo-bordo'>🛡️ EDF SEGUROS - Propuesta</div>", unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown(f"**Asegurado:** {q_data['n']}")
-            if p_tipo == "q": st.markdown(f"**Vehículo:** {q_data.get('v', 'S/D')}")
-        with c2:
-            st.markdown(f"**Fecha:** {date.today().strftime('%d/%m/%Y')}")
-            st.markdown(f"**Asesor:** {q_data['e']}")
-            if q_data.get('cont'): st.markdown(f"**Contacto:** {q_data['cont']}")
-        df_view = pd.DataFrame(q_data['tab'])
-        for col in df_view.columns:
-            if any(p in col.lower() for p in ["precio", "contado", "cuotas", "deducible", "p.", "ded."]):
-                df_view[col] = df_view[col].apply(fmt_curr)
-        st.table(df_view) 
-        st.write("### ✅ Beneficios Incluidos"); st.markdown(f"<div class='quote-card'>{q_data['ben']}</div>", unsafe_allow_html=True)
-        if p_tipo == "q" and q_data.get('ch'):
-            st.write("### 🏠 Coberturas Complementarias")
-            col_comp = st.columns(3)
-            with col_comp[0]: st.info("**Hogar**"); st.caption(q_data['ch'])
-            with col_comp[1]: st.info("**Alquiler**"); st.caption(q_data['ca'])
-            with col_comp[2]: st.info("**Bici**"); st.caption(q_data['cb'])
-        st.stop() 
-    except: st.error("Error."); st.stop()
+# Esta parte suele ir arriba del todo en tu código principal
+if "q" in st.query_params or "f" in st.query_params:
+    # Lógica para extraer datos (se mantiene igual)
+    if "q" in st.query_params:
+        p_raw = base64.b64decode(st.query_params["q"]).decode()
+        p = json.loads(p_raw)
+    else:
+        p_raw = base64.b64decode(st.query_params["f"]).decode()
+        p = json.loads(p_raw)
+
+    # --- 1. TÍTULO Y ESTILOS CSS (Aquí aplicamos tus cambios) ---
+    st.markdown(f"""
+        <style>
+            /* Título Principal más grande y negro */
+            .titulo-cotizacion {{
+                color: #000000 !important;
+                font-size: 42px !important; /* Más grande que los subtítulos */
+                font-weight: 800;
+                margin-bottom: 5px;
+                line-height: 1.2;
+            }}
+            .linea-negra {{
+                border-bottom: 3px solid #000000;
+                margin-bottom: 20px;
+            }}
+            /* Tabla con encabezado azul traslúcido */
+            thead tr th {{
+                background-color: rgba(0, 102, 204, 0.1) !important;
+                color: #000000 !important;
+                font-weight: bold !important;
+                text-align: center !important;
+                padding: 15px !important;
+            }}
+            /* Alineación Aseguradora a la izquierda */
+            tbody td:first-child {{
+                text-align: left !important;
+                font-weight: bold;
+                padding-left: 15px !important;
+            }}
+            /* Estilo general para celdas */
+            td {{
+                text-align: center;
+                vertical-align: middle !important;
+            }}
+        </style>
+        <div class="titulo-cotizacion">🛡️ EDF SEGUROS - Cotización de Seguro</div>
+        <div class="linea-negra"></div>
+    """, unsafe_allow_html=True)
+
+    # --- 2. INFORMACIÓN DEL CLIENTE ---
+    c1, c2 = st.columns(2)
+    c1.markdown(f"**Asegurado:** {p['n']}")
+    if "v" in p: c2.markdown(f"**Vehículo:** {p['v']}")
+    
+    st.write("") # Espacio
+
+    # --- 3. TABLA DE PRECIOS ---
+    df_p = pd.DataFrame(p["tab"])
+    # Convertimos a tabla HTML para que los estilos CSS anteriores funcionen perfecto
+    st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
+
+    st.write("") # Espacio
+
+    # --- 4. SECCIONES COMPLEMENTARIAS ---
+    st.subheader("✅ Beneficios Incluidos")
+    st.info(p["ben"])
+
+    if "ch" in p:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.subheader("🏠 Hogar")
+            st.write(p["ch"])
+        with col2:
+            st.subheader("🚗 Alquiler")
+            st.write(p["ca"])
+        with col3:
+            st.subheader("🚲 Bici")
+            st.write(p["cb"])
+
+    # --- 5. FIRMA DEL ASESOR ---
+    st.markdown("---")
+    st.markdown(f"**Asesor:** {p['e']}  \n**Contacto:** {p['cont']}")
+    
+    st.stop() # Importante para que no cargue el resto de la app del panel
         # ==========================================
 # 🔐 SEGURIDAD Y CARTERA
 # ==========================================
