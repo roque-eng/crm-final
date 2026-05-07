@@ -52,133 +52,103 @@ st.markdown("""
 query_params = st.query_params
 # Esta parte suele ir arriba del todo en tu código principal
 if "q" in st.query_params or "f" in st.query_params:
-    # ... (mantené tu lógica de extracción de datos p_raw y p) ...
+    # 1. Extracción segura de datos
+    try:
+        import base64, json
+        query_val = st.query_params.get("q") or st.query_params.get("f")
+        p_raw = base64.b64decode(query_val).decode()
+        p = json.loads(p_raw)
+    except Exception as e:
+        st.error("No se pudo cargar la cotización. El enlace puede estar incompleto.")
+        st.stop()
 
-    # --- 1. ESTILOS CSS REFORZADOS (ANCHO TOTAL) ---
+    # 2. Estilos CSS (Ancho total, cajones azules y títulos grandes)
     st.markdown("""
         <style>
-            .titulo-cotizacion {
-                color: #000000 !important;
-                font-size: 42px !important;
-                font-weight: 800;
-                margin-bottom: 5px;
-            }
-            .linea-negra {
-                border-bottom: 3px solid #000000;
-                margin-bottom: 30px;
-            }
+            .main .block-container { max-width: 100% !important; padding-top: 2rem; }
+            .titulo-cot { color: #000; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
+            .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
             
-            /* TABLA IGUAL AL ANCHO DE BENEFICIOS */
-            .stTable, table {
-                width: 100% !important; /* Ocupa todo el espacio disponible */
-                margin: 25px 0 !important;
-                border-collapse: collapse;
-            }
+            /* TABLA ANCHA AL 100% */
+            .tabla-container { width: 100%; margin: 25px 0; }
+            table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
+            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; }
+            tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
+            tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; }
             
-            thead tr th {
-                background-color: rgba(0, 102, 204, 0.1) !important;
-                color: #000000 !important;
-                padding: 20px !important;
-                font-size: 20px;
-                text-align: center !important;
+            /* Cajones de Coberturas */
+            .caja-azul { 
+                background-color: rgba(0, 102, 204, 0.05); 
+                padding: 20px; border-radius: 12px; height: 100%; 
+                border: 1px solid rgba(0, 102, 204, 0.1); 
             }
+            .sub-tit { font-size: 22px !important; font-weight: bold; color: #000; margin-bottom: 10px; display: block; }
+            .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
             
-            tbody td {
-                padding: 18px !important;
-                font-size: 19px;
-                text-align: center !important;
-                border-bottom: 1px solid #eee;
-            }
-            
-            tbody td:first-child {
-                text-align: left !important;
-                font-weight: bold;
-                padding-left: 20px !important;
-                width: 30%; /* Asegura espacio para el nombre de la aseguradora */
-            }
-
-            /* Estilo para los bloques de Coberturas (Cajones Azules) */
-            .bloque-cobertura {
-                background-color: rgba(0, 102, 204, 0.05);
-                padding: 20px;
-                border-radius: 10px;
-                height: 100%;
-                border: 1px solid rgba(0, 102, 204, 0.1);
-            }
-            
-            .titulo-sub {
-                font-size: 22px !important;
-                font-weight: bold;
-                color: #000;
-                margin-bottom: 10px;
-                display: block;
-            }
-
-            .beneficio-fila {
-                background-color: #f8f9fa;
-                padding: 12px 18px;
-                border-radius: 8px;
-                margin-bottom: 10px;
-                border-left: 6px solid #28a745;
-                width: 100%; /* Alineado con la tabla */
+            .ben-fila { 
+                background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
+                margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; 
             }
         </style>
-        <div class="titulo-cotizacion">🛡️ EDF SEGUROS - Cotización de Seguro</div>
-        <div class="linea-negra"></div>
+        <div class="titulo-cot">🛡️ EDF SEGUROS - Cotización de Seguro</div>
+        <div class="linea"></div>
     """, unsafe_allow_html=True)
 
-    # --- 2. INFO ASEGURADO ---
+    # 3. Datos del Asegurado
     c1, c2 = st.columns(2)
-    with c1: st.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
-    with c2: 
-        if "v" in p: st.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
+    # Usamos llaves simples para evitar el error de NameError
+    nombre_cli = p.get('n', 'N/A')
+    vehiculo_cli = p.get('v', 'N/A')
+    c1.markdown(f"### 👤 Asegurado: {nombre_cli}")
+    if "v" in p:
+        c2.markdown(f"### 🚗 Vehículo: {vehiculo_cli}")
 
-    # --- 3. CUADRO DE PRECIOS (FORZADO A ANCHO TOTAL) ---
+    # 4. Tabla de Costos (Ancho total)
+    st.write("")
     df_p = pd.DataFrame(p["tab"])
-    # Formateo de precios con $
+    # Formateo manual de $ para que se vea prolijo
     for col in df_p.columns:
         if col != "Aseguradora":
-            df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').isdigit() else x)
-
-    # Renderizado directo para asegurar que el CSS tome la tabla
+            df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').replace(',','').isdigit() else x)
+    
+    st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
     st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- 4. BENEFICIOS ---
+    # 5. Beneficios
     st.write("")
     st.markdown("### ✅ Beneficios Incluidos")
-    beneficios_lista = p.get("ben", "").split('\n')
-    for b in beneficios_lista:
+    for b in p.get("ben", "").split('\n'):
         if b.strip():
-            st.markdown(f'<div class="beneficio-fila">{b.strip()}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # --- 5. COBERTURAS COMPLEMENTARIAS ---
+    # 6. Coberturas Complementarias
     st.write("")
     st.markdown("### ⚠️ Coberturas Complementarias")
     col1, col2, col3 = st.columns(3)
     
-    def renderizar_bloque(titulo, icono, texto, es_hogar=False):
-        contenido_html = f'<div class="bloque-cobertura"><span class="titulo-sub">{icono} {titulo}</span>'
+    def bloque_html(titulo, icono, texto, es_hogar=False):
+        html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
         if es_hogar:
-            # Lógica para resaltar los dos costos de Hogar
             partes = texto.split("Costo Anual")
-            contenido_html += f'<span>{partes[0].strip()}</span>'
+            html += f'<span>{partes[0].strip()}</span>'
             for pc in partes[1:]:
-                contenido_html += f'<span style="color: #0066cc; font-weight: bold; display: block; margin-top: 8px;">💰 Costo Anual {pc.strip()}</span>'
+                html += f'<span class="costo-res">💰 Costo Anual {pc.strip()}</span>'
         else:
             if "Costo:" in texto:
                 partes = texto.split("Costo:")
-                contenido_html += f'<span>{partes[0].strip()}</span>'
-                contenido_html += f'<span style="color: #0066cc; font-weight: bold; display: block; margin-top: 8px;">💰 Costo: {partes[1].strip()}</span>'
+                html += f'<span>{partes[0].strip()}</span>'
+                html += f'<span class="costo-res">💰 Costo: {partes[1].strip()}</span>'
             else:
-                contenido_html += f'<span>{texto}</span>'
-        contenido_html += '</div>'
-        st.markdown(contenido_html, unsafe_allow_html=True)
+                html += f'<span>{texto}</span>'
+        html += '</div>'
+        return html
 
-    with col1: renderizar_bloque("Hogar", "🏠", p.get("ch", ""), es_hogar=True)
-    with col2: renderizar_bloque("Alquiler", "🚗", p.get("ca", ""))
-    with col3: renderizar_bloque("Bici", "🚲", p.get("cb", ""))
+    col1.markdown(bloque_html("Hogar", "🏠", p.get("ch", ""), True), unsafe_allow_html=True)
+    col2.markdown(bloque_html("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
+    col3.markdown(bloque_html("Bici", "🚲", p.get("cb", "")), unsafe_allow_html=True)
 
-    # --- 6. FIRMA ---
+    # 7. Cierre
     st.markdown("---")
     st.markdown(f"**Asesor:** {p.get('e', '')} | **Contacto:** {p.get('cont', '')}")
     st.stop()
