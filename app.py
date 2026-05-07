@@ -52,7 +52,7 @@ st.markdown("""
 query_params = st.query_params
 # Esta parte suele ir arriba del todo en tu código principal
 if "q" in st.query_params or "f" in st.query_params:
-    # Extracción de datos con seguridad
+    # Extracción de datos
     try:
         if "q" in st.query_params:
             p_raw = base64.b64decode(st.query_params["q"]).decode()
@@ -63,7 +63,7 @@ if "q" in st.query_params or "f" in st.query_params:
         st.error("Error al cargar los datos.")
         st.stop()
 
-    # --- 1. ESTILOS CSS (TABLA CENTRADA Y ANCHA + RESALTADOS) ---
+    # --- 1. ESTILOS CSS REFORZADOS ---
     st.markdown("""
         <style>
             .titulo-cotizacion {
@@ -76,49 +76,58 @@ if "q" in st.query_params or "f" in st.query_params:
                 border-bottom: 3px solid #000000;
                 margin-bottom: 30px;
             }
-            /* TABLA: Centrada al medio y más ancha */
-            .contenedor-tabla {
-                display: flex;
-                justify-content: center;
-                width: 100%;
-                margin: 40px 0;
-            }
+            /* TABLA: De lado a lado (100%) */
             .tabla-ancha {
-                width: 90% !important; /* Ajuste de ancho al 90% de la pantalla */
+                width: 100% !important;
                 border-collapse: collapse;
+                margin: 25px 0;
             }
             thead tr th {
                 background-color: rgba(0, 102, 204, 0.1) !important;
                 color: #000000 !important;
                 padding: 20px !important;
-                font-size: 19px;
+                font-size: 20px;
                 text-align: center !important;
             }
             tbody td {
                 padding: 18px !important;
-                font-size: 18px;
+                font-size: 19px;
                 text-align: center !important;
                 border-bottom: 1px solid #eee;
             }
             tbody td:first-child {
                 text-align: left !important;
                 font-weight: bold;
-                padding-left: 25px !important;
+                padding-left: 20px !important;
             }
-            /* Beneficios y Resaltados */
+            /* Estilo para los bloques de Coberturas Complementarias */
+            .bloque-cobertura {
+                background-color: rgba(0, 102, 204, 0.05); /* Azul clarito traslúcido */
+                padding: 20px;
+                border-radius: 10px;
+                height: 100%;
+                border: 1px solid rgba(0, 102, 204, 0.1);
+            }
+            .titulo-sub {
+                font-size: 22px !important; /* Más grande como pediste */
+                font-weight: bold;
+                color: #000;
+                margin-bottom: 10px;
+                display: block;
+            }
+            .costo-resaltado {
+                color: #0066cc;
+                font-weight: bold;
+                display: block;
+                margin-top: 8px;
+                font-size: 17px;
+            }
             .beneficio-fila {
                 background-color: #f8f9fa;
                 padding: 12px 18px;
                 border-radius: 8px;
                 margin-bottom: 10px;
                 border-left: 6px solid #28a745;
-                font-size: 16px;
-            }
-            .costo-resaltado {
-                color: #0066cc;
-                font-weight: bold;
-                display: block;
-                margin-top: 4px;
             }
         </style>
         <div class="titulo-cotizacion">🛡️ EDF SEGUROS - Cotización de Seguro</div>
@@ -131,15 +140,13 @@ if "q" in st.query_params or "f" in st.query_params:
     with c2: 
         if "v" in p: st.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
-    # --- 3. CUADRO DE PRECIOS (CON SÍMBOLO $ Y CENTRADO) ---
+    # --- 3. CUADRO DE PRECIOS (LADO A LADO) ---
     df_p = pd.DataFrame(p["tab"])
-    
-    # Aplicamos el símbolo $ a todas las columnas excepto Aseguradora
     for col in df_p.columns:
         if col != "Aseguradora":
             df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').isdigit() else x)
 
-    st.markdown(f'<div class="contenedor-tabla"><div class="tabla-ancha">{df_p.to_html(index=False, escape=False)}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="tabla-ancha">{df_p.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
 
     # --- 4. BENEFICIOS ---
     st.markdown("### ✅ Beneficios Incluidos")
@@ -148,30 +155,30 @@ if "q" in st.query_params or "f" in st.query_params:
         if b.strip():
             st.markdown(f'<div class="beneficio-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # --- 5. COBERTURAS COMPLEMENTARIAS (MULTIPLE COSTO EN HOGAR) ---
-    st.markdown("### 🛠️ Coberturas Complementarias")
+    # --- 5. COBERTURAS COMPLEMENTARIAS (ESTILO CAJÓN AZUL) ---
+    st.markdown("### ⚠️ Coberturas Complementarias")
     col1, col2, col3 = st.columns(3)
     
-    # Función mejorada para Hogar (Apartamentos y Casas)
-    def mostrar_hogar(texto):
-        st.markdown("**🏠 Hogar**")
-        # Separamos el detalle de los costos
-        partes = texto.split("Costo Anual")
-        st.write(partes[0].strip()) # Detalle
-        for p_costo in partes[1:]:
-            st.markdown(f'<span class="costo-resaltado">💰 Costo Anual {p_costo.strip()}</span>', unsafe_allow_html=True)
+    def renderizar_bloque(titulo, icono, texto, es_hogar=False):
+        contenido_html = f'<div class="bloque-cobertura"><span class="titulo-sub">{icono} {titulo}</span>'
+        if es_hogar:
+            partes = texto.split("Costo Anual")
+            contenido_html += f'<span>{partes[0].strip()}</span>'
+            for pc in partes[1:]:
+                contenido_html += f'<span class="costo-resaltado">💰 Costo Anual {pc.strip()}</span>'
+        else:
+            if "Costo:" in texto:
+                partes = texto.split("Costo:")
+                contenido_html += f'<span>{partes[0].strip()}</span>'
+                contenido_html += f'<span class="costo-resaltado">💰 Costo: {partes[1].strip()}</span>'
+            else:
+                contenido_html += f'<span>{texto}</span>'
+        contenido_html += '</div>'
+        st.markdown(contenido_html, unsafe_allow_html=True)
 
-    def mostrar_simple(titulo, icono, texto):
-        st.markdown(f"**{icono} {titulo}**")
-        if "Costo:" in texto:
-            partes = texto.split("Costo:")
-            st.write(partes[0].strip())
-            st.markdown(f'<span class="costo-resaltado">💰 Costo: {partes[1].strip()}</span>', unsafe_allow_html=True)
-        else: st.write(texto)
-
-    with col1: mostrar_hogar(p.get("ch", ""))
-    with col2: mostrar_simple("Alquiler", "🚗", p.get("ca", ""))
-    with col3: mostrar_simple("Bici", "🚲", p.get("cb", ""))
+    with col1: renderizar_bloque("Hogar", "🏠", p.get("ch", ""), es_hogar=True)
+    with col2: renderizar_bloque("Alquiler", "🚗", p.get("ca", ""))
+    with col3: renderizar_bloque("Bici", "🚲", p.get("cb", ""))
 
     # --- 6. FIRMA ---
     st.markdown("---")
