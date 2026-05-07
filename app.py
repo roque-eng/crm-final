@@ -51,6 +51,9 @@ st.markdown("""
 
 query_params = st.query_params
 # Esta parte suele ir arriba del todo en tu código principal
+# ==========================================
+# 📱 VISTA DE LA PROPUESTA PARA EL CLIENTE
+# ==========================================
 if "q" in st.query_params or "f" in st.query_params:
     # 1. Extracción segura de datos
     try:
@@ -62,21 +65,30 @@ if "q" in st.query_params or "f" in st.query_params:
         st.error("No se pudo cargar la cotización. El enlace puede estar incompleto.")
         st.stop()
 
-    # 2. Estilos CSS (Ancho total, cajones azules y títulos grandes)
+    # 2. Estilos CSS (Ancho total, cajones azules, alineaciones y títulos)
     st.markdown("""
         <style>
+            /* Forzamos el ancho de la página al máximo */
             .main .block-container { max-width: 100% !important; padding-top: 2rem; }
+            
             .titulo-cot { color: #000; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
             .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
             
-            /* TABLA ANCHA AL 100% */
+            /* TABLA AL 100% CON ALINEACIÓN AJUSTADA */
             .tabla-container { width: 100%; margin: 25px 0; }
             table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
-            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; }
-            tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
-            tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; }
             
-            /* Cajones de Coberturas */
+            /* Encabezados: Aseguradora a la izquierda, el resto al centro */
+            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; }
+            thead tr th:first-child { text-align: left !important; padding-left: 20px; }
+            thead tr th:not(:first-child) { text-align: center !important; }
+            
+            /* Celdas: Aseguradora a la izquierda, el resto al centro */
+            tbody td { padding: 16px; font-size: 18px; border-bottom: 1px solid #eee; }
+            tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
+            tbody td:not(:first-child) { text-align: center !important; }
+            
+            /* Cajones de Coberturas Complementarias */
             .caja-azul { 
                 background-color: rgba(0, 102, 204, 0.05); 
                 padding: 20px; border-radius: 12px; height: 100%; 
@@ -85,9 +97,11 @@ if "q" in st.query_params or "f" in st.query_params:
             .sub-tit { font-size: 22px !important; font-weight: bold; color: #000; margin-bottom: 10px; display: block; }
             .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
             
+            /* Beneficios en filas */
             .ben-fila { 
                 background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
                 margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; 
+                font-size: 16px; color: #333;
             }
         </style>
         <div class="titulo-cot">🛡️ EDF SEGUROS - Cotización de Seguro</div>
@@ -96,17 +110,17 @@ if "q" in st.query_params or "f" in st.query_params:
 
     # 3. Datos del Asegurado
     c1, c2 = st.columns(2)
-    # Usamos llaves simples para evitar el error de NameError
     nombre_cli = p.get('n', 'N/A')
     vehiculo_cli = p.get('v', 'N/A')
     c1.markdown(f"### 👤 Asegurado: {nombre_cli}")
     if "v" in p:
         c2.markdown(f"### 🚗 Vehículo: {vehiculo_cli}")
 
-    # 4. Tabla de Costos (Ancho total)
+    # 4. Tabla de Costos (Ancho total y alineada)
     st.write("")
     df_p = pd.DataFrame(p["tab"])
-    # Formateo manual de $ para que se vea prolijo
+    
+    # Formateo de $ con separador de miles
     for col in df_p.columns:
         if col != "Aseguradora":
             df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').replace(',','').isdigit() else x)
@@ -115,14 +129,14 @@ if "q" in st.query_params or "f" in st.query_params:
     st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 5. Beneficios
+    # 5. Beneficios en filas separadas
     st.write("")
     st.markdown("### ✅ Beneficios Incluidos")
     for b in p.get("ben", "").split('\n'):
         if b.strip():
             st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # 6. Coberturas Complementarias
+    # 6. Coberturas Complementarias (Signo ⚠️ y Cajones Azules)
     st.write("")
     st.markdown("### ⚠️ Coberturas Complementarias")
     col1, col2, col3 = st.columns(3)
@@ -130,6 +144,7 @@ if "q" in st.query_params or "f" in st.query_params:
     def bloque_html(titulo, icono, texto, es_hogar=False):
         html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
         if es_hogar:
+            # Lógica para resaltar los dos costos de Hogar
             partes = texto.split("Costo Anual")
             html += f'<span>{partes[0].strip()}</span>'
             for pc in partes[1:]:
@@ -148,26 +163,11 @@ if "q" in st.query_params or "f" in st.query_params:
     col2.markdown(bloque_html("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
     col3.markdown(bloque_html("Bici", "🚲", p.get("cb", "")), unsafe_allow_html=True)
 
-    # 7. Cierre
+    # 7. Firma del Asesor
     st.markdown("---")
     st.markdown(f"**Asesor:** {p.get('e', '')} | **Contacto:** {p.get('cont', '')}")
-    st.stop()
-        # ==========================================
-# 🔐 SEGURIDAD Y CARTERA
-# ==========================================
-USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
-
-if 'logueado' not in st.session_state: st.session_state['logueado'] = False
-if not st.session_state['logueado']:
-    st.markdown("<h1 style='text-align: center;'>🛡️ EDF SEGUROS</h1>", unsafe_allow_html=True)
-    _, col, _ = st.columns([1, 1, 1])
-    with col:
-        with st.form("login"):
-            u = st.text_input("Usuario"); p = st.text_input("Contraseña", type="password")
-            if st.form_submit_button("Ingresar", use_container_width=True):
-                if u in USUARIOS and USUARIOS[u] == p:
-                    st.session_state['logueado'] = True; st.session_state['usuario_actual'] = u; st.rerun()
-                else: st.error("❌ Credenciales incorrectas")
+    
+    # Detenemos la ejecución para que el cliente no vea el panel de control
     st.stop()
 
 conn = st.connection("gsheets", type=GSheetsConnection)
