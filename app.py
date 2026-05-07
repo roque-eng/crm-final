@@ -52,88 +52,100 @@ st.markdown("""
 query_params = st.query_params
 # Esta parte suele ir arriba del todo en tu código principal
 if "q" in st.query_params or "f" in st.query_params:
-    # Lógica para extraer datos (se mantiene igual)
-    if "q" in st.query_params:
-        p_raw = base64.b64decode(st.query_params["q"]).decode()
-        p = json.loads(p_raw)
-    else:
-        p_raw = base64.b64decode(st.query_params["f"]).decode()
-        p = json.loads(p_raw)
+    # ... (mantené tu lógica de extracción de datos p_raw y p) ...
 
-    # --- 1. TÍTULO Y ESTILOS CSS (Aquí aplicamos tus cambios) ---
+    # --- 1. TÍTULO Y ESTILOS CSS REFORZADOS ---
     st.markdown(f"""
         <style>
-            /* Título Principal más grande y negro */
             .titulo-cotizacion {{
                 color: #000000 !important;
-                font-size: 42px !important; /* Más grande que los subtítulos */
+                font-size: 42px !important;
                 font-weight: 800;
                 margin-bottom: 5px;
-                line-height: 1.2;
             }}
             .linea-negra {{
                 border-bottom: 3px solid #000000;
-                margin-bottom: 20px;
+                margin-bottom: 30px;
             }}
-            /* Tabla con encabezado azul traslúcido */
+            /* ENSANCHAR TABLA: Forzamos el ancho completo y más padding */
+            .tabla-ancha {{
+                width: 100% !important;
+                margin-top: 20px;
+                margin-bottom: 30px;
+            }}
             thead tr th {{
                 background-color: rgba(0, 102, 204, 0.1) !important;
                 color: #000000 !important;
-                font-weight: bold !important;
-                text-align: center !important;
-                padding: 15px !important;
+                padding: 18px !important; /* Más espacio arriba/abajo */
+                font-size: 18px;
             }}
-            /* Alineación Aseguradora a la izquierda */
+            tbody td {{
+                padding: 15px !important; /* Más espacio en las celdas */
+                font-size: 17px;
+                border-bottom: 1px solid #eee;
+            }}
             tbody td:first-child {{
                 text-align: left !important;
                 font-weight: bold;
-                padding-left: 15px !important;
+                width: 30%; /* Le damos buen espacio a la aseguradora */
             }}
-            /* Estilo general para celdas */
-            td {{
-                text-align: center;
-                vertical-align: middle !important;
+            /* Estilo para los beneficios en filas */
+            .beneficio-fila {{
+                background-color: #f8f9fa;
+                padding: 10px 15px;
+                border-radius: 5px;
+                margin-bottom: 8px;
+                border-left: 5px solid #28a745;
+                font-size: 16px;
             }}
         </style>
         <div class="titulo-cotizacion">🛡️ EDF SEGUROS - Cotización de Seguro</div>
         <div class="linea-negra"></div>
     """, unsafe_allow_html=True)
 
-    # --- 2. INFORMACIÓN DEL CLIENTE ---
+    # --- 2. INFORMACIÓN ASEGURADO ---
     c1, c2 = st.columns(2)
-    c1.markdown(f"**Asegurado:** {p['n']}")
-    if "v" in p: c2.markdown(f"**Vehículo:** {p['v']}")
+    c1.markdown(f"### 👤 Asegurado: {p['n']}")
+    if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p['v']}")
     
-    st.write("") # Espacio
+    st.write("") 
 
-    # --- 3. TABLA DE PRECIOS ---
+    # --- 3. CUADRO DE PRECIOS ENSANCHADO ---
     df_p = pd.DataFrame(p["tab"])
-    # Convertimos a tabla HTML para que los estilos CSS anteriores funcionen perfecto
-    st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
+    # Usamos la clase 'tabla-ancha' definida en el CSS
+    st.markdown(f'<div class="tabla-ancha">{df_p.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
 
-    st.write("") # Espacio
+    # --- 4. BENEFICIOS EN FILAS SEPARADAS ---
+    st.markdown("### ✅ Beneficios Incluidos")
+    beneficios_lista = p["ben"].split('\n') # Separa el texto por cada enter
+    for b in beneficios_lista:
+        if b.strip(): # Si la línea no está vacía
+            st.markdown(f'<div class="beneficio-fila">{b}</div>', unsafe_allow_html=True)
 
-    # --- 4. SECCIONES COMPLEMENTARIAS ---
-    st.subheader("✅ Beneficios Incluidos")
-    st.info(p["ben"])
+    st.write("")
 
-    if "ch" in p:
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.subheader("🏠 Hogar")
-            st.write(p["ch"])
-        with col2:
-            st.subheader("🚗 Alquiler")
-            st.write(p["ca"])
-        with col3:
-            st.subheader("🚲 Bici")
-            st.write(p["cb"])
-
-    # --- 5. FIRMA DEL ASESOR ---
-    st.markdown("---")
-    st.markdown(f"**Asesor:** {p['e']}  \n**Contacto:** {p['cont']}")
+    # --- 5. COBERTURAS ADICIONALES (COSTO DEBAJO) ---
+    st.markdown("### 🏠 Coberturas Complementarias")
+    col1, col2, col3 = st.columns(3)
     
-    st.stop() # Importante para que no cargue el resto de la app del panel
+    # Función para limpiar y separar texto de costo
+    def mostrar_cobertura(titulo, icono, texto):
+        # Separamos el contenido por la palabra "Costo:" para mandarlo abajo
+        partes = texto.split("Costo:")
+        st.markdown(f"**{icono} {titulo}**")
+        st.write(partes[0].strip()) # El detalle arriba
+        if len(partes) > 1:
+            st.markdown(f"**💰 Costo:** {partes[1].strip()}") # El costo abajo en negrita
+
+    with col1: mostrar_cobertura("Hogar", "🏠", p["ch"])
+    with col2: mostrar_cobertura("Alquiler", "🚗", p["ca"])
+    with col3: mostrar_cobertura("Bici", "🚲", p["cb"])
+
+    # --- 6. FIRMA ---
+    st.markdown("---")
+    st.markdown(f"**Asesor:** {p['e']} | **Contacto:** {p['cont']}")
+    
+    st.stop()
         # ==========================================
 # 🔐 SEGURIDAD Y CARTERA
 # ==========================================
