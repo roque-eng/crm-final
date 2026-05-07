@@ -52,18 +52,9 @@ st.markdown("""
 query_params = st.query_params
 # Esta parte suele ir arriba del todo en tu código principal
 if "q" in st.query_params or "f" in st.query_params:
-    # Extracción de datos
-    try:
-        if "q" in st.query_params:
-            p_raw = base64.b64decode(st.query_params["q"]).decode()
-        else:
-            p_raw = base64.b64decode(st.query_params["f"]).decode()
-        p = json.loads(p_raw)
-    except:
-        st.error("Error al cargar los datos.")
-        st.stop()
+    # ... (mantené tu lógica de extracción de datos p_raw y p) ...
 
-    # --- 1. ESTILOS CSS REFORZADOS ---
+    # --- 1. ESTILOS CSS REFORZADOS (ANCHO TOTAL) ---
     st.markdown("""
         <style>
             .titulo-cotizacion {
@@ -76,12 +67,14 @@ if "q" in st.query_params or "f" in st.query_params:
                 border-bottom: 3px solid #000000;
                 margin-bottom: 30px;
             }
-            /* TABLA: De lado a lado (100%) */
-            .tabla-ancha {
-                width: 100% !important;
+            
+            /* TABLA IGUAL AL ANCHO DE BENEFICIOS */
+            .stTable, table {
+                width: 100% !important; /* Ocupa todo el espacio disponible */
+                margin: 25px 0 !important;
                 border-collapse: collapse;
-                margin: 25px 0;
             }
+            
             thead tr th {
                 background-color: rgba(0, 102, 204, 0.1) !important;
                 color: #000000 !important;
@@ -89,45 +82,45 @@ if "q" in st.query_params or "f" in st.query_params:
                 font-size: 20px;
                 text-align: center !important;
             }
+            
             tbody td {
                 padding: 18px !important;
                 font-size: 19px;
                 text-align: center !important;
                 border-bottom: 1px solid #eee;
             }
+            
             tbody td:first-child {
                 text-align: left !important;
                 font-weight: bold;
                 padding-left: 20px !important;
+                width: 30%; /* Asegura espacio para el nombre de la aseguradora */
             }
-            /* Estilo para los bloques de Coberturas Complementarias */
+
+            /* Estilo para los bloques de Coberturas (Cajones Azules) */
             .bloque-cobertura {
-                background-color: rgba(0, 102, 204, 0.05); /* Azul clarito traslúcido */
+                background-color: rgba(0, 102, 204, 0.05);
                 padding: 20px;
                 border-radius: 10px;
                 height: 100%;
                 border: 1px solid rgba(0, 102, 204, 0.1);
             }
+            
             .titulo-sub {
-                font-size: 22px !important; /* Más grande como pediste */
+                font-size: 22px !important;
                 font-weight: bold;
                 color: #000;
                 margin-bottom: 10px;
                 display: block;
             }
-            .costo-resaltado {
-                color: #0066cc;
-                font-weight: bold;
-                display: block;
-                margin-top: 8px;
-                font-size: 17px;
-            }
+
             .beneficio-fila {
                 background-color: #f8f9fa;
                 padding: 12px 18px;
                 border-radius: 8px;
                 margin-bottom: 10px;
                 border-left: 6px solid #28a745;
+                width: 100%; /* Alineado con la tabla */
             }
         </style>
         <div class="titulo-cotizacion">🛡️ EDF SEGUROS - Cotización de Seguro</div>
@@ -140,37 +133,42 @@ if "q" in st.query_params or "f" in st.query_params:
     with c2: 
         if "v" in p: st.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
-    # --- 3. CUADRO DE PRECIOS (LADO A LADO) ---
+    # --- 3. CUADRO DE PRECIOS (FORZADO A ANCHO TOTAL) ---
     df_p = pd.DataFrame(p["tab"])
+    # Formateo de precios con $
     for col in df_p.columns:
         if col != "Aseguradora":
             df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').isdigit() else x)
 
-    st.markdown(f'<div class="tabla-ancha">{df_p.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
+    # Renderizado directo para asegurar que el CSS tome la tabla
+    st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
 
     # --- 4. BENEFICIOS ---
+    st.write("")
     st.markdown("### ✅ Beneficios Incluidos")
     beneficios_lista = p.get("ben", "").split('\n')
     for b in beneficios_lista:
         if b.strip():
             st.markdown(f'<div class="beneficio-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # --- 5. COBERTURAS COMPLEMENTARIAS (ESTILO CAJÓN AZUL) ---
+    # --- 5. COBERTURAS COMPLEMENTARIAS ---
+    st.write("")
     st.markdown("### ⚠️ Coberturas Complementarias")
     col1, col2, col3 = st.columns(3)
     
     def renderizar_bloque(titulo, icono, texto, es_hogar=False):
         contenido_html = f'<div class="bloque-cobertura"><span class="titulo-sub">{icono} {titulo}</span>'
         if es_hogar:
+            # Lógica para resaltar los dos costos de Hogar
             partes = texto.split("Costo Anual")
             contenido_html += f'<span>{partes[0].strip()}</span>'
             for pc in partes[1:]:
-                contenido_html += f'<span class="costo-resaltado">💰 Costo Anual {pc.strip()}</span>'
+                contenido_html += f'<span style="color: #0066cc; font-weight: bold; display: block; margin-top: 8px;">💰 Costo Anual {pc.strip()}</span>'
         else:
             if "Costo:" in texto:
                 partes = texto.split("Costo:")
                 contenido_html += f'<span>{partes[0].strip()}</span>'
-                contenido_html += f'<span class="costo-resaltado">💰 Costo: {partes[1].strip()}</span>'
+                contenido_html += f'<span style="color: #0066cc; font-weight: bold; display: block; margin-top: 8px;">💰 Costo: {partes[1].strip()}</span>'
             else:
                 contenido_html += f'<span>{texto}</span>'
         contenido_html += '</div>'
