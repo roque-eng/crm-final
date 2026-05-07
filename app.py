@@ -8,6 +8,13 @@ import json
 import base64
 import requests
 
+# 1. Definición Global de Usuarios
+USUARIOS = {"RDF": "Roque de Freitas", "GS": "Gabriel Silva", "AB": "Andrés Bianchi"}
+
+# 2. Red de seguridad para el Session State
+if 'usuario_actual' not in st.session_state:
+    st.session_state['usuario_actual'] = "Invitado" # O podés poner "RDF" por defecto para que no falle nunca
+
 # ==========================================
 # ⚙️ CONFIGURACIÓN Y CONEXIONES
 # ==========================================
@@ -177,22 +184,32 @@ df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get('Premio USD (IVA inc)', 0
 df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
 
 with st.sidebar:
-    st.title(f"👤 {st.session_state['usuario_actual']}")
-    def get_list(col): return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
-    f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
-    f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
-    f_ra = st.selectbox("Ramo", get_list('Ramo'))
-    # RESTAURADOS LOS FILTROS QUE FALTABAN
-    f_co = st.selectbox("Corredor", get_list('Corredor'))
-    f_ag = st.selectbox("Agente", get_list('Agente'))
-    if st.button("Cerrar Sesión"): st.session_state['logueado'] = False; st.rerun()
+    # --- REEMPLAZO DESDE LÍNEA 187 A 202 ---
+        nombre_asesor = USUARIOS.get(st.session_state.get('usuario_actual', 'RDF'), "Asesor")
+        st.title(f"👤 {nombre_asesor}")
 
-df_f = df_raw.copy()
-if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
-if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
-if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
-if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
-if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
+        def get_list(col): 
+            return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
+        
+        f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
+        f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
+        f_ra = st.selectbox("Ramo", get_list('Ramo'))
+        
+        # RESTAURADOS LOS FILTROS QUE FALTABAN
+        f_co = st.selectbox("Corredor", get_list('Corredor'))
+        f_ag = st.selectbox("Agente", get_list('Agente'))
+        
+        if st.button("Cerrar Sesión"): 
+            st.session_state['logueado'] = False
+            st.rerun()
+
+    df_f = df_raw.copy()
+    # Aplicación de filtros sobre la copia
+    if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
+    if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
+    if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
+    if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
+    if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 # ==========================================
 # ⚙️ CONFIGURACIÓN Y ESTADOS (BLOQUE 3)
 # ==========================================
