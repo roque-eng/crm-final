@@ -52,7 +52,7 @@ st.markdown("""
 query_params = st.query_params
 # Esta parte suele ir arriba del todo en tu código principal
 if "q" in st.query_params or "f" in st.query_params:
-    # Extracción de datos
+    # Extracción de datos con seguridad
     try:
         if "q" in st.query_params:
             p_raw = base64.b64decode(st.query_params["q"]).decode()
@@ -60,10 +60,10 @@ if "q" in st.query_params or "f" in st.query_params:
             p_raw = base64.b64decode(st.query_params["f"]).decode()
         p = json.loads(p_raw)
     except:
-        st.error("Error al cargar los datos de la cotización.")
+        st.error("Error al cargar los datos.")
         st.stop()
 
-    # --- 1. TÍTULO Y ESTILOS CSS ---
+    # --- 1. ESTILOS CSS (TABLA CENTRADA Y ANCHA + RESALTADOS) ---
     st.markdown("""
         <style>
             .titulo-cotizacion {
@@ -76,27 +76,36 @@ if "q" in st.query_params or "f" in st.query_params:
                 border-bottom: 3px solid #000000;
                 margin-bottom: 30px;
             }
+            /* TABLA: Centrada al medio y más ancha */
+            .contenedor-tabla {
+                display: flex;
+                justify-content: center;
+                width: 100%;
+                margin: 40px 0;
+            }
             .tabla-ancha {
-                width: 100% !important;
-                margin-top: 20px;
-                margin-bottom: 30px;
+                width: 90% !important; /* Ajuste de ancho al 90% de la pantalla */
+                border-collapse: collapse;
             }
             thead tr th {
                 background-color: rgba(0, 102, 204, 0.1) !important;
                 color: #000000 !important;
-                padding: 18px !important;
-                font-size: 18px;
+                padding: 20px !important;
+                font-size: 19px;
+                text-align: center !important;
             }
             tbody td {
-                padding: 15px !important;
-                font-size: 17px;
+                padding: 18px !important;
+                font-size: 18px;
+                text-align: center !important;
                 border-bottom: 1px solid #eee;
             }
             tbody td:first-child {
                 text-align: left !important;
                 font-weight: bold;
-                width: 30%;
+                padding-left: 25px !important;
             }
+            /* Beneficios y Resaltados */
             .beneficio-fila {
                 background-color: #f8f9fa;
                 padding: 12px 18px;
@@ -104,64 +113,69 @@ if "q" in st.query_params or "f" in st.query_params:
                 margin-bottom: 10px;
                 border-left: 6px solid #28a745;
                 font-size: 16px;
-                color: #333;
             }
             .costo-resaltado {
                 color: #0066cc;
                 font-weight: bold;
-                margin-top: 5px;
                 display: block;
+                margin-top: 4px;
             }
         </style>
         <div class="titulo-cotizacion">🛡️ EDF SEGUROS - Cotización de Seguro</div>
         <div class="linea-negra"></div>
     """, unsafe_allow_html=True)
 
-    # --- 2. INFORMACIÓN ASEGURADO (Aquí estaba el error, ya corregido) ---
+    # --- 2. INFO ASEGURADO ---
     c1, c2 = st.columns(2)
-    with c1:
-        st.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
-    with c2:
-        if "v" in p:
-            st.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
-    
-    st.write("") 
+    with c1: st.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
+    with c2: 
+        if "v" in p: st.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
-    # --- 3. CUADRO DE PRECIOS ENSANCHADO ---
+    # --- 3. CUADRO DE PRECIOS (CON SÍMBOLO $ Y CENTRADO) ---
     df_p = pd.DataFrame(p["tab"])
-    st.markdown(f'<div class="tabla-ancha">{df_p.to_html(index=False, escape=False)}</div>', unsafe_allow_html=True)
+    
+    # Aplicamos el símbolo $ a todas las columnas excepto Aseguradora
+    for col in df_p.columns:
+        if col != "Aseguradora":
+            df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').isdigit() else x)
 
-    # --- 4. BENEFICIOS EN FILAS SEPARADAS ---
+    st.markdown(f'<div class="contenedor-tabla"><div class="tabla-ancha">{df_p.to_html(index=False, escape=False)}</div></div>', unsafe_allow_html=True)
+
+    # --- 4. BENEFICIOS ---
     st.markdown("### ✅ Beneficios Incluidos")
-    beneficios_texto = p.get("ben", "")
-    beneficios_lista = beneficios_texto.split('\n')
+    beneficios_lista = p.get("ben", "").split('\n')
     for b in beneficios_lista:
         if b.strip():
             st.markdown(f'<div class="beneficio-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    st.write("")
-
-    # --- 5. COBERTURAS ADICIONALES (COSTO DEBAJO) ---
-    st.markdown("### 🏠 Coberturas Complementarias")
+    # --- 5. COBERTURAS COMPLEMENTARIAS (MULTIPLE COSTO EN HOGAR) ---
+    st.markdown("### 🛠️ Coberturas Complementarias")
     col1, col2, col3 = st.columns(3)
     
-    def mostrar_cobertura(titulo, icono, texto):
+    # Función mejorada para Hogar (Apartamentos y Casas)
+    def mostrar_hogar(texto):
+        st.markdown("**🏠 Hogar**")
+        # Separamos el detalle de los costos
+        partes = texto.split("Costo Anual")
+        st.write(partes[0].strip()) # Detalle
+        for p_costo in partes[1:]:
+            st.markdown(f'<span class="costo-resaltado">💰 Costo Anual {p_costo.strip()}</span>', unsafe_allow_html=True)
+
+    def mostrar_simple(titulo, icono, texto):
         st.markdown(f"**{icono} {titulo}**")
         if "Costo:" in texto:
             partes = texto.split("Costo:")
             st.write(partes[0].strip())
             st.markdown(f'<span class="costo-resaltado">💰 Costo: {partes[1].strip()}</span>', unsafe_allow_html=True)
-        else:
-            st.write(texto)
+        else: st.write(texto)
 
-    with col1: mostrar_cobertura("Hogar", "🏠", p.get("ch", ""))
-    with col2: mostrar_cobertura("Alquiler", "🚗", p.get("ca", ""))
-    with col3: mostrar_cobertura("Bici", "🚲", p.get("cb", ""))
+    with col1: mostrar_hogar(p.get("ch", ""))
+    with col2: mostrar_simple("Alquiler", "🚗", p.get("ca", ""))
+    with col3: mostrar_simple("Bici", "🚲", p.get("cb", ""))
 
     # --- 6. FIRMA ---
     st.markdown("---")
     st.markdown(f"**Asesor:** {p.get('e', '')} | **Contacto:** {p.get('cont', '')}")
-    
     st.stop()
         # ==========================================
 # 🔐 SEGURIDAD Y CARTERA
