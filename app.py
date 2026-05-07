@@ -138,8 +138,9 @@ with tab_car:
         df_disp_c, use_container_width=True, hide_index=True, 
         column_config={
             "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
-            "Premio_Total_USD": st.column_config.NumberColumn("Premio USD", format="USD %.0f"),
-            "Premio_Total_UYU": st.column_config.NumberColumn("Premio UYU", format="$ %.0f")
+            "Premio USD (IVA inc)": st.column_config.NumberColumn("Premio USD", format="USD %.0f"),
+            "Premio UYU (IVA inc)": st.column_config.NumberColumn("Premio UYU", format="$ %.0f"),
+            "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="USD %.0f")
         }
     )
 
@@ -159,8 +160,9 @@ with tab_ven:
             df_venc_disp, use_container_width=True, hide_index=True,
             column_config={
                 "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
-                "Premio_Total_USD": st.column_config.NumberColumn("Premio USD", format="USD %.0f"),
-                "Premio_Total_UYU": st.column_config.NumberColumn("Premio UYU", format="$ %.0f")
+                "Premio USD (IVA inc)": st.column_config.NumberColumn("Premio USD", format="USD %.0f"),
+                "Premio UYU (IVA inc)": st.column_config.NumberColumn("Premio UYU", format="$ %.0f"),
+                "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="USD %.0f")
             }
         )
         output = io.BytesIO()
@@ -205,7 +207,6 @@ with tab_cot:
     st.markdown("---")
     if st.button("🚀 GUARDAR Y GENERAR PROPUESTA", use_container_width=True):
         db_i = {"tipo": "individual", "documento": doc_in, "asegurado": n_cot, "vehiculo_o_flota": v_cot, "asesor": e_cot, "datos_json": datos_i, "link_cotizacion": l_i}
-        # Evitamos duplicados usando session_state
         if f"saved_{n_cot}_{v_cot}" not in st.session_state:
             if guardar_en_db(db_i):
                 st.session_state[f"saved_{n_cot}_{v_cot}"] = True
@@ -226,8 +227,11 @@ with tab_flota:
         df_f_init, num_rows="dynamic", use_container_width=True,
         column_config={
             f"Precio {f_as1}": st.column_config.NumberColumn(format="$ %.0f"),
+            f"Ded {f_as1}": st.column_config.NumberColumn(format="$ %.0f"),
             f"Precio {f_as2}": st.column_config.NumberColumn(format="$ %.0f"),
-            f"Precio {f_as3}": st.column_config.NumberColumn(format="$ %.0f")
+            f"Ded {f_as2}": st.column_config.NumberColumn(format="$ %.0f"),
+            f"Precio {f_as3}": st.column_config.NumberColumn(format="$ %.0f"),
+            f"Ded {f_as3}": st.column_config.NumberColumn(format="$ %.0f")
         }
     )
     datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
