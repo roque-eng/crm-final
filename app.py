@@ -195,9 +195,10 @@ with tab_cot:
     )
     col_a, col_b = st.columns(2)
     with col_a:
-        b_cot = st.text_area("Beneficios:", value="• Auxilio mecánico 24hs...", height=200)
+        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible"
+        b_cot = st.text_area("Beneficios:", value=t_ben, height=200)
     with col_b:
-t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
+        t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
         c_h = st.text_area("Hogar:", value=t_h, height=130)
         c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días en taller\nCosto: UYU 3.500", height=70)
         c_b = st.text_area("Bici:", value="• Hurto USD 1.000\nCosto: USD 110", height=70)
