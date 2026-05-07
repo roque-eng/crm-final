@@ -130,15 +130,12 @@ tab_car, tab_ven, tab_cot, tab_flota, tab_hist, tab_an = st.tabs([
 with tab_car:
     busq = st.text_input("🔍 Buscar cliente o matrícula en cartera...")
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
-    
     df_disp_c = df_c.copy()
     if 'Fin de Vigencia' in df_disp_c.columns:
         df_disp_c['Fin de Vigencia'] = pd.to_datetime(df_disp_c['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
     
     st.dataframe(
-        df_disp_c, 
-        use_container_width=True, 
-        hide_index=True, 
+        df_disp_c, use_container_width=True, hide_index=True, 
         column_config={
             "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
             "Premio_Total_USD": st.column_config.NumberColumn("Premio USD", format="USD %.0f"),
@@ -154,23 +151,18 @@ with tab_ven:
         c1, c2 = st.columns(2)
         f_ini = c1.date_input("Desde:", date.today().replace(day=1))
         f_fin = c2.date_input("Hasta:", date.today() + timedelta(days=90))
-        
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
-        
         df_venc_disp = df_venc_f.copy()
         df_venc_disp['Fin de Vigencia'] = pd.to_datetime(df_venc_disp['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         
         st.dataframe(
-            df_venc_disp, 
-            use_container_width=True, 
-            hide_index=True,
+            df_venc_disp, use_container_width=True, hide_index=True,
             column_config={
                 "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
                 "Premio_Total_USD": st.column_config.NumberColumn("Premio USD", format="USD %.0f"),
                 "Premio_Total_UYU": st.column_config.NumberColumn("Premio UYU", format="$ %.0f")
             }
         )
-        
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False)
         st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
@@ -210,9 +202,15 @@ with tab_cot:
     datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
     l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
     
-    if st.link_button("🚀 GUARDAR Y VER VISTA PREVIA", l_i, use_container_width=True):
+    st.markdown("---")
+    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA", use_container_width=True):
         db_i = {"tipo": "individual", "documento": doc_in, "asegurado": n_cot, "vehiculo_o_flota": v_cot, "asesor": e_cot, "datos_json": datos_i, "link_cotizacion": l_i}
-        guardar_en_db(db_i)
+        # Evitamos duplicados usando session_state
+        if f"saved_{n_cot}_{v_cot}" not in st.session_state:
+            if guardar_en_db(db_i):
+                st.session_state[f"saved_{n_cot}_{v_cot}"] = True
+                st.success("Guardado con éxito")
+        st.link_button("👁️ VER VISTA PREVIA", l_i, use_container_width=True)
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
@@ -232,13 +230,16 @@ with tab_flota:
             f"Precio {f_as3}": st.column_config.NumberColumn(format="$ %.0f")
         }
     )
-    
-    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "• Auxilio mecánico 24hs..."}
+    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
     l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
     
-    if st.link_button("🚀 GUARDAR Y VER VISTA PREVIA FLOTA", l_f, use_container_width=True):
+    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA FLOTA", use_container_width=True):
         db_f = {"tipo": "flota", "asegurado": f_nom, "vehiculo_o_flota": "Flota", "asesor": f_ase, "datos_json": datos_f, "link_cotizacion": l_f}
-        guardar_en_db(db_f)
+        if f"saved_f_{f_nom}" not in st.session_state:
+            if guardar_en_db(db_f):
+                st.session_state[f"saved_f_{f_nom}"] = True
+                st.success("Flota guardada")
+        st.link_button("👁️ VER VISTA PREVIA FLOTA", l_f, use_container_width=True)
 
 # --- PESTAÑA HISTORIAL ---
 with tab_hist:
@@ -250,18 +251,21 @@ with tab_hist:
     if c_del_all.button("🔥 BORRAR TODO EL HISTORIAL", type="primary"):
         headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
         res = requests.delete(f"{SUPABASE_URL}/rest/v1/cotizaciones?id=not.is.null", headers=headers)
-        if res.status_code in [200, 204]: st.success("Vaciado."); st.rerun()
+        if res.status_code in [200, 204]:
+            st.success("Vaciado."); st.rerun()
+        else: st.error(f"Error al borrar: {res.text}")
 
     df_h = leer_historial()
     if not df_h.empty:
         df_h['Fecha'] = pd.to_datetime(df_h['created_at']).dt.strftime('%d/%m/%Y %H:%M')
         if busqueda_h:
-            df_h = df_h[df_h.astype(str).apply(lambda x: x.str.contains(busqueda_h, case=False)).any(axis=1)]
+            df_h = df_h[df_h['asegurado'].str.contains(busqueda_h, case=False, na=False)]
         st.dataframe(
             df_h[['Fecha', 'tipo', 'asegurado', 'asesor', 'link_cotizacion']], 
             use_container_width=True, hide_index=True,
             column_config={"link_cotizacion": st.column_config.LinkColumn("Propuesta", display_text="📂")}
         )
+    else: st.info("El historial está vacío.")
 
 # --- PESTAÑA ANÁLISIS ---
 with tab_an:
@@ -269,11 +273,10 @@ with tab_an:
     if not df_f.empty:
         total_usd = df_f['Premio_Total_USD'].sum()
         total_polizas = len(df_f)
-        kpi1, kpi2 = st.columns(2)
-        kpi1.metric("Cartera Total (USD)", f"USD {total_usd:,.0f}")
-        kpi2.metric("Total de Pólizas", f"{total_polizas}")
+        k1, k2 = st.columns(2)
+        k1.metric("Cartera Total (USD)", f"USD {total_usd:,.0f}")
+        k2.metric("Total de Pólizas", f"{total_polizas}")
         st.markdown("---")
         c1, c2 = st.columns(2)
         with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía (USD)", hole=0.4), use_container_width=True)
         with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo (USD)", hole=0.4), use_container_width=True)
-    else: st.info("Sin datos.")
