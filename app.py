@@ -185,7 +185,7 @@ with tab_cot:
         cont_cot = c_con.text_input("Nombre y Contacto Asesor")
 
     t_edit = st.data_editor(
-        pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "3 Cuotas":0, "6 Cuotas:0", "10 Cuotas": 0, "Deducible": 0}]), 
+        pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), 
         num_rows="dynamic", use_container_width=True,
         column_config={
             "Contado": st.column_config.NumberColumn(format="$ %.0f"),
