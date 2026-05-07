@@ -120,7 +120,7 @@ if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
 # ==========================================
-# 🏢 PESTAÑAS Y FUNCIONALIDADES (BLOQUE 3)
+# 🏢 PESTAÑAS Y FUNCIONALIDADES (BLOQUE 3 COMPLETO)
 # ==========================================
 tab_car, tab_ven, tab_cot, tab_flota, tab_hist, tab_an = st.tabs([
     "👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"
@@ -131,7 +131,6 @@ with tab_car:
     busq = st.text_input("🔍 Buscar cliente o matrícula en cartera...")
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     
-    # Formateo de fechas y moneda para visualización
     df_disp_c = df_c.copy()
     if 'Fin de Vigencia' in df_disp_c.columns:
         df_disp_c['Fin de Vigencia'] = pd.to_datetime(df_disp_c['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
@@ -158,7 +157,6 @@ with tab_ven:
         
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
         
-        # Formateo para la tabla de vencimientos
         df_venc_disp = df_venc_f.copy()
         df_venc_disp['Fin de Vigencia'] = pd.to_datetime(df_venc_disp['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         
@@ -177,28 +175,105 @@ with tab_ven:
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False)
         st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
 
-# --- PESTAÑA ANÁLISIS (CON TOTALES Y SIN BARRAS) ---
+# --- PESTAÑA COTIZADOR INDIVIDUAL ---
+with tab_cot:
+    st.subheader("📝 Cotizador Individual")
+    with st.container(border=True):
+        c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
+        doc_in = c_doc.text_input("CI/RUT")
+        n_sug = ""
+        if doc_in and not df_raw.empty:
+            match = df_raw[df_raw.astype(str).apply(lambda x: x.str.contains(doc_in, na=False)).any(axis=1)]
+            if not match.empty: n_sug = match.iloc[0].get("Asegurado", "")
+        n_cot = c_nom.text_input("Nombre", value=n_sug)
+        v_cot = c_veh.text_input("Vehículo")
+        e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
+        cont_cot = c_con.text_input("Nombre y Contacto Asesor")
+
+    t_edit = st.data_editor(
+        pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), 
+        num_rows="dynamic", use_container_width=True,
+        column_config={
+            "Contado": st.column_config.NumberColumn(format="$ %.0f"),
+            "10 Cuotas": st.column_config.NumberColumn(format="$ %.0f"),
+            "Deducible": st.column_config.NumberColumn(format="$ %.0f")
+        }
+    )
+    col_a, col_b = st.columns(2)
+    with col_a:
+        b_cot = st.text_area("Beneficios:", value="• Auxilio mecánico 24hs...", height=200)
+    with col_b:
+        c_h = st.text_area("Hogar:", value="• Incendio Edificio: USD 100.000...", height=130)
+        c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días...", height=70)
+        c_b = st.text_area("Bici:", value="• Hurto USD 1.000...", height=70)
+
+    datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b}
+    l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
+    
+    if st.link_button("🚀 GUARDAR Y VER VISTA PREVIA", l_i, use_container_width=True):
+        db_i = {"tipo": "individual", "documento": doc_in, "asegurado": n_cot, "vehiculo_o_flota": v_cot, "asesor": e_cot, "datos_json": datos_i, "link_cotizacion": l_i}
+        guardar_en_db(db_i)
+
+# --- PESTAÑA FLOTAS ---
+with tab_flota:
+    st.subheader("🚛 Cotizador de Flotas Pro")
+    with st.container(border=True):
+        f1, f2, f3, f4, f5, f6 = st.columns([2, 1.2, 1.2, 1.2, 1, 2])
+        f_nom = f1.text_input("Asegurado Flota")
+        f_as1 = f2.text_input("Cía 1", value="SURA"); f_as2 = f3.text_input("Cía 2", value="BSE"); f_as3 = f4.text_input("Cía 3", value="SBI")
+        f_ase = f5.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="f_ase_sel"); f_cont = f6.text_input("Contacto", key="f_con_sel")
+    
+    df_f_init = pd.DataFrame([{"Vehículo": "Unidad 1", f"Precio {f_as1}": 0, f"Ded {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded {f_as3}": 0}])
+    t_flota = st.data_editor(
+        df_f_init, num_rows="dynamic", use_container_width=True,
+        column_config={
+            f"Precio {f_as1}": st.column_config.NumberColumn(format="$ %.0f"),
+            f"Precio {f_as2}": st.column_config.NumberColumn(format="$ %.0f"),
+            f"Precio {f_as3}": st.column_config.NumberColumn(format="$ %.0f")
+        }
+    )
+    
+    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "• Auxilio mecánico 24hs..."}
+    l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
+    
+    if st.link_button("🚀 GUARDAR Y VER VISTA PREVIA FLOTA", l_f, use_container_width=True):
+        db_f = {"tipo": "flota", "asegurado": f_nom, "vehiculo_o_flota": "Flota", "asesor": f_ase, "datos_json": datos_f, "link_cotizacion": l_f}
+        guardar_en_db(db_f)
+
+# --- PESTAÑA HISTORIAL ---
+with tab_hist:
+    st.subheader("📜 Gestión de Historial")
+    c_bus, c_ref, c_del_all = st.columns([3, 1, 2])
+    busqueda_h = c_bus.text_input("🔍 Buscar por cliente...", key="bus_hist")
+    if c_ref.button("🔄 ACTUALIZAR"): st.rerun()
+    
+    if c_del_all.button("🔥 BORRAR TODO EL HISTORIAL", type="primary"):
+        headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+        res = requests.delete(f"{SUPABASE_URL}/rest/v1/cotizaciones?id=not.is.null", headers=headers)
+        if res.status_code in [200, 204]: st.success("Vaciado."); st.rerun()
+
+    df_h = leer_historial()
+    if not df_h.empty:
+        df_h['Fecha'] = pd.to_datetime(df_h['created_at']).dt.strftime('%d/%m/%Y %H:%M')
+        if busqueda_h:
+            df_h = df_h[df_h.astype(str).apply(lambda x: x.str.contains(busqueda_h, case=False)).any(axis=1)]
+        st.dataframe(
+            df_h[['Fecha', 'tipo', 'asegurado', 'asesor', 'link_cotizacion']], 
+            use_container_width=True, hide_index=True,
+            column_config={"link_cotizacion": st.column_config.LinkColumn("Propuesta", display_text="📂")}
+        )
+
+# --- PESTAÑA ANÁLISIS ---
 with tab_an:
     st.subheader("📊 Análisis de Cartera")
     if not df_f.empty:
-        # Los subtotales dependen de lo que se filtre en la barra lateral (df_f ya viene filtrado)
         total_usd = df_f['Premio_Total_USD'].sum()
         total_polizas = len(df_f)
-        
-        # Indicadores principales arriba
         kpi1, kpi2 = st.columns(2)
         kpi1.metric("Cartera Total (USD)", f"USD {total_usd:,.0f}")
         kpi2.metric("Total de Pólizas", f"{total_polizas}")
-        
         st.markdown("---")
-        
-        # Gráficas de torta
         c1, c2 = st.columns(2)
-        with c1:
-            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Distribución por Compañía (USD)", hole=0.4), use_container_width=True)
-        with c2:
-            st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Distribución por Ramo (USD)", hole=0.4), use_container_width=True)
-    else:
-        st.info("No hay datos para analizar con los filtros seleccionados.")
-
-# ... (El resto de las pestañas Cotizador, Flotas e Historial se mantienen igual)
+        with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía (USD)", hole=0.4), use_container_width=True)
+        with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo (USD)", hole=0.4), use_container_width=True)
+    else: st.info("Sin datos.")
