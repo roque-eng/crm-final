@@ -185,7 +185,7 @@ with tab_cot:
         cont_cot = c_con.text_input("Nombre y Contacto Asesor")
 
     t_edit = st.data_editor(
-        pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}]), 
+        pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "3 Cuotas":0, "6 Cuotas:0", "10 Cuotas": 0, "Deducible": 0}]), 
         num_rows="dynamic", use_container_width=True,
         column_config={
             "Contado": st.column_config.NumberColumn(format="$ %.0f"),
@@ -197,7 +197,7 @@ with tab_cot:
     with col_a:
         b_cot = st.text_area("Beneficios:", value="• Auxilio mecánico 24hs...", height=200)
     with col_b:
-        c_h = st.text_area("Hogar:", value="• Incendio Edificio: USD 100.000...", height=130)
+        c_h = st.text_area("Hogar:", value="• Incendio Edificio: USD 100.000, • Incendio Contenido: USD 50.000.", height=130)
         c_a = st.text_area("Alquiler:", value="• Auto cortesía 15 días...", height=70)
         c_b = st.text_area("Bici:", value="• Hurto USD 1.000...", height=70)
 
