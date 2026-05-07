@@ -205,11 +205,12 @@ with st.sidebar:
 df_f = df_raw.copy()
 
     # --- Lógica de filtrado (Pegar debajo de df_f = df_raw.copy()) ---
-    if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
-    if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
-    if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
-    if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
-    if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
+if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
+if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
+if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
+if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
+if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
+    
 # ==========================================
 # ⚙️ CONFIGURACIÓN Y ESTADOS (BLOQUE 3)
 # ==========================================
