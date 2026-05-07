@@ -184,7 +184,7 @@ df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get('Premio USD (IVA inc)', 0
 df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
 
 with st.sidebar:
-    # --- REEMPLAZO DESDE LÍNEA 187 A 202 ---
+# --- BLOQUE CORREGIDO (Líneas 187-203) ---
         nombre_asesor = USUARIOS.get(st.session_state.get('usuario_actual', 'RDF'), "Asesor")
         st.title(f"👤 {nombre_asesor}")
 
@@ -194,8 +194,6 @@ with st.sidebar:
         f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
         f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
         f_ra = st.selectbox("Ramo", get_list('Ramo'))
-        
-        # RESTAURADOS LOS FILTROS QUE FALTABAN
         f_co = st.selectbox("Corredor", get_list('Corredor'))
         f_ag = st.selectbox("Agente", get_list('Agente'))
         
@@ -203,8 +201,10 @@ with st.sidebar:
             st.session_state['logueado'] = False
             st.rerun()
 
+    # Importante: Esta línea debe estar al mismo nivel que el "with st.sidebar:" de arriba
     df_f = df_raw.copy()
-    # Aplicación de filtros sobre la copia
+
+    # --- Lógica de filtrado (Pegar debajo de df_f = df_raw.copy()) ---
     if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
     if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
     if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
