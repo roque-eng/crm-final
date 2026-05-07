@@ -194,15 +194,19 @@ if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
 if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
 # ==========================================
-# 🏢 PESTAÑAS Y FUNCIONALIDADES (BLOQUE 3 COMPLETO)
+# ⚙️ CONFIGURACIÓN Y ESTADOS (BLOQUE 3)
 # ==========================================
 
-# 1. Inicializar estados de edición si no existen (para la función de V.2)
+# Definición de Usuarios (asegurate de tener esto arriba si no estaba)
+USUARIOS = {"RDF": "Roque de Freitas", "GS": "Gabriel Silva", "AB": "Andrés Bianchi"}
+
+# Inicializar estados para Edición V.2
 if "edit_data" not in st.session_state:
     st.session_state.edit_data = None
 if "es_edicion" not in st.session_state:
     st.session_state.es_edicion = False
 
+# Crear Pestañas
 tab_car, tab_ven, tab_cot, tab_flota, tab_hist, tab_an = st.tabs([
     "👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"
 ])
@@ -242,21 +246,19 @@ with tab_ven:
             column_config={
                 "Adjunto (póliza)": st.column_config.LinkColumn("Póliza", display_text="📂"),
                 "Premio USD (IVA inc)": st.column_config.NumberColumn("Premio USD", format="USD %.0f"),
-                "Premio UYU (IVA inc)": st.column_config.NumberColumn("Premio UYU", format="$ %.0f"),
-                "Premio_Total_USD": st.column_config.NumberColumn("Total USD", format="USD %.0f")
+                "Premio UYU (IVA inc)": st.column_config.NumberColumn("Premio UYU", format="$ %.0f")
             }
         )
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False)
         st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
 
-# --- PESTAÑA COTIZADOR INDIVIDUAL (CON EDICIÓN Y TEXTOS PREVIOS) ---
+# --- PESTAÑA COTIZADOR INDIVIDUAL (CON EDICIÓN V.2) ---
 with tab_cot:
     st.subheader("📝 Cotizador Individual")
-    
     edit = st.session_state.edit_data
     if st.session_state.es_edicion:
-        st.warning(f"⚠️ Modo Edición: Cargando datos de {edit['n']}. Se guardará como nueva versión.")
+        st.warning(f"⚠️ Editando cotización de: {edit['n']}. Se guardará como V.2")
         if st.button("❌ CANCELAR EDICIÓN"):
             st.session_state.edit_data = None
             st.session_state.es_edicion = False
@@ -265,20 +267,15 @@ with tab_cot:
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
         doc_in = c_doc.text_input("CI/RUT", value=edit["doc"] if edit and "doc" in edit else "")
-        
-        # Sugerencia de nombre con V.2 si es edición
-        nombre_sug = edit["n"] if edit else ""
-        if st.session_state.es_edicion and "V.2" not in nombre_sug:
-            nombre_sug = f"{nombre_sug} V.2"
-            
-        n_cot = c_nom.text_input("Nombre", value=nombre_sug)
+        nom_sug = edit["n"] if edit else ""
+        if st.session_state.es_edicion and "V.2" not in nom_sug: nom_sug = f"{nom_sug} V.2"
+        n_cot = c_nom.text_input("Nombre", value=nom_sug)
         v_cot = c_veh.text_input("Vehículo", value=edit["v"] if edit else "")
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
         cont_cot = c_con.text_input("Nombre y Contacto Asesor", value=edit["cont"] if edit else "")
 
-    # Tabla de precios con formato
-    df_precios = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
-    t_edit = st.data_editor(df_precios, num_rows="dynamic", use_container_width=True, column_config={
+    df_p_init = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_config={
         "Contado": st.column_config.NumberColumn(format="$ %.0f"),
         "10 Cuotas": st.column_config.NumberColumn(format="$ %.0f"),
         "Deducible": st.column_config.NumberColumn(format="$ %.0f")
@@ -286,7 +283,7 @@ with tab_cot:
     
     col_a, col_b = st.columns(2)
     with col_a:
-        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: SANCOR sin deducible"
+        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: PORTO sin deducible"
         b_cot = st.text_area("Beneficios:", value=edit["ben"] if edit else t_ben, height=200)
     with col_b:
         t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
@@ -297,15 +294,14 @@ with tab_cot:
     datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in}
     l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
     
-    st.markdown("---")
-    if st.button("🚀 GUARDAR VERSIÓN Y GENERAR PROPUESTA", use_container_width=True):
+    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA", use_container_width=True):
         db_i = {"tipo": "individual", "documento": doc_in, "asegurado": n_cot, "vehiculo_o_flota": v_cot, "asesor": e_cot, "datos_json": datos_i, "link_cotizacion": l_i}
         if f"saved_{n_cot}" not in st.session_state:
             if guardar_en_db(db_i):
                 st.session_state[f"saved_{n_cot}"] = True
                 st.session_state.es_edicion = False
                 st.session_state.edit_data = None
-                st.success("Nueva versión guardada.")
+                st.success("Guardado.")
         st.link_button("👁️ VER VISTA PREVIA", l_i, use_container_width=True)
 
 # --- PESTAÑA FLOTAS ---
@@ -315,7 +311,8 @@ with tab_flota:
         f1, f2, f3, f4, f5, f6 = st.columns([2, 1.2, 1.2, 1.2, 1, 2])
         f_nom = f1.text_input("Asegurado Flota")
         f_as1 = f2.text_input("Cía 1", value="SURA"); f_as2 = f3.text_input("Cía 2", value="BSE"); f_as3 = f4.text_input("Cía 3", value="SBI")
-        f_ase = f5.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="f_ase_sel"); f_cont = f6.text_input("Contacto", key="f_con_sel")
+        f_ase = f5.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="f_ase_sel")
+        f_cont = f6.text_input("Contacto", key="f_con_sel")
     
     df_f_init = pd.DataFrame([{"Vehículo": "Unidad 1", f"Precio {f_as1}": 0, f"Ded {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded {f_as3}": 0}])
     t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True, column_config={
@@ -323,9 +320,9 @@ with tab_flota:
         f"Precio {f_as2}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as2}": st.column_config.NumberColumn(format="$ %.0f"),
         f"Precio {f_as3}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as3}": st.column_config.NumberColumn(format="$ %.0f")
     })
-    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico 24hs incluido."}
+    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
     l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
-    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA FLOTA", use_container_width=True):
+    if st.button("🚀 GUARDAR FLOTA", use_container_width=True):
         db_f = {"tipo": "flota", "asegurado": f_nom, "vehiculo_o_flota": "Flota", "asesor": f_ase, "datos_json": datos_f, "link_cotizacion": l_f}
         guardar_en_db(db_f)
         st.link_button("👁️ VER VISTA PREVIA FLOTA", l_f, use_container_width=True)
@@ -334,9 +331,8 @@ with tab_flota:
 with tab_hist:
     st.subheader("📜 Gestión de Historial")
     c_bus, c_ref, c_del_all = st.columns([3, 1, 2])
-    busqueda_h = c_bus.text_input("🔍 Buscar por cliente...", key="bus_hist")
+    bus_h = c_bus.text_input("🔍 Buscar por cliente...", key="bus_hist")
     if c_ref.button("🔄 ACTUALIZAR"): st.rerun()
-    
     if c_del_all.button("🔥 BORRAR TODO EL HISTORIAL", type="primary"):
         headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
         res = requests.delete(f"{SUPABASE_URL}/rest/v1/cotizaciones?id=not.is.null", headers=headers)
@@ -345,20 +341,17 @@ with tab_hist:
     df_h = leer_historial()
     if not df_h.empty:
         df_h['Fecha'] = pd.to_datetime(df_h['created_at']).dt.strftime('%d/%m/%Y %H:%M')
-        if busqueda_h:
-            df_h = df_h[df_h['asegurado'].str.contains(busqueda_h, case=False, na=False)]
-        
+        if bus_h: df_h = df_h[df_h['asegurado'].str.contains(bus_h, case=False, na=False)]
         for index, row in df_h.iterrows():
             with st.container(border=True):
                 h1, h2, h3 = st.columns([4, 1, 1])
-                h1.write(f"📅 {row['Fecha']} | 👤 **{row['asegurado']}** ({row['tipo']})")
+                h1.write(f"📅 {row['Fecha']} | 👤 **{row['asegurado']}**")
                 h2.link_button("📂 VER", row['link_cotizacion'], use_container_width=True)
                 if h3.button("📝 EDITAR", key=f"btn_ed_{row['id']}", use_container_width=True):
                     st.session_state.edit_data = row['datos_json']
                     st.session_state.es_edicion = True
-                    st.success("Datos cargados. Ve a la pestaña COTIZADOR.")
+                    st.success("Cargado. Ve a COTIZADOR.")
                     st.rerun()
-    else: st.info("Historial vacío.")
 
 # --- PESTAÑA ANÁLISIS ---
 with tab_an:
@@ -368,7 +361,6 @@ with tab_an:
         k1, k2 = st.columns(2)
         k1.metric("Cartera Total (USD)", f"USD {t_usd:,.0f}")
         k2.metric("Total de Pólizas", f"{len(df_f)}")
-        st.markdown("---")
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía (USD)", hole=0.4), use_container_width=True)
-        with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo (USD)", hole=0.4), use_container_width=True)
+        with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
+        with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
