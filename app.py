@@ -292,23 +292,21 @@ with tab_cot:
     l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
     
 if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", use_container_width=True):
-        # 1. Creamos el link CORTO basado en el nombre (liviano)
         nombre_cod = base64.b64encode(f_nom.encode()).decode()
         l_f = f"https://dfseguros.streamlit.app/?flota={nombre_cod}"
         
-        # 2. Guardamos en la base de datos CON el link corto
         db_f = {
             "tipo": "flota", 
             "asegurado": f_nom, 
             "vehiculo_o_flota": "Flota", 
             "asesor": f_ase, 
             "datos_json": datos_f, 
-            "link_cotizacion": l_f  # <--- Link liviano
+            "link_cotizacion": l_f 
         }
         
         if guardar_en_db(db_f):
-            st.success("✅ Flota guardada con link optimizado.")
-            st.link_button("👁️ VER PROPUESTA", l_f, use_container_width=True)
+            st.success("✅ Flota guardada correctamente.")
+            st.link_button("👁️ VER VISTA PREVIA FLOTA", l_f, use_container_width=True)
             
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
