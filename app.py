@@ -131,12 +131,22 @@ if p:
 
     # --- TABLA SIN NaN ---
     df_p = pd.DataFrame(p["tab"]).fillna("")
-    for col in df_p.columns:
-    # Buscá esta línea cerca de la 110 y agregá los campos nuevos:
-        if col not in ["Aseguradora", "Vehículo", "Vehículo / Modelo", "Matrícula"]:
-            # ... el código que sigue abajo ...    
+    # --- REEMPLAZO DINÁMICO (FILA 134 APROX) ---
+    # Definimos las columnas que queremos ver si existen
+    posibles_fijas = ["Aseguradora", "Vehículo / Modelo", "Matrícula", "Vehículo"]
+    
+    # Filtramos las que realmente están en el DataFrame
+    cols_presentes = [c for c in posibles_fijas if c in df_p.columns]
+    
+    # Agregamos el resto (las aseguradoras con sus precios)
+    cols_precios = [c for c in df_p.columns if c not in posibles_fijas]
+    
+    # Unimos todo para el orden final
+    columnas_finales = cols_presentes + cols_precios
+    
     st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
-    st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
+    st.write(df_p[columnas_finales].to_html(index=False, escape=False), unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
