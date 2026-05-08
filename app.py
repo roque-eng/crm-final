@@ -125,12 +125,16 @@ if "q" in st.query_params or "f" in st.query_params:
 
     # 4. Tabla de Costos (Ancho total y alineada)
     st.write("")
+# Renderizado de Tabla de Costos (Corrección de NaN)
     df_p = pd.DataFrame(p["tab"])
     
-    # Formateo de $ con separador de miles
+    # Esta línea es la que limpia los NaN y los deja vacíos ""
+    df_p = df_p.fillna("") 
+
     for col in df_p.columns:
         if col != "Aseguradora":
-            df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').replace(',','').isdigit() else x)
+            # Modificamos la función para que si está vacío no intente formatear como número
+            df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').replace(',','').isdigit() and x != "" else x)
     
     st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
     st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
