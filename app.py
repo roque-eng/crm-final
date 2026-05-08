@@ -9,7 +9,7 @@ import base64
 import requests
 
 # 1. Definición Global de Usuarios
-USUARIOS = {"RDF": "Roque de Freitas", "GS": "Gabriel Silva", "AB": "Andrés Bianchi"}
+USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
 
 # 2. Red de seguridad para el Session State
 if 'usuario_actual' not in st.session_state:
