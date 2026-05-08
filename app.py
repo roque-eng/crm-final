@@ -126,21 +126,24 @@ if p:
     st.write("")
     st.markdown("### ⚠️ Coberturas Complementarias")
     col1, col2, col3 = st.columns(3)
-    
+
     def bloque_html(titulo, icono, texto, es_hogar=False):
         html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
-        if es_hogar:
-            partes = texto.split("Costo Anual")
-            html += f'<span>{partes[0].strip()}</span>'
-            for pc in partes[1:]:
-                html += f'<span class="costo-res">💰 Costo Anual {pc.strip()}</span>'
-        else:
-            if "Costo:" in texto:
-                partes = texto.split("Costo:")
-                html += f'<span>{partes[0].strip()}</span>'
-                html += f'<span class="costo-res">💰 Costo: {partes[1].strip()}</span>'
+        
+        # Si el texto tiene un signo $ o la palabra Costo, lo resaltamos
+        lineas = texto.split('\n')
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea: continue
+            
+            # Si la línea tiene $ o dice Costo, le ponemos la clase "costo-res"
+            if "$" in linea or "Costo" in linea:
+                # Quitamos puntos previos si los hay para que no se dupliquen iconos
+                l_limpia = linea.replace("•", "").strip()
+                html += f'<span class="costo-res">💰 {l_limpia}</span>'
             else:
-                html += f'<span>{texto}</span>'
+                html += f'<span>{linea}</span>'
+        
         html += '</div>'
         return html
 
