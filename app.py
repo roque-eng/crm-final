@@ -220,7 +220,7 @@ if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 # ==========================================
 
 # Definición de Usuarios (asegurate de tener esto arriba si no estaba)
-USUARIOS = {"RDF": "Roque de Freitas", "GS": "Gabriel Silva", "AB": "Andrés Bianchi"}
+USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
 
 # Inicializar estados para Edición V.2
 if "edit_data" not in st.session_state:
