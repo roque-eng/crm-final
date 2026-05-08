@@ -329,26 +329,6 @@ with tab_flota:
     datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
     l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
 # ... (Dentro de la pestaña de flotas, después de definir datos_f)
-    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", use_container_width=True):
-        # 1. Guardamos en DB primero para obtener un ID o usar el nombre
-        db_f = {
-            "tipo": "flota", 
-            "asegurado": f_nom, 
-            "vehiculo_o_flota": "Flota", 
-            "asesor": f_ase, 
-            "datos_json": datos_f,
-            "link_cotizacion": "" # Lo actualizamos ahora
-        }
-        
-        # Guardamos y generamos un link basado en búsqueda, no en datos pesados
-        if guardar_en_db(db_f):
-            # Usamos una URL corta que solo le diga al CRM: "buscá la flota de este cliente"
-            # Codificamos solo el nombre del cliente para que la URL sea minúscula
-            nombre_codificado = base64.b64encode(f_nom.encode()).decode()
-            l_f = f"https://dfseguros.streamlit.app/?flota={nombre_codificado}"
-            
-            st.success("✅ Flota guardada correctamente.")
-            st.link_button("👁️ VER VISTA PREVIA FLOTA", l_f, use_container_width=True)
 
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
