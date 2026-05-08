@@ -61,93 +61,61 @@ query_params = st.query_params
 # ==========================================
 # 📱 VISTA DE LA PROPUESTA PARA EL CLIENTE
 # ==========================================
-# --- Al principio de la VISTA DEL CLIENTE ---
+# --- DETECCIÓN DE PROPUESTA (Individual o Flota) ---
+p = None
 if "flota" in st.query_params:
     try:
-        # 1. Decodificamos el nombre del cliente
         nombre_cliente = base64.b64decode(st.query_params["flota"]).decode()
-        
-        # 2. Buscamos en la base de datos la última cotización de ese cliente
         headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
         url_busqueda = f"{SUPABASE_URL}/rest/v1/cotizaciones?asegurado=eq.{nombre_cliente}&tipo=eq.flota&order=created_at.desc&limit=1"
         res = requests.get(url_busqueda, headers=headers)
-        
         if res.status_code == 200 and len(res.json()) > 0:
             p = res.json()[0]["datos_json"]
-        else:
-            st.error("No se encontró la cotización de flota.")
-            st.stop()
-    except:
-        st.error("Error al cargar los datos de la flota.")
-        st.stop()
+    except: st.error("Error al cargar datos de flota.")
+elif "q" in st.query_params or "f" in st.query_params:
+    try:
+        val = st.query_params.get("q") or st.query_params.get("f")
+        p = json.loads(base64.b64decode(val).decode())
+    except: st.error("Error al cargar cotización.")
 
-    # 2. Estilos CSS (Ancho total, cajones azules, alineaciones y títulos)
+# Si hay una propuesta, se muestra la vista limpia
+if p:
     st.markdown("""
         <style>
-            /* Forzamos el ancho de la página al máximo */
             .main .block-container { max-width: 100% !important; padding-top: 2rem; }
-            
             .titulo-cot { color: #000; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
             .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
-            
-            /* TABLA AL 100% CON ALINEACIÓN AJUSTADA */
             .tabla-container { width: 100%; margin: 25px 0; }
             table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
-            
-            /* Encabezados: Aseguradora a la izquierda, el resto al centro */
-            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; }
+            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; text-align: center !important; }
             thead tr th:first-child { text-align: left !important; padding-left: 20px; }
-            thead tr th:not(:first-child) { text-align: center !important; }
-            
-            /* Celdas: Aseguradora a la izquierda, el resto al centro */
-            tbody td { padding: 16px; font-size: 18px; border-bottom: 1px solid #eee; }
+            tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
             tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
-            tbody td:not(:first-child) { text-align: center !important; }
-            
-            /* Cajones de Coberturas Complementarias */
-            .caja-azul { 
-                background-color: rgba(0, 102, 204, 0.05); 
-                padding: 20px; border-radius: 12px; height: 100%; 
-                border: 1px solid rgba(0, 102, 204, 0.1); 
-            }
+            .caja-azul { background-color: rgba(0, 102, 204, 0.05); padding: 20px; border-radius: 12px; height: 100%; border: 1px solid rgba(0, 102, 204, 0.1); }
             .sub-tit { font-size: 22px !important; font-weight: bold; color: #000; margin-bottom: 10px; display: block; }
             .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
-            
-            /* Beneficios en filas */
-            .ben-fila { 
-                background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
-                margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; 
-                font-size: 16px; color: #333;
-            }
+            .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; font-size: 16px; color: #333; }
         </style>
-        <div class="titulo-cot">🛡️ EDF SEGUROS - Cotización de Seguro</div>
+        <div class="titulo-cot">🛡️ EDF SEGUROS - Propuesta</div>
         <div class="linea"></div>
     """, unsafe_allow_html=True)
 
-    # 3. Datos del Asegurado
     c1, c2 = st.columns(2)
-    nombre_cli = p.get('n', 'N/A')
-    vehiculo_cli = p.get('v', 'N/A')
-    c1.markdown(f"### 👤 Asegurado: {nombre_cli}")
-    if "v" in p:
-        c2.markdown(f"### 🚗 Vehículo: {vehiculo_cli}")
+    c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
+    if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
-    # 4. Tabla de Costos (Ancho total y alineada)
-    st.write("")
-# Renderizado de Tabla de Costos (Corrección de NaN)
-    df_p = pd.DataFrame(p["tab"])
-    
-    # Esta línea es la que limpia los NaN y los deja vacíos ""
-    df_p = df_p.fillna("") 
-
+    # --- TABLA SIN NaN ---
+    df_p = pd.DataFrame(p["tab"]).fillna("")
     for col in df_p.columns:
-        if col != "Aseguradora":
-            # Modificamos la función para que si está vacío no intente formatear como número
+        if col not in ["Aseguradora", "Vehículo"]:
             df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').replace(',','').isdigit() and x != "" else x)
     
     st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
     st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
+    st.stop()
 
     # 5. Beneficios en filas separadas
     st.write("")
@@ -229,7 +197,6 @@ if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 # ==========================================
 
 # Definición de Usuarios (asegurate de tener esto arriba si no estaba)
-USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
 
 # Inicializar estados para Edición V.2
 if "edit_data" not in st.session_state:
@@ -301,7 +268,7 @@ with tab_cot:
         nom_sug = edit["n"] if edit else ""
         if st.session_state.es_edicion and "V.2" not in nom_sug: nom_sug = f"{nom_sug} V.2"
         n_cot = c_nom.text_input("Nombre", value=nom_sug)
-        v_cot = c_veh.text_input("Vehículo", value=edit["v"] if edit else "")
+        v_cot = c_veh.text_input("Vehículo", value=edit.get("v", "") if edit else "")
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
         cont_cot = c_con.text_input("Nombre y Contacto Asesor", value=edit["cont"] if edit else "")
 
