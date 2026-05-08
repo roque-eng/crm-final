@@ -61,15 +61,24 @@ query_params = st.query_params
 # ==========================================
 # 📱 VISTA DE LA PROPUESTA PARA EL CLIENTE
 # ==========================================
-if "q" in st.query_params or "f" in st.query_params:
-    # 1. Extracción segura de datos
+# --- Al principio de la VISTA DEL CLIENTE ---
+if "flota" in st.query_params:
     try:
-        import base64, json
-        query_val = st.query_params.get("q") or st.query_params.get("f")
-        p_raw = base64.b64decode(query_val).decode()
-        p = json.loads(p_raw)
-    except Exception as e:
-        st.error("No se pudo cargar la cotización. El enlace puede estar incompleto.")
+        # 1. Decodificamos el nombre del cliente
+        nombre_cliente = base64.b64decode(st.query_params["flota"]).decode()
+        
+        # 2. Buscamos en la base de datos la última cotización de ese cliente
+        headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+        url_busqueda = f"{SUPABASE_URL}/rest/v1/cotizaciones?asegurado=eq.{nombre_cliente}&tipo=eq.flota&order=created_at.desc&limit=1"
+        res = requests.get(url_busqueda, headers=headers)
+        
+        if res.status_code == 200 and len(res.json()) > 0:
+            p = res.json()[0]["datos_json"]
+        else:
+            st.error("No se encontró la cotización de flota.")
+            st.stop()
+    except:
+        st.error("Error al cargar los datos de la flota.")
         st.stop()
 
     # 2. Estilos CSS (Ancho total, cajones azules, alineaciones y títulos)
@@ -344,10 +353,27 @@ with tab_flota:
     })
     datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
     l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
-    if st.button("🚀 GUARDAR FLOTA", use_container_width=True):
-        db_f = {"tipo": "flota", "asegurado": f_nom, "vehiculo_o_flota": "Flota", "asesor": f_ase, "datos_json": datos_f, "link_cotizacion": l_f}
-        guardar_en_db(db_f)
-        st.link_button("👁️ VER VISTA PREVIA FLOTA", l_f, use_container_width=True)
+# ... (Dentro de la pestaña de flotas, después de definir datos_f)
+    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", use_container_width=True):
+        # 1. Guardamos en DB primero para obtener un ID o usar el nombre
+        db_f = {
+            "tipo": "flota", 
+            "asegurado": f_nom, 
+            "vehiculo_o_flota": "Flota", 
+            "asesor": f_ase, 
+            "datos_json": datos_f,
+            "link_cotizacion": "" # Lo actualizamos ahora
+        }
+        
+        # Guardamos y generamos un link basado en búsqueda, no en datos pesados
+        if guardar_en_db(db_f):
+            # Usamos una URL corta que solo le diga al CRM: "buscá la flota de este cliente"
+            # Codificamos solo el nombre del cliente para que la URL sea minúscula
+            nombre_codificado = base64.b64encode(f_nom.encode()).decode()
+            l_f = f"https://dfseguros.streamlit.app/?flota={nombre_codificado}"
+            
+            st.success("✅ Flota guardada correctamente.")
+            st.link_button("👁️ VER VISTA PREVIA FLOTA", l_f, use_container_width=True)
 
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
