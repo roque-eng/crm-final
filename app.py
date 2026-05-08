@@ -326,24 +326,7 @@ with tab_cot:
         c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70)
     datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in}
     l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
-    
-if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", use_container_width=True):
-        nombre_cod = base64.b64encode(f_nom.encode()).decode()
-        l_f = f"https://dfseguros.streamlit.app/?flota={nombre_cod}"
-        
-        db_f = {
-            "tipo": "flota", 
-            "asegurado": f_nom, 
-            "vehiculo_o_flota": "Flota", 
-            "asesor": f_ase, 
-            "datos_json": datos_f, 
-            "link_cotizacion": l_f 
-        }
-        
-        if guardar_en_db(db_f):
-            st.success("✅ Flota guardada correctamente.")
-            st.link_button("👁️ VER VISTA PREVIA FLOTA", l_f, use_container_width=True)
-            
+
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
     st.subheader("🚛 Cotizador de Flotas Pro")
