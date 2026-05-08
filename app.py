@@ -337,11 +337,20 @@ with tab_cot:
         cont_cot = c_con.text_input("Nombre y Contacto Asesor", value=edit["cont"] if edit else "")
 
     df_p_init = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
-    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_config={
-        "Contado": st.column_config.NumberColumn(format="$ %.0f"),
-        "10 Cuotas": st.column_config.NumberColumn(format="$ %.0f"),
-        "Deducible": st.column_config.NumberColumn(format="$ %.0f")
-    })
+    
+    t_edit = st.data_editor(
+        df_p_init, 
+        num_rows="dynamic", 
+        use_container_width=True,
+        # ESTA LÍNEA FIJA EL ORDEN DE IZQUIERDA A DERECHA
+        column_order=("Aseguradora", "Contado", "10 Cuotas", "Deducible"),
+        column_config={
+            "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
+            "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
+            "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %.0f"),
+            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
+        }
+    )
     
     col_a, col_b = st.columns(2)
     with col_a:
