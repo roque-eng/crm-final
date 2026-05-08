@@ -306,7 +306,7 @@ with tab_cot:
     with col_b:
         t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
         c_h = st.text_area("Hogar:", value=edit["ch"] if edit else t_h, height=130)
-        c_a = st.text_area("Alquiler:", value=edit["ca"] if edit else "• Auto cortesía 15 días en taller\nCosto: UYU 3.500", height=70)
+        c_a = st.text_area("Alquiler:", value=edit["ca"] if edit else "• Auto cortesía 15 días en caso de que choques y tu vehículo vaya a reparar a un taller\nCosto: UYU 3.500", height=70)
         c_b = st.text_area("Bici:", value=edit["cb"] if edit else "• Hurto USD 1.000\nCosto: USD 110", height=70)
 
     datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in}
