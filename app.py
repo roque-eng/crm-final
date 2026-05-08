@@ -317,7 +317,7 @@ with tab_ven:
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL (CON EDICIÓN V.2) ---
 with tab_cot:
-    st.subheader("📝 Cotizador Individual")
+    st.subheader("📝 Cotizador Seguros para Vehículos")
     edit = st.session_state.edit_data
     if st.session_state.es_edicion:
         st.warning(f"⚠️ Editando cotización de: {edit['n']}. Se guardará como V.2")
@@ -366,7 +366,7 @@ with tab_cot:
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
-    st.subheader("🚛 Cotizador de Flotas Pro")
+    st.subheader("🚛 Cotizador Seguro de Flotas")
     with st.container(border=True):
         f1, f2, f3, f4, f5, f6 = st.columns([2, 1.2, 1.2, 1.2, 1, 2])
         f_nom = f1.text_input("Asegurado Flota")
@@ -374,12 +374,30 @@ with tab_flota:
         f_ase = f5.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="f_ase_sel")
         f_cont = f6.text_input("Contacto", key="f_con_sel")
     
-    df_f_init = pd.DataFrame([{"Vehículo": "Unidad 1", f"Precio {f_as1}": 0, f"Ded {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded {f_as3}": 0}])
-    t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True, column_config={
-        f"Precio {f_as1}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as1}": st.column_config.NumberColumn(format="$ %.0f"),
-        f"Precio {f_as2}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as2}": st.column_config.NumberColumn(format="$ %.0f"),
-        f"Precio {f_as3}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as3}": st.column_config.NumberColumn(format="$ %.0f")
-    })
+    columnas_flota = ["Aseguradora", "Vehículo / Modelo", "Matrícula", "Contado", "10 Cuotas", "Deducible"]
+    
+    # Si estamos editando una flota cargada del historial
+    if edit and "tab" in edit:
+        df_f_init = pd.DataFrame(edit["tab"])
+    else:
+        # Estructura inicial para cotización nueva
+        df_f_init = pd.DataFrame([{"Aseguradora": "BSE", "Vehículo / Modelo": "", "Matrícula": "", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+
+    t_flota = st.data_editor(
+        df_f_init,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editor_flotas_final",
+        column_order=columnas_flota,
+        column_config={
+            "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
+            "Vehículo / Modelo": st.column_config.TextColumn("Vehículo / Modelo", width="large"),
+            "Matrícula": st.column_config.TextColumn("Matrícula", width="small"),
+            "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
+            "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %.0f"),
+            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
+        }
+    )
     datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": b_cot}
     if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", use_container_width=True, key="btn_guardar_flota_unica"):
                 # 1. Creamos el link CORTO (liviano) para evitar el error 414
