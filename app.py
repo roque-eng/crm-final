@@ -285,10 +285,9 @@ with tab_cot:
         b_cot = st.text_area("Beneficios:", value=edit["ben"] if edit else t_ben, height=200)
     with col_b:
         t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
-        c_h = st.text_area("Hogar:", value=edit["ch"] if edit else t_h, height=130)
-        c_a = st.text_area("Alquiler:", value=edit["ca"] if edit else "• Auto cortesía 15 días en caso de que choques y tu vehículo vaya a reparar a un taller.\nCosto Anual: UYU 3.500", height=70)
-        c_b = st.text_area("Bici:", value=edit["cb"] if edit else "• Hurto USD 1.000\n• Daños a Terceros: USD 10.000\nCosto Anual: USD 110", height=70)
-
+        c_h = st.text_area("Hogar:", value=edit.get("ch", t_h) if edit else t_h, height=130)
+        c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70)
+        c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70)
     datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in}
     l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
     
