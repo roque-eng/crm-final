@@ -132,7 +132,7 @@ if p:
     # --- TABLA SIN NaN ---
     df_p = pd.DataFrame(p["tab"]).fillna("")
     for col in df_p.columns:
-# Buscá esta línea cerca de la 110 y agregá los campos nuevos:
+    # Buscá esta línea cerca de la 110 y agregá los campos nuevos:
         if col not in ["Aseguradora", "Vehículo", "Vehículo / Modelo", "Matrícula"]:
             # ... el código que sigue abajo ...    
     st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
