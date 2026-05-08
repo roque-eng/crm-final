@@ -80,23 +80,43 @@ elif "q" in st.query_params or "f" in st.query_params:
 
 # Si hay una propuesta, se muestra la vista limpia
 if p:
+# --- ALREDEDOR DE LA FILA 85 ---
     st.markdown("""
         <style>
             .main .block-container { max-width: 100% !important; padding-top: 2rem; }
-            .titulo-cot { color: #000; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
-            .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
+            /* Título en Bordó */
+            .titulo-cot { color: #800020; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
+            .linea { border-bottom: 4px solid #800020; margin-bottom: 30px; }
+            
             .tabla-container { width: 100%; margin: 25px 0; }
             table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
-            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; text-align: center !important; }
+            
+            /* Encabezados con fondo bordó suave */
+            thead tr th { background-color: rgba(128, 0, 32, 0.1) !important; color: #800020; padding: 18px; font-size: 20px; text-align: center !important; }
             thead tr th:first-child { text-align: left !important; padding-left: 20px; }
+            
             tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
             tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
-            .caja-azul { background-color: rgba(0, 102, 204, 0.05); padding: 20px; border-radius: 12px; height: 100%; border: 1px solid rgba(0, 102, 204, 0.1); }
-            .sub-tit { font-size: 22px !important; font-weight: bold; color: #000; margin-bottom: 10px; display: block; }
-            .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
-            .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; font-size: 16px; color: #333; }
+            
+            /* Cajones de Coberturas con borde bordó */
+            .caja-azul { 
+                background-color: #fdfdfd; 
+                padding: 20px; border-radius: 12px; height: 100%; 
+                border: 1px solid rgba(128, 0, 32, 0.2); 
+                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+            }
+            .sub-tit { font-size: 22px !important; font-weight: bold; color: #800020; margin-bottom: 10px; display: block; }
+            
+            /* Resaltado de Costos en Bordó */
+            .costo-res { color: #800020; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
+            
+            .ben-fila { 
+                background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
+                margin-bottom: 10px; border-left: 6px solid #800020; width: 100%; 
+                font-size: 16px; color: #333; 
+            }
         </style>
-        <div class="titulo-cot">🛡️ EDF SEGUROS - Propuesta</div>
+        <div class="titulo-cot">🍷 EDF SEGUROS - Propuesta</div>
         <div class="linea"></div>
     """, unsafe_allow_html=True)
 
