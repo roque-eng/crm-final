@@ -324,9 +324,26 @@ with tab_flota:
         f"Precio {f_as2}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as2}": st.column_config.NumberColumn(format="$ %.0f"),
         f"Precio {f_as3}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as3}": st.column_config.NumberColumn(format="$ %.0f")
     })
-    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
-    l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
-# ... (Dentro de la pestaña de flotas, después de definir datos_f)
+    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": b_cot}
+    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", use_container_width=True):
+            # 1. Creamos el link CORTO (liviano) para evitar el error 414
+            nombre_cod = base64.b64encode(f_nom.encode()).decode()
+            l_f = f"https://dfseguros.streamlit.app/?flota={nombre_cod}"
+            
+            # 2. Preparamos los datos para la base de datos
+            db_f = {
+                "tipo": "flota", 
+                "asegurado": f_nom, 
+                "vehiculo_o_flota": "Flota", 
+                "asesor": f_ase, 
+                "datos_json": datos_f, 
+                "link_cotizacion": l_f
+            }
+            
+            # 3. Guardamos en Supabase
+            if guardar_en_db(db_f):
+                st.success("✅ Flota guardada con éxito en el historial.")
+                st.link_button("👁️ VER PROPUESTA DE FLOTA", l_f, use_container_width=True)
 
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
