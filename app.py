@@ -115,6 +115,42 @@ if p:
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
+    # 5. Beneficios en filas separadas
+    st.write("")
+    st.markdown("### ✅ Beneficios Incluidos")
+    for b in p.get("ben", "").split('\n'):
+        if b.strip():
+            st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
+
+    # 6. Coberturas Complementarias (Signo ⚠️ y Cajones Azules)
+    st.write("")
+    st.markdown("### ⚠️ Coberturas Complementarias")
+    col1, col2, col3 = st.columns(3)
+    
+    def bloque_html(titulo, icono, texto, es_hogar=False):
+        html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
+        if es_hogar:
+            partes = texto.split("Costo Anual")
+            html += f'<span>{partes[0].strip()}</span>'
+            for pc in partes[1:]:
+                html += f'<span class="costo-res">💰 Costo Anual {pc.strip()}</span>'
+        else:
+            if "Costo:" in texto:
+                partes = texto.split("Costo:")
+                html += f'<span>{partes[0].strip()}</span>'
+                html += f'<span class="costo-res">💰 Costo: {partes[1].strip()}</span>'
+            else:
+                html += f'<span>{texto}</span>'
+        html += '</div>'
+        return html
+
+    col1.markdown(bloque_html("Hogar", "🏠", p.get("ch", ""), True), unsafe_allow_html=True)
+    col2.markdown(bloque_html("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
+    col3.markdown(bloque_html("Bici", "🚲", p.get("cb", "")), unsafe_allow_html=True)
+
+    # 7. Firma del Asesor
+    st.markdown("---")
+    st.markdown(f"**Asesor:** {p.get('e', '')} | **Contacto:** {p.get('cont', '')}")
     st.stop()
 
     # 5. Beneficios en filas separadas
