@@ -130,23 +130,21 @@ if p:
     if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
     # --- TABLA SIN NaN ---
+    # --- REEMPLAZO INTELIGENTE DE TABLA (FILA 133) ---
     df_p = pd.DataFrame(p["tab"]).fillna("")
-    # --- REEMPLAZO DINÁMICO (FILA 134 APROX) ---
-    # Definimos las columnas que queremos ver si existen
-    posibles_fijas = ["Aseguradora", "Vehículo / Modelo", "Matrícula", "Vehículo"]
     
-    # Filtramos las que realmente están en el DataFrame
-    cols_presentes = [c for c in posibles_fijas if c in df_p.columns]
+    # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
+    cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
     
-    # Agregamos el resto (las aseguradoras con sus precios)
-    cols_precios = [c for c in df_p.columns if c not in posibles_fijas]
+    # 2. Identificamos cuáles de estas están realmente en los datos cargados
+    existentes = [c for c in cols_texto if c in df_p.columns]
     
-    # Unimos todo para el orden final
-    columnas_finales = cols_presentes + cols_precios
+    # 3. Identificamos todas las demás (precios, deducibles, etc.)
+    precios_y_otros = [c for c in df_p.columns if c not in cols_texto]
     
+    # 4. Mostramos la tabla final con el orden correcto
     st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
-    st.write(df_p[columnas_finales].to_html(index=False, escape=False), unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
@@ -377,22 +375,39 @@ with tab_cot:
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
     st.subheader("🚛 Cotizador Seguro de Flotas")
-    with st.container(border=True):
-        f1, f2, f3, f4, f5, f6 = st.columns([2, 1.2, 1.2, 1.2, 1, 2])
-        f_nom = f1.text_input("Asegurado Flota")
-        f_as1 = f2.text_input("Cía 1", value="SURA"); f_as2 = f3.text_input("Cía 2", value="BSE"); f_as3 = f4.text_input("Cía 3", value="SBI")
-        f_ase = f5.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="f_ase_sel")
-        f_cont = f6.text_input("Contacto", key="f_con_sel")
+# --- NUEVO ENCABEZADO SIMPLIFICADO ---
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        f_asegurado = st.text_input("Asegurado", value=edit.get('asegurado', '') if edit else "", key="f_nom_flota")
+        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_ase_cia_flota")
+    with col_f2:
+        f_asesor = st.text_input("Asesor", value=edit.get('asesor', '') if edit else "EDF SEGUROS", key="f_ase_nom_flota")
+        f_contacto = st.text_input("Contacto", value=edit.get('datos_json', {}).get('cont', '099 635 244') if edit else "099 635 244", key="f_cont_flota")
+
+    # --- NUEVA TABLA DE VEHÍCULOS ---
+    cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
     
-    columnas_flota = ["Aseguradora", "Vehículo / Modelo", "Matrícula", "Contado", "10 Cuotas", "Deducible"]
-    
-    # Si estamos editando una flota cargada del historial
     if edit and "tab" in edit:
         df_f_init = pd.DataFrame(edit["tab"])
     else:
-        # Estructura inicial para cotización nueva
-        df_f_init = pd.DataFrame([{"Aseguradora": "BSE", "Vehículo / Modelo": "", "Matrícula": "", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+        # Estructura limpia con las columnas nuevas
+        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
 
+    t_flota = st.data_editor(
+        df_f_init,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editor_flotas_v_final",
+        column_order=cols_f,
+        column_config={
+            "Marca": st.column_config.TextColumn("Marca", width="medium"),
+            "Modelo": st.column_config.TextColumn("Modelo", width="medium"),
+            "Matrícula": st.column_config.TextColumn("Matrícula", width="small"),
+            "Cobertura": st.column_config.TextColumn("Cobertura", width="medium"),
+            "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
+            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
+        }
+    )
     t_flota = st.data_editor(
         df_f_init,
         num_rows="dynamic",
@@ -409,25 +424,25 @@ with tab_flota:
         }
     )
     datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": b_cot}
-    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", use_container_width=True, key="btn_guardar_flota_unica"):
-                # 1. Creamos el link CORTO (liviano) para evitar el error 414
-                nombre_cod = base64.b64encode(f_nom.encode()).decode()
-                l_f = f"https://dfseguros.streamlit.app/?flota={nombre_cod}"
-                
-                # 2. Preparamos los datos para la base de datos
-                db_f = {
-                    "tipo": "flota", 
-                    "asegurado": f_nom, 
-                    "vehiculo_o_flota": "Flota", 
-                    "asesor": f_ase, 
-                    "datos_json": datos_f, 
-                    "link_cotizacion": l_f
-                }
-                
-                # 3. Guardamos en Supabase
-                if guardar_en_db(db_f):
-                    st.success("✅ Flota guardada con éxito en el historial.")
-                    st.link_button("👁️ VER PROPUESTA DE FLOTA", l_f, use_container_width=True, key="btn_ver_flota_nueva")
+if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", key="btn_f_flota_ok"):
+        nombre_cod = base64.b64encode(f_asegurado.encode()).decode()
+        link_f = f"https://dfseguros.streamlit.app/?flota={nombre_cod}"
+        
+        db_f = {
+            "tipo": "flota", 
+            "asegurado": f_asegurado, 
+            "vehiculo_o_flota": f"Flota - {f_aseguradora}", 
+            "asesor": f_asesor, 
+            "datos_json": {
+                "tab": t_flota.to_dict(orient='records'),
+                "ase": f_aseguradora,
+                "cont": f_contacto
+            }, 
+            "link_cotizacion": link_f
+        }
+        if guardar_en_db(db_f):
+            st.success(f"✅ Flota guardada con éxito.")
+            st.link_button("👁️ VER PROPUESTA", link_f, use_container_width=True)
 
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
