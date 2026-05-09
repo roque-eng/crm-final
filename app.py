@@ -145,12 +145,24 @@ if p:
     st.markdown('</div>', unsafe_allow_html=True)
     
     # --- PEGÁ ESTO DEBAJO DE LA TABLA (Fila 130 aprox) ---
-    st.markdown('<br>', unsafe_allow_html=True)
+    # --- 1. REORDENAMIENTO Y FORMATEO FINAL ---
+    df_p = pd.DataFrame(p["tab"]).fillna("")
+    
+    # Aplicamos el formato de moneda $ y separador de miles
+    for col in ["Contado", "10 Cuotas", "Deducible"]:
+        if col in df_p.columns:
+            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
+            df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
+
+    # --- 2. BENEFICIOS INCLUIDOS (ARRIBA) ---
     if ben_raw:
         st.markdown("### ✅ Beneficios Incluidos")
         for b in ben_raw.split('\n'):
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
+
+    # --- 3. COBERTURAS COMPLEMENTARIAS (ABAJO) ---
+    st.markdown('<br>', unsafe_allow_html=True)
     st.markdown("### ⚠️ Coberturas Complementarias")
     c1, c2, c3 = st.columns(3)
 
@@ -158,14 +170,11 @@ if p:
     mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
     mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
 
-    # Firma del Asesor (Fila 170 aprox)
+    # --- 4. FIRMA Y CIERRE ---
     st.markdown("---")
-    # Buscamos asesor y contacto tanto en formato flota como individual
     nom_ase = p.get('e') or p.get('asesor', 'EDF SEGUROS')
     cont_ase = p.get('cont') or p.get('datos_json', {}).get('cont', '099 635 244')
     st.markdown(f"**Asesor:** {nom_ase} | **Contacto:** {cont_ase}")
-
-    # Detenemos la ejecución para que el cliente no vea el panel de control
     st.stop()
 
 conn = st.connection("gsheets", type=GSheetsConnection)
