@@ -330,9 +330,9 @@ with tab_cot:
     st.subheader("📝 Cotizador Seguros para Vehículos")
     edit = st.session_state.edit_data
     if st.session_state.es_edicion:
-    # Cambiamos el st.warning que falla por esto:
-    if isinstance(edit, dict) and 'n' in edit:
-        st.warning(f"⚠️ Editando cotización de: {edit['n']}. Se guardará como V.2")
+# Cambiamos el st.warning que falla por esto:
+if isinstance(edit, dict) and 'n' in edit:
+    st.warning(f"⚠️ Editando cotización de: {edit['n']}. Se guardará como V.2")
 
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
