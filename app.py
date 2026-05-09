@@ -140,23 +140,24 @@ if p:
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    st.markdown('<br>', unsafe_allow_html=True)
-    st.markdown("### ⚠️ Coberturas Complementarias")
-    c1, c2, c3 = st.columns(3)
-
-    # Función rápida para mostrar los cajones azules con datos dinámicos
-    def mostrar_cajon(col, titulo, icono, clave_txt, clave_costo=None):
+def mostrar_cajon_v2(col, titulo, icono, clave_txt, clave_costo=None):
         with col:
             st.markdown('<div class="caja-azul">', unsafe_allow_html=True)
             st.markdown(f'<span class="sub-tit">{icono} {titulo}</span>', unsafe_allow_html=True)
-            # Buscamos el texto en ambos formatos posibles
             txt = p.get(clave_txt) or p.get('datos_json', {}).get(clave_txt, '')
             if txt: st.write(txt)
             
             if clave_costo:
                 costo = p.get(clave_costo) or p.get('datos_json', {}).get(clave_costo, '')
-                if costo: st.markdown(f'<span class="costo-res">Costo: {costo}</span>', unsafe_allow_html=True)
+                if costo: 
+                    # Aquí agregamos el ícono de bolsa de dinero y resaltamos
+                    st.markdown(f'<span class="costo-res">💰 Costo: {costo}</span>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
+
+    # Llamadas con el ícono de Auto 🚗 para Alquiler
+    mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
+    mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
+    mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
 
     mostrar_cajon(c1, "Hogar", "🏠", "ch")
     mostrar_cajon(c2, "Alquiler", "🔑", "ca", "c_alquiler")
