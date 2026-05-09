@@ -102,7 +102,20 @@ if p:
         <div class="titulo-cot">🛡️ EDF SEGUROS - Propuesta</div>
         <div class="linea"></div>
     """, unsafe_allow_html=True)
-
+    
+    def mostrar_cajon_v2(col, titulo, icono, clave_txt, clave_costo=None):
+        with col:
+            st.markdown('<div class="caja-azul">', unsafe_allow_html=True)
+            st.markdown(f'<span class="sub-tit">{icono} {titulo}</span>', unsafe_allow_html=True)
+            txt = p.get(clave_txt) or p.get('datos_json', {}).get(clave_txt, '')
+            if txt: st.write(txt)
+            
+            if clave_costo:
+                costo = p.get(clave_costo) or p.get('datos_json', {}).get(clave_costo, '')
+                if costo: 
+                    # Aquí agregamos el ícono de bolsa de dinero y resaltamos
+                    st.markdown(f'<span class="costo-res">💰 Costo: {costo}</span>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
     # Bloque para asegurar que se vean los textos
     c1, c2 = st.columns(2)
     # Intentamos buscar el nombre en 'n' (nuevo) o en 'asegurado' (viejo)
@@ -127,7 +140,15 @@ if p:
     st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
     st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+    
+    # --- PEGÁ ESTO DEBAJO DE LA TABLA (Fila 130 aprox) ---
+    st.markdown('<br>', unsafe_allow_html=True)
+    st.markdown("### ⚠️ Coberturas Complementarias")
+    c1, c2, c3 = st.columns(3)
 
+    mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
+    mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
+    mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
     # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
     # 5. Beneficios en filas separadas
     st.write("")
@@ -139,20 +160,6 @@ if p:
         for b in ben_raw.split('\n'):
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
-
-    def mostrar_cajon_v2(col, titulo, icono, clave_txt, clave_costo=None):
-        with col:
-            st.markdown('<div class="caja-azul">', unsafe_allow_html=True)
-            st.markdown(f'<span class="sub-tit">{icono} {titulo}</span>', unsafe_allow_html=True)
-            txt = p.get(clave_txt) or p.get('datos_json', {}).get(clave_txt, '')
-            if txt: st.write(txt)
-            
-            if clave_costo:
-                costo = p.get(clave_costo) or p.get('datos_json', {}).get(clave_costo, '')
-                if costo: 
-                    # Aquí agregamos el ícono de bolsa de dinero y resaltamos
-                    st.markdown(f'<span class="costo-res">💰 Costo: {costo}</span>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
 
     # Llamadas con el ícono de Auto 🚗 para Alquiler
     mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
