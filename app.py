@@ -90,13 +90,13 @@ if p:
             .titulo-cot { color: #2C2C2C; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
             
             /* Línea en Bordó institucional */
-            .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
+            .linea { border-bottom: 4px solid #800020; margin-bottom: 30px; }
             
             .tabla-container { width: 100%; margin: 25px 0; }
             table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
             
             /* Encabezados con toque bordó */
-            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; text-align: center !important; }
+            thead tr th { background-color: rgba(128, 0, 32, 0.05) !important; color: #800020; padding: 18px; font-size: 20px; text-align: center !important; }
             thead tr th:first-child { text-align: left !important; padding-left: 20px; }
             
             tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
@@ -113,11 +113,11 @@ if p:
             .sub-tit { font-size: 22px !important; font-weight: bold; color: #2C2C2C; margin-bottom: 10px; display: block; }
             
             /* Costos resaltados en Gris Oscuro */
-            .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
+            .costo-res { color: #2C2C2C; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f4f4f4; padding: 5px 10px; border-radius: 5px; }
             
             .ben-fila { 
                 background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
-                margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; 
+                margin-bottom: 10px; border-left: 6px solid #800020; width: 100%; 
                 font-size: 16px; color: #333; 
             }
         </style>
@@ -130,11 +130,6 @@ if p:
     if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
     df_p = pd.DataFrame(p["tab"]).fillna("")
-    # --- FORMATEO DE PRECIOS ($ y miles) ---
-    for col in ["Contado", "10 Cuotas", "Deducible"]:
-        if col in df_p.columns:
-            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
-            df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
     # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
     cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
     
@@ -326,13 +321,15 @@ with tab_ven:
         st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL (CON EDICIÓN V.2) ---
-    with tab_cot:
-        st.subheader("... Cotizador Seguros para Vehículos")  # <--- Agregá 4 espacios aquí
-        edit = st.session_state.edit_data
-        if st.session_state.es_edicion:
-            # Cambiamos el st.warning...
-            if isinstance(edit, dict) and 'n' in edit:
-                st.warning(f"Editando cotización de: {edit['n']}. Se guardará como V.2")
+with tab_cot:
+    st.subheader("📝 Cotizador Seguros para Vehículos")
+    edit = st.session_state.edit_data
+    if st.session_state.es_edicion:
+        st.warning(f"⚠️ Editando cotización de: {edit['n']}. Se guardará como V.2")
+        if st.button("❌ CANCELAR EDICIÓN"):
+            st.session_state.edit_data = None
+            st.session_state.es_edicion = False
+            st.rerun()
 
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
