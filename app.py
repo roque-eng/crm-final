@@ -157,12 +157,6 @@ if p:
     mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
     mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
     mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
-    # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
-    # 5. Beneficios en filas separadas
-    st.write("")
-    # --- BLOQUE DE INFORMACIÓN (REEMPLAZO FILA 134-171) ---
-    # Recuperamos beneficios de cualquier formato (viejo o nuevo)
-    ben_raw = p.get('ben') or p.get('datos_json', {}).get('ben', '')
 
     # Firma del Asesor (Fila 170 aprox)
     st.markdown("---")
