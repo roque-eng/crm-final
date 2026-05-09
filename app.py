@@ -123,14 +123,6 @@ if p:
     df_p = pd.DataFrame(p["tab"]).fillna("")
     
     # --- PEGÁ ESTO DEBAJO DE LA TABLA (Fila 130 aprox) ---
-    # --- 1. REORDENAMIENTO Y FORMATEO FINAL ---
-    df_p = pd.DataFrame(p["tab"]).fillna("")
-    
-    # Aplicamos el formato de moneda $ y separador de miles
-    for col in ["Contado", "10 Cuotas", "Deducible"]:
-        if col in df_p.columns:
-            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
-            df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
 
     # --- 2. BENEFICIOS INCLUIDOS (ARRIBA) ---
     if ben_raw:
@@ -167,6 +159,15 @@ if p:
     st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
     st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- 1. REORDENAMIENTO Y FORMATEO FINAL ---
+    df_p = pd.DataFrame(p["tab"]).fillna("")
+    
+    # Aplicamos el formato de moneda $ y separador de miles
+    for col in ["Contado", "10 Cuotas", "Deducible"]:
+        if col in df_p.columns:
+            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
+            df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
 
     # --- 4. FIRMA Y CIERRE ---
     st.markdown("---")
