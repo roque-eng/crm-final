@@ -123,6 +123,13 @@ if p:
     if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
     df_p = pd.DataFrame(p["tab"]).fillna("")
+    # --- FORMATEO DE PRECIOS (Símbolo $ y miles) ---
+        for col in ["Contado", "10 Cuotas", "Deducible"]:
+            if col in df_p.columns:
+                # Convertimos a número, quitamos decimales y ponemos el $
+                df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
+                df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
+                
     # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
     cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
     
@@ -139,6 +146,11 @@ if p:
     
     # --- PEGÁ ESTO DEBAJO DE LA TABLA (Fila 130 aprox) ---
     st.markdown('<br>', unsafe_allow_html=True)
+    if ben_raw:
+        st.markdown("### ✅ Beneficios Incluidos")
+        for b in ben_raw.split('\n'):
+            if b.strip():
+                st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
     st.markdown("### ⚠️ Coberturas Complementarias")
     c1, c2, c3 = st.columns(3)
 
@@ -151,11 +163,6 @@ if p:
     # --- BLOQUE DE INFORMACIÓN (REEMPLAZO FILA 134-171) ---
     # Recuperamos beneficios de cualquier formato (viejo o nuevo)
     ben_raw = p.get('ben') or p.get('datos_json', {}).get('ben', '')
-    if ben_raw:
-        st.markdown("### ✅ Beneficios Incluidos")
-        for b in ben_raw.split('\n'):
-            if b.strip():
-                st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
     # Firma del Asesor (Fila 170 aprox)
     st.markdown("---")
