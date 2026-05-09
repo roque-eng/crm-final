@@ -327,12 +327,12 @@ with tab_ven:
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL (CON EDICIÓN V.2) ---
     with tab_cot:
-        st.subheader("📝 Cotizador Seguros para Vehículos")
+        st.subheader("... Cotizador Seguros para Vehículos")  # <--- Agregá 4 espacios aquí
         edit = st.session_state.edit_data
         if st.session_state.es_edicion:
-            # Cambiamos el st.warning que falla por esto:
-        if isinstance(edit, dict) and 'n' in edit:
-            st.warning(f"⚠️ Editando cotización de: {edit['n']}. Se guardará como V.2")
+            # Cambiamos el st.warning...
+            if isinstance(edit, dict) and 'n' in edit:
+                st.warning(f"Editando cotización de: {edit['n']}. Se guardará como V.2")
 
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
