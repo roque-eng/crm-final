@@ -121,26 +121,6 @@ if p:
     if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
     df_p = pd.DataFrame(p["tab"]).fillna("")
-    # --- FORMATEO DE PRECIOS (Símbolo $ y miles) ---
-        for col in ["Contado", "10 Cuotas", "Deducible"]:
-            if col in df_p.columns:
-                # Convertimos a número, quitamos decimales y ponemos el $
-                df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
-                df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
-                
-    # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
-    cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
-    
-    # 2. Identificamos cuáles de estas están realmente en los datos cargados
-    existentes = [c for c in cols_texto if c in df_p.columns]
-    
-    # 3. Identificamos todas las demás (precios, deducibles, etc.)
-    precios_y_otros = [c for c in df_p.columns if c not in cols_texto]
-    
-    # 4. Mostramos la tabla final con el orden correcto
-    st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
-    st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
     
     # --- PEGÁ ESTO DEBAJO DE LA TABLA (Fila 130 aprox) ---
     # --- 1. REORDENAMIENTO Y FORMATEO FINAL ---
@@ -167,6 +147,26 @@ if p:
     mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
     mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
     mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
+    # --- FORMATEO DE PRECIOS (Símbolo $ y miles) ---
+        for col in ["Contado", "10 Cuotas", "Deducible"]:
+            if col in df_p.columns:
+                # Convertimos a número, quitamos decimales y ponemos el $
+                df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
+                df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
+                
+    # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
+    cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
+    
+    # 2. Identificamos cuáles de estas están realmente en los datos cargados
+    existentes = [c for c in cols_texto if c in df_p.columns]
+    
+    # 3. Identificamos todas las demás (precios, deducibles, etc.)
+    precios_y_otros = [c for c in df_p.columns if c not in cols_texto]
+    
+    # 4. Mostramos la tabla final con el orden correcto
+    st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
+    st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # --- 4. FIRMA Y CIERRE ---
     st.markdown("---")
