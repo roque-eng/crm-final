@@ -61,7 +61,6 @@ query_params = st.query_params
 # ==========================================
 # 📱 VISTA DE LA PROPUESTA PARA EL CLIENTE
 # ==========================================
-# --- DETECCIÓN DE PROPUESTA (Individual o Flota) ---
 p = None
 if "flota" in st.query_params:
     try:
@@ -78,11 +77,8 @@ elif "q" in st.query_params or "f" in st.query_params:
         p = json.loads(base64.b64decode(val).decode())
     except: st.error("Error al cargar cotización.")
 
-# Si hay una propuesta, se muestra la vista limpia
 if p:
-# --- ALREDEDOR DE LA FILA 85 ---
-# --- VISTA DEL CLIENTE: ESTILO REFINADO ---
-# --- REEMPLAZO DESDE FILA 85 HASTA 126 ---
+    # --- 1. ESTILOS Y TÍTULO ---
     st.markdown("""
         <style>
             .main .block-container { max-width: 100% !important; padding-top: 2rem; }
@@ -102,114 +98,66 @@ if p:
         <div class="titulo-cot">🛡️ EDF SEGUROS - Propuesta</div>
         <div class="linea"></div>
     """, unsafe_allow_html=True)
-    
+
     def mostrar_cajon_v2(col, titulo, icono, clave_txt, clave_costo=None):
         with col:
             st.markdown('<div class="caja-azul">', unsafe_allow_html=True)
             st.markdown(f'<span class="sub-tit">{icono} {titulo}</span>', unsafe_allow_html=True)
             txt = p.get(clave_txt) or p.get('datos_json', {}).get(clave_txt, '')
             if txt: st.write(txt)
-            
             if clave_costo:
                 costo = p.get(clave_costo) or p.get('datos_json', {}).get(clave_costo, '')
-                if costo: 
-                    # Aquí agregamos el ícono de bolsa de dinero y resaltamos
-                    st.markdown(f'<span class="costo-res">💰 Costo: {costo}</span>', unsafe_allow_html=True)
+                if costo: st.markdown(f'<span class="costo-res">💰 Costo: {costo}</span>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
-    # Bloque para asegurar que se vean los textos
 
-    if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
+    # --- 2. ENCABEZADO: ASEGURADO Y VEHÍCULO ---
+    c1, c2 = st.columns(2)
+    n_cli = p.get('n') or p.get('asegurado', 'N/A')
+    v_cli = p.get('v') or p.get('vehiculo_o_flota', 'N/A')
+    c1.markdown(f"### 👤 Asegurado: {n_cli}")
+    c2.markdown(f"### 🚗 {v_cli}")
 
-    df_p = pd.DataFrame(p["tab"]).fillna("")
-    
-    # --- PEGÁ ESTO DEBAJO DE LA TABLA (Fila 130 aprox) ---
-
-    # --- 2. BENEFICIOS INCLUIDOS (ARRIBA) ---
+    # --- 3. BENEFICIOS INCLUIDOS (ARRIBA) ---
+    ben_raw = p.get('ben') or p.get('datos_json', {}).get('ben', '')
     if ben_raw:
         st.markdown("### ✅ Beneficios Incluidos")
         for b in ben_raw.split('\n'):
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # --- 3. COBERTURAS COMPLEMENTARIAS (ABAJO) ---
+    # --- 4. COBERTURAS COMPLEMENTARIAS (MEDIO) ---
     st.markdown('<br>', unsafe_allow_html=True)
     st.markdown("### ⚠️ Coberturas Complementarias")
-    c1, c2, c3 = st.columns(3)
+    col_a, col_b, col_c = st.columns(3)
+    mostrar_cajon_v2(col_a, "Hogar", "🏠", "ch")
+    mostrar_cajon_v2(col_b, "Alquiler", "🚗", "ca", "c_alquiler")
+    mostrar_cajon_v2(col_c, "Bici", "🚲", "cb", "c_bici")
 
-    mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
-    mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
-    mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
-    # --- FORMATEO DE PRECIOS (Símbolo $ y miles) ---
-        for col in ["Contado", "10 Cuotas", "Deducible"]:
-            if col in df_p.columns:
-                # Convertimos a número, quitamos decimales y ponemos el $
-                df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
-                df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
-                
-    # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
-    cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
-    
-    # 2. Identificamos cuáles de estas están realmente en los datos cargados
-    existentes = [c for c in cols_texto if c in df_p.columns]
-    
-    # 3. Identificamos todas las demás (precios, deducibles, etc.)
-    precios_y_otros = [c for c in df_p.columns if c not in cols_texto]
-    
-    # 4. Mostramos la tabla final con el orden correcto
-    st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
-    st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # --- 5. TABLA DE PRECIOS (ABAJO) ---
+    st.write("")
+    if "tab" in p:
+        df_p = pd.DataFrame(p["tab"]).fillna("")
+        
+        # Formateo de precios $ y miles
+        for col_name in ["Contado", "10 Cuotas", "Deducible"]:
+            if col_name in df_p.columns:
+                df_p[col_name] = pd.to_numeric(df_p[col_name], errors='coerce').fillna(0)
+                df_p[col_name] = df_p[col_name].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
+        
+        cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
+        existentes = [c for c in cols_texto if c in df_p.columns]
+        precios_y_otros = [c for c in df_p.columns if c not in cols_texto]
+        
+        st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
+        st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- 1. REORDENAMIENTO Y FORMATEO FINAL ---
-    df_p = pd.DataFrame(p["tab"]).fillna("")
-    
-    # Aplicamos el formato de moneda $ y separador de miles
-    for col in ["Contado", "10 Cuotas", "Deducible"]:
-        if col in df_p.columns:
-            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
-            df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
-
-    # --- 4. FIRMA Y CIERRE ---
+    # --- 6. FIRMA Y CIERRE ---
     st.markdown("---")
     nom_ase = p.get('e') or p.get('asesor', 'EDF SEGUROS')
     cont_ase = p.get('cont') or p.get('datos_json', {}).get('cont', '099 635 244')
     st.markdown(f"**Asesor:** {nom_ase} | **Contacto:** {cont_ase}")
     st.stop()
-
-conn = st.connection("gsheets", type=GSheetsConnection)
-df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
-df_raw.columns = df_raw.columns.str.strip()
-df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / TC_USD)).round(0)
-df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
-
-with st.sidebar:
-# --- BLOQUE CORREGIDO (Líneas 187-203) ---
-        nombre_asesor = USUARIOS.get(st.session_state.get('usuario_actual', 'RDF'), "Asesor")
-        st.title(f"👤 {nombre_asesor}")
-
-        def get_list(col): 
-            return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
-        
-        f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
-        f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
-        f_ra = st.selectbox("Ramo", get_list('Ramo'))
-        f_co = st.selectbox("Corredor", get_list('Corredor'))
-        f_ag = st.selectbox("Agente", get_list('Agente'))
-        
-        if st.button("Cerrar Sesión"): 
-            st.session_state['logueado'] = False
-            st.rerun()
-
-    # Importante: Esta línea debe estar al mismo nivel que el "with st.sidebar:" de arriba
-df_f = df_raw.copy()
-
-    # --- Lógica de filtrado (Pegar debajo de df_f = df_raw.copy()) ---
-if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
-if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
-if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
-if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
-if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
-    
 # ==========================================
 # ⚙️ CONFIGURACIÓN Y ESTADOS (BLOQUE 3)
 # ==========================================
