@@ -421,8 +421,15 @@ with tab_flota:
             "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
         }
     )
-    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": b_cot}
-if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", key="btn_f_flota_ok"):
+    datos_f = {
+        "n": f_asegurado, 
+        "e": f_aseguradora, 
+        "cont": f_contacto, 
+        "tab": t_flota.to_dict(orient='records'), 
+        "ben": b_cot # o b_col, verificá cómo se llama tu variable de beneficios
+    }
+
+    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", key="btn_f_flota_ok"):
         nombre_cod = base64.b64encode(f_asegurado.encode()).decode()
         link_f = f"https://dfseguros.streamlit.app/?flota={nombre_cod}"
         
