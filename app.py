@@ -321,14 +321,14 @@ with tab_ven:
         st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL (CON EDICIÓN V.2) ---
-with tab_cot:
-    st.subheader("📝 Cotizador Seguros para Vehículos")
-    edit = st.session_state.edit_data
-    if st.session_state.es_edicion:
-    # Solo mostramos el aviso si 'edit' existe y tiene contenido
-    if isinstance(edit, dict) and edit:
-        nom_cliente_edit = edit.get('n') or edit.get('asegurado', 'Cliente')
-        st.warning(f"⚠️ Editando cotización de: {nom_cliente_edit}. Se guardará como V.2")
+    with tab_cot:
+        st.subheader("📝 Cotizador Seguros para Vehículos")
+        edit = st.session_state.edit_data
+        if st.session_state.es_edicion:
+        # Solo mostramos el aviso si 'edit' existe y tiene contenido
+        if isinstance(edit, dict) and edit:
+            nom_cliente_edit = edit.get('n') or edit.get('asegurado', 'Cliente')
+            st.warning(f"⚠️ Editando cotización de: {nom_cliente_edit}. Se guardará como V.2")
 
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
