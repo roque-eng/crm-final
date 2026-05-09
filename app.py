@@ -140,7 +140,7 @@ if p:
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-def mostrar_cajon_v2(col, titulo, icono, clave_txt, clave_costo=None):
+    def mostrar_cajon_v2(col, titulo, icono, clave_txt, clave_costo=None):
         with col:
             st.markdown('<div class="caja-azul">', unsafe_allow_html=True)
             st.markdown(f'<span class="sub-tit">{icono} {titulo}</span>', unsafe_allow_html=True)
