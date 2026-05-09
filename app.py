@@ -129,7 +129,6 @@ if p:
     c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
     if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
-    # --- TABLA SIN NaN ---
     # --- REEMPLAZO INTELIGENTE DE TABLA (FILA 133) ---
     df_p = pd.DataFrame(p["tab"]).fillna("")
     
