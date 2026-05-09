@@ -141,14 +141,6 @@ if p:
     st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # --- PEGÁ ESTO DEBAJO DE LA TABLA (Fila 130 aprox) ---
-    st.markdown('<br>', unsafe_allow_html=True)
-    st.markdown("### ⚠️ Coberturas Complementarias")
-    c1, c2, c3 = st.columns(3)
-
-    mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
-    mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
-    mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
     # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
     # 5. Beneficios en filas separadas
     st.write("")
