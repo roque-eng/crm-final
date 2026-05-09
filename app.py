@@ -130,6 +130,12 @@ if p:
     if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
     df_p = pd.DataFrame(p["tab"]).fillna("")
+    # --- FORMATEO DE PRECIOS ($ y miles) ---
+        for col in ["Contado", "10 Cuotas", "Deducible"]:
+            if col in df_p.columns:
+                # Convertimos a número y aplicamos formato
+                df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
+                df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
     # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
     cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
     
@@ -326,9 +332,9 @@ with tab_ven:
         edit = st.session_state.edit_data
         if st.session_state.es_edicion:
             # Solo mostramos el aviso si 'edit' existe y tiene contenido
-        if isinstance(edit, dict) and edit:
-            nom_cliente_edit = edit.get('n') or edit.get('asegurado', 'Cliente')
-            st.warning(f"⚠️ Editando cotización de: {nom_cliente_edit}. Se guardará como V.2")
+            if isinstance(edit, dict) and edit:
+                nom_cliente_edit = edit.get('n') or edit.get('asegurado', 'Cliente')
+                st.warning(f"⚠️ Editando cotización de: {nom_cliente_edit}. Se guardará como V.2")
 
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
