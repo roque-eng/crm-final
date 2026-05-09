@@ -82,70 +82,54 @@ elif "q" in st.query_params or "f" in st.query_params:
 if p:
 # --- ALREDEDOR DE LA FILA 85 ---
 # --- VISTA DEL CLIENTE: ESTILO REFINADO ---
-# --- REEMPLAZO DESDE FILA 85 HASTA 126 ---
     st.markdown("""
         <style>
             .main .block-container { max-width: 100% !important; padding-top: 2rem; }
-            .titulo-cot { color: #000; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
-            .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
+            
+            /* Título en Gris Muy Oscuro */
+            .titulo-cot { color: #2C2C2C; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
+            
+            /* Línea en Bordó institucional */
+            .linea { border-bottom: 4px solid #800020; margin-bottom: 30px; }
+            
             .tabla-container { width: 100%; margin: 25px 0; }
             table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
-            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; text-align: center !important; }
+            
+            /* Encabezados con toque bordó */
+            thead tr th { background-color: rgba(128, 0, 32, 0.05) !important; color: #800020; padding: 18px; font-size: 20px; text-align: center !important; }
             thead tr th:first-child { text-align: left !important; padding-left: 20px; }
+            
             tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
             tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
-            .caja-azul { background-color: rgba(0, 102, 204, 0.05); padding: 20px; border-radius: 12px; height: 100%; border: 1px solid rgba(0, 102, 204, 0.1); }
-            .sub-tit { font-size: 22px !important; font-weight: bold; color: #000; margin-bottom: 10px; display: block; }
-            .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
-            .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; font-size: 16px; color: #333; }
+            
+            /* Cajones de Coberturas */
+            .caja-azul { 
+                background-color: #ffffff; 
+                padding: 20px; border-radius: 12px; height: 100%; 
+                border: 1px solid #e0e0e0; 
+                border-top: 5px solid #800020; /* Detalle superior en bordó */
+                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+            }
+            .sub-tit { font-size: 22px !important; font-weight: bold; color: #2C2C2C; margin-bottom: 10px; display: block; }
+            
+            /* Costos resaltados en Gris Oscuro */
+            .costo-res { color: #2C2C2C; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f4f4f4; padding: 5px 10px; border-radius: 5px; }
+            
+            .ben-fila { 
+                background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
+                margin-bottom: 10px; border-left: 6px solid #800020; width: 100%; 
+                font-size: 16px; color: #333; 
+            }
         </style>
         <div class="titulo-cot">🛡️ EDF SEGUROS - Propuesta</div>
         <div class="linea"></div>
     """, unsafe_allow_html=True)
-    
-    def mostrar_cajon_v2(col, titulo, icono, clave_txt, clave_costo=None):
-        with col:
-            st.markdown('<div class="caja-azul">', unsafe_allow_html=True)
-            st.markdown(f'<span class="sub-tit">{icono} {titulo}</span>', unsafe_allow_html=True)
-            txt = p.get(clave_txt) or p.get('datos_json', {}).get(clave_txt, '')
-            if txt: st.write(txt)
-            
-            if clave_costo:
-                costo = p.get(clave_costo) or p.get('datos_json', {}).get(clave_costo, '')
-                if costo: 
-                    # Aquí agregamos el ícono de bolsa de dinero y resaltamos
-                    st.markdown(f'<span class="costo-res">💰 Costo: {costo}</span>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-    # Bloque para asegurar que se vean los textos
 
+    c1, c2 = st.columns(2)
+    c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
     if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
     df_p = pd.DataFrame(p["tab"]).fillna("")
-    
-    # --- PEGÁ ESTO DEBAJO DE LA TABLA (Fila 130 aprox) ---
-
-    # --- 2. BENEFICIOS INCLUIDOS (ARRIBA) ---
-    if ben_raw:
-        st.markdown("### ✅ Beneficios Incluidos")
-        for b in ben_raw.split('\n'):
-            if b.strip():
-                st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
-
-    # --- 3. COBERTURAS COMPLEMENTARIAS (ABAJO) ---
-    st.markdown('<br>', unsafe_allow_html=True)
-    st.markdown("### ⚠️ Coberturas Complementarias")
-    c1, c2, c3 = st.columns(3)
-
-    mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
-    mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
-    mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
-    # --- FORMATEO DE PRECIOS (Símbolo $ y miles) ---
-        for col in ["Contado", "10 Cuotas", "Deducible"]:
-            if col in df_p.columns:
-                # Convertimos a número, quitamos decimales y ponemos el $
-                df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
-                df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
-                
     # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
     cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
     
@@ -160,20 +144,87 @@ if p:
     st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- 1. REORDENAMIENTO Y FORMATEO FINAL ---
-    df_p = pd.DataFrame(p["tab"]).fillna("")
-    
-    # Aplicamos el formato de moneda $ y separador de miles
-    for col in ["Contado", "10 Cuotas", "Deducible"]:
-        if col in df_p.columns:
-            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
-            df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
+    # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
+    # 5. Beneficios en filas separadas
+    st.write("")
+    st.markdown("### ✅ Beneficios Incluidos")
+    for b in p.get("ben", "").split('\n'):
+        if b.strip():
+            st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # --- 4. FIRMA Y CIERRE ---
+    # 6. Coberturas Complementarias (Signo ⚠️ y Cajones Azules)
+    st.write("")
+    st.markdown("### ⚠️ Coberturas Complementarias")
+    col1, col2, col3 = st.columns(3)
+
+    def bloque_html(titulo, icono, texto, es_hogar=False):
+        html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
+        
+        # Si el texto tiene un signo $ o la palabra Costo, lo resaltamos
+        lineas = texto.split('\n')
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea: continue
+            
+            # Si la línea tiene $ o dice Costo, le ponemos la clase "costo-res"
+            if "$" in linea or "Costo" in linea:
+                # Quitamos puntos previos si los hay para que no se dupliquen iconos
+                l_limpia = linea.replace("•", "").strip()
+                html += f'<span class="costo-res">💰 {l_limpia}</span>'
+            else:
+                html += f'<span>{linea}</span>'
+        
+        html += '</div>'
+        return html
+
+    col1.markdown(bloque_html("Hogar", "🏠", p.get("ch", ""), True), unsafe_allow_html=True)
+    col2.markdown(bloque_html("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
+    col3.markdown(bloque_html("Bici", "🚲", p.get("cb", "")), unsafe_allow_html=True)
+
+    # 7. Firma del Asesor
     st.markdown("---")
-    nom_ase = p.get('e') or p.get('asesor', 'EDF SEGUROS')
-    cont_ase = p.get('cont') or p.get('datos_json', {}).get('cont', '099 635 244')
-    st.markdown(f"**Asesor:** {nom_ase} | **Contacto:** {cont_ase}")
+    st.markdown(f"**Asesor:** {p.get('e', '')} | **Contacto:** {p.get('cont', '')}")
+    st.stop()
+
+    # 5. Beneficios en filas separadas
+    st.write("")
+    st.markdown("### ✅ Beneficios Incluidos")
+    for b in p.get("ben", "").split('\n'):
+        if b.strip():
+            st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
+
+    # 6. Coberturas Complementarias (Signo ⚠️ y Cajones Azules)
+    st.write("")
+    st.markdown("### ⚠️ Coberturas Complementarias")
+    col1, col2, col3 = st.columns(3)
+    
+    def bloque_html(titulo, icono, texto, es_hogar=False):
+        html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
+        if es_hogar:
+            # Lógica para resaltar los dos costos de Hogar
+            partes = texto.split("Costo Anual")
+            html += f'<span>{partes[0].strip()}</span>'
+            for pc in partes[1:]:
+                html += f'<span class="costo-res">💰 Costo Anual {pc.strip()}</span>'
+        else:
+            if "Costo:" in texto:
+                partes = texto.split("Costo:")
+                html += f'<span>{partes[0].strip()}</span>'
+                html += f'<span class="costo-res">💰 Costo: {partes[1].strip()}</span>'
+            else:
+                html += f'<span>{texto}</span>'
+        html += '</div>'
+        return html
+
+    col1.markdown(bloque_html("Hogar", "🏠", p.get("ch", ""), True), unsafe_allow_html=True)
+    col2.markdown(bloque_html("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
+    col3.markdown(bloque_html("Bici", "🚲", p.get("cb", "")), unsafe_allow_html=True)
+
+    # 7. Firma del Asesor
+    st.markdown("---")
+    st.markdown(f"**Asesor:** {p.get('e', '')} | **Contacto:** {p.get('cont', '')}")
+    
+    # Detenemos la ejecución para que el cliente no vea el panel de control
     st.stop()
 
 conn = st.connection("gsheets", type=GSheetsConnection)
