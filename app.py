@@ -96,7 +96,7 @@ if p:
             table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
             
             /* Encabezados con toque bordó */
-            thead tr th { background-color: rgba(128, 0, 32, 0.05) !important; color: #800020; padding: 18px; font-size: 20px; text-align: center !important; }
+            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; text-align: center !important; }
             thead tr th:first-child { text-align: left !important; padding-left: 20px; }
             
             tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
