@@ -90,7 +90,7 @@ if p:
             .titulo-cot { color: #2C2C2C; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
             
             /* Línea en Bordó institucional */
-            .linea { border-bottom: 4px solid #800020; margin-bottom: 30px; }
+            .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
             
             .tabla-container { width: 100%; margin: 25px 0; }
             table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
@@ -113,11 +113,11 @@ if p:
             .sub-tit { font-size: 22px !important; font-weight: bold; color: #2C2C2C; margin-bottom: 10px; display: block; }
             
             /* Costos resaltados en Gris Oscuro */
-            .costo-res { color: #2C2C2C; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f4f4f4; padding: 5px 10px; border-radius: 5px; }
+            .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
             
             .ben-fila { 
                 background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
-                margin-bottom: 10px; border-left: 6px solid #800020; width: 100%; 
+                margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; 
                 font-size: 16px; color: #333; 
             }
         </style>
