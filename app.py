@@ -118,8 +118,6 @@ if p:
             st.markdown('</div>', unsafe_allow_html=True)
     # Bloque para asegurar que se vean los textos
 
-    c1, c2 = st.columns(2)
-    c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
     if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
     df_p = pd.DataFrame(p["tab"]).fillna("")
