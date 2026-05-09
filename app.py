@@ -161,11 +161,6 @@ if p:
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # Llamadas con el ícono de Auto 🚗 para Alquiler
-    mostrar_cajon_v2(c1, "Hogar", "🏠", "ch")
-    mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
-    mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
-
     # Firma del Asesor (Fila 170 aprox)
     st.markdown("---")
     # Buscamos asesor y contacto tanto en formato flota como individual
