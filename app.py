@@ -325,7 +325,7 @@ with tab_ven:
         st.subheader("📝 Cotizador Seguros para Vehículos")
         edit = st.session_state.edit_data
         if st.session_state.es_edicion:
-        # Solo mostramos el aviso si 'edit' existe y tiene contenido
+            # Solo mostramos el aviso si 'edit' existe y tiene contenido
         if isinstance(edit, dict) and edit:
             nom_cliente_edit = edit.get('n') or edit.get('asegurado', 'Cliente')
             st.warning(f"⚠️ Editando cotización de: {nom_cliente_edit}. Se guardará como V.2")
