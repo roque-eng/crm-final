@@ -381,15 +381,15 @@ with tab_flota:
     col_f1, col_f2 = st.columns(2)
         with col_f1:
             # Shield para el nombre: busca en 'asegurado' o en 'n'
-            nom_f = edit.get('asegurado') or edit.get('n', '') if edit else ""
-            f_asegurado = st.text_input("Asegurado", value=nom_f, key="f_nom_flota")
-            f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_ase_cia_flota")
+                nom_f = edit.get('asegurado') or edit.get('n', '') if edit else ""
+                f_asegurado = st.text_input("Asegurado", value=nom_f, key="f_nom_flota")
+                f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_ase_cia_flota")
         
         with col_f2:
             f_asesor = st.text_input("Asesor", value=edit.get('asesor', 'EDF SEGUROS') if edit else "EDF SEGUROS", key="f_ase_nom_flota")
             # Shield para el contacto
-            cont_f = edit.get('cont') or edit.get('datos_json', {}).get('cont', '099 635 244') if edit else '099 635 244'
-            f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_flota")
+                cont_f = edit.get('cont') or edit.get('datos_json', {}).get('cont', '099 635 244') if edit else '099 635 244'
+                f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_flota")
         
         # --- FORMATEO DE PRECIOS PARA FLOTAS ---
         for col in ["Contado", "Deducible"]:
