@@ -110,14 +110,14 @@ if p:
                 if costo: st.markdown(f'<span class="costo-res">💰 Costo: {costo}</span>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- 2. ENCABEZADO: ASEGURADO Y VEHÍCULO ---
+    # --- 2. ENCABEZADO ---
     c1, c2 = st.columns(2)
     n_cli = p.get('n') or p.get('asegurado', 'N/A')
     v_cli = p.get('v') or p.get('vehiculo_o_flota', 'N/A')
     c1.markdown(f"### 👤 Asegurado: {n_cli}")
     c2.markdown(f"### 🚗 {v_cli}")
 
-    # --- 3. BENEFICIOS INCLUIDOS (ARRIBA) ---
+    # --- 3. BENEFICIOS ---
     ben_raw = p.get('ben') or p.get('datos_json', {}).get('ben', '')
     if ben_raw:
         st.markdown("### ✅ Beneficios Incluidos")
@@ -125,39 +125,53 @@ if p:
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # --- 4. COBERTURAS COMPLEMENTARIAS (MEDIO) ---
+    # --- 4. COBERTURAS ---
     st.markdown('<br>', unsafe_allow_html=True)
     st.markdown("### ⚠️ Coberturas Complementarias")
-    col_a, col_b, col_c = st.columns(3)
-    mostrar_cajon_v2(col_a, "Hogar", "🏠", "ch")
-    mostrar_cajon_v2(col_b, "Alquiler", "🚗", "ca", "c_alquiler")
-    mostrar_cajon_v2(col_c, "Bici", "🚲", "cb", "c_bici")
+    ca, cb, cc = st.columns(3)
+    mostrar_cajon_v2(ca, "Hogar", "🏠", "ch")
+    mostrar_cajon_v2(cb, "Alquiler", "🚗", "ca", "c_alquiler")
+    mostrar_cajon_v2(cc, "Bici", "🚲", "cb", "c_bici")
 
-    # --- 5. TABLA DE PRECIOS (ABAJO) ---
-    st.write("")
+    # --- 5. TABLA ---
     if "tab" in p:
         df_p = pd.DataFrame(p["tab"]).fillna("")
-        
-        # Formateo de precios $ y miles
-        for col_name in ["Contado", "10 Cuotas", "Deducible"]:
-            if col_name in df_p.columns:
-                df_p[col_name] = pd.to_numeric(df_p[col_name], errors='coerce').fillna(0)
-                df_p[col_name] = df_p[col_name].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
-        
-        cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
-        existentes = [c for c in cols_texto if c in df_p.columns]
-        precios_y_otros = [c for c in df_p.columns if c not in cols_texto]
-        
+        for col in ["Contado", "10 Cuotas", "Deducible"]:
+            if col in df_p.columns:
+                df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0)
+                df_p[col] = df_p[col].apply(lambda x: f"$ {int(x):,}".replace(",", "."))
+        cols_t = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
+        existentes = [c for c in cols_t if c in df_p.columns]
+        otros = [c for c in df_p.columns if c not in cols_t]
         st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
-        st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
+        st.write(df_p[existentes + otros].to_html(index=False, escape=False), unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- 6. FIRMA Y CIERRE ---
     st.markdown("---")
-    nom_ase = p.get('e') or p.get('asesor', 'EDF SEGUROS')
-    cont_ase = p.get('cont') or p.get('datos_json', {}).get('cont', '099 635 244')
-    st.markdown(f"**Asesor:** {nom_ase} | **Contacto:** {cont_ase}")
+    st.markdown(f"**Asesor:** {p.get('e', 'EDF SEGUROS')} | **Contacto:** {p.get('cont', '099 635 244')}")
     st.stop()
+
+# ==========================================
+# 🏠 VISTA DEL ASESOR (PÁGINA PRINCIPAL)
+# ==========================================
+conn = st.connection("gsheets", type=GSheetsConnection)
+df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
+df_raw.columns = df_raw.columns.str.strip()
+
+with st.sidebar:
+    st.title(f"👤 {USUARIOS.get(st.session_state.get('usuario_actual', 'RDF'), 'Asesor')}")
+    f_as = st.selectbox("Aseguradora", ["Todos"] + sorted(df_raw['Aseguradora'].unique().tolist()))
+    if st.button("Cerrar Sesión"):
+        st.session_state['logueado'] = False
+        st.rerun()
+
+df_f = df_raw.copy()
+if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
+
+st.title("📋 Cartera de Clientes")
+busq = st.text_input("🔍 Buscar por cliente, matrícula o póliza...", "")
+df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
+st.dataframe(df_c, use_container_width=True)
 # ==========================================
 # ⚙️ CONFIGURACIÓN Y ESTADOS (BLOQUE 3)
 # ==========================================
