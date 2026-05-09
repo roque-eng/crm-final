@@ -166,10 +166,6 @@ if p:
     mostrar_cajon_v2(c2, "Alquiler", "🚗", "ca", "c_alquiler")
     mostrar_cajon_v2(c3, "Bici", "🚲", "cb", "c_bici")
 
-    mostrar_cajon(c1, "Hogar", "🏠", "ch")
-    mostrar_cajon(c2, "Alquiler", "🔑", "ca", "c_alquiler")
-    mostrar_cajon(c3, "Bici", "🚲", "cb", "c_bici")
-
     # Firma del Asesor (Fila 170 aprox)
     st.markdown("---")
     # Buscamos asesor y contacto tanto en formato flota como individual
