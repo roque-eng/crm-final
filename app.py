@@ -409,14 +409,15 @@ with tab_flota:
         df_f_init,
         num_rows="dynamic",
         use_container_width=True,
-        key="editor_flotas_final",
-        column_order=columnas_flota,
+        key="editor_flotas_v_final_ok",
+        # 2. ACÁ ESTÁ EL SECRETO: usá el mismo nombre que arriba
+        column_order=cols_f, 
         column_config={
-            "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
-            "Vehículo / Modelo": st.column_config.TextColumn("Vehículo / Modelo", width="large"),
+            "Marca": st.column_config.TextColumn("Marca", width="medium"),
+            "Modelo": st.column_config.TextColumn("Modelo", width="medium"),
             "Matrícula": st.column_config.TextColumn("Matrícula", width="small"),
+            "Cobertura": st.column_config.TextColumn("Cobertura", width="medium"),
             "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
-            "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %.0f"),
             "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
         }
     )
