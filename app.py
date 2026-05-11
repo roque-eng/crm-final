@@ -500,9 +500,11 @@ with tab_flota:
     col_f1, col_f2 = st.columns(2)
     with col_f1:
         f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_flota_vfinal")
-        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_ase_cia_vfinal")
+        # Aseguradora (Compañía)
+        f_cia_elegida = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_cia_select_vfinal")
     with col_f2:
-        f_asesor = st.text_input("Asesor", value=edit_f.get('e', 'EDF SEGUROS'), key="f_ase_nom_vfinal")
+        # ASESOR (Nombre de la persona) - Variable independiente
+        f_asesor_nombre = st.text_input("Asesor", value=edit_f.get('e_nombre', 'EDF SEGUROS'), key="f_asesor_input_vfinal")
         f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_cont_vfinal")
 
     st.markdown("---")
@@ -535,8 +537,8 @@ with tab_flota:
         nueva_f = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "n": f_asegurado, 
-            "e": f_aseguradora,    # Aquí va BSE, SURA, etc.
-            "e_nombre": f_asesor,  # <--- NUEVA ETIQUETA para el nombre real (ej: Roque)
+            "e": f_cia_elegida,     # Guarda BSE, SURA, etc.
+            "e_nombre": f_asesor_nombre,  # Guarda tu nombre (ej: Roque)
             "cont": f_contacto,
             "tab": t_flota.to_dict(orient='records'), 
             "ben": f_obs, 
