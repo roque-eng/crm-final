@@ -205,11 +205,11 @@ if p:
         col2.markdown(bloque_res("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
         col3.markdown(bloque_res("Bici Eléctrica", "🚲", p.get("cb", "")), unsafe_allow_html=True)
 
-    # --- PIE DE PÁGINA DIFERENCIADO ---
+    # --- PIE DE PÁGINA DINÁMICO (Paso 3) ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
     
-    if not es_flota:
-        # INDIVIDUAL: Muestra Fecha + Asesor
+    # Detectamos si es Individual (por la 'v' de vehículo o la etiqueta tipo)
+    if "v" in p or p.get("tipo") == "Individual":
         st.markdown(f"""
             <div class="footer-cliente">
                 <div><b>Fecha de Cotización:</b> {fecha_val}</div>
@@ -217,10 +217,8 @@ if p:
             </div>
         """, unsafe_allow_html=True)
     else:
-        # FLOTA: Muestra solo Fecha (limpio)
+        # Es Flota: Solo fecha a la derecha, bien limpio
         st.markdown(f'<div class="footer-cliente" style="justify-content: flex-end;">Fecha de Cotización: {fecha_val}</div>', unsafe_allow_html=True)
-    
-    st.stop()
     
     # --- FORMATEO DE PRECIOS ($ y miles) ---
     for col in ["Contado", "10 Cuotas", "Deducible"]:
@@ -474,23 +472,20 @@ with tab_cot:
         c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", "• Hurto USD 1.000\n• Accidentes Personales: USD 5.000\n• Daños a terceros: USD 10.000\nCosto Anual: USD 120"), height=70, key="bic_v_final")
 
     # 5. Lógica de Guardado (Específica para Individual)
-    if st.button("💾 Guardar y Generar Link Individual", use_container_width=True, key="btn_ind_v_final"):
+    if st.button("💾 Guardar y Generar Link Individual", use_container_width=True):
         datos_individual = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in,
-            "tab": t_edit.to_dict(orient='records'), # Guarda las 4 columnas
+            "tab": t_edit.to_dict(orient='records'),
             "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b,
-            "tipo": "Individual" # Para que el historial no se confunda
+            "tipo": "Individual"  # <--- ESTA ES LA CLAVE
         }
-        
-        if "historico" not in st.session_state:
-            st.session_state.historico = []
-            
+        if "historico" not in st.session_state: st.session_state.historico = []
         st.session_state.historico.append(datos_individual)
         st.session_state.edit_data = datos_individual
-        st.success(f"✅ Cotización Individual de {n_cot} guardada correctamente.")
+        st.success(f"✅ Cotización de {n_cot} guardada.")
         st.rerun()
-
+        
     # 6. Botón de Vista Previa (Solo para Individual)
     if st.session_state.edit_data and "v" in st.session_state.edit_data:
         st.markdown("---")
@@ -578,50 +573,46 @@ with tab_flota:
         st.link_button("🚀 VER VISTA PREVIA PARA EL CLIENTE", link_f_final, type="primary", use_container_width=True)
         st.code(link_f_final)
         
-# --- PESTAÑA HISTORIAL ---
+# --- PESTAÑA HISTORIAL (CORREGIDA) ---
 with tab_historial:
-    st.subheader("📋 Gestión de Historial")
-    
-    # 1. Botones de acción general
-    c_ref, c_del = st.columns([1, 1])
-    with c_ref:
-        if st.button("🔄 Actualizar Historial", use_container_width=True):
-            st.rerun()
-    with c_del:
-        if st.button("🔥 BORRAR TODO", type="primary", use_container_width=True):
-            st.session_state.historico = []
-            st.rerun()
-
-    st.divider()
-
-    # 2. Lista de registros con Edición y Borrado
+    st.subheader("📜 Historial de Cotizaciones")
     if "historico" in st.session_state and st.session_state.historico:
-        # Mostramos de la más nueva a la más vieja
-        for i, registro in enumerate(reversed(st.session_state.historico)):
+        # Recorremos el historial del más nuevo al más viejo
+        for i, reg in enumerate(reversed(st.session_state.historico)):
             idx_real = len(st.session_state.historico) - 1 - i
             
+            # Creamos una fila con columnas: Info, Editar y Borrar
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             
             with col_info:
-                f = registro.get('fecha', 'S/F')[:10]
-                n = registro.get('n') or registro.get('asegurado', 'Cliente')
-                t = "🚚 Flota" if "tab" in registro else "🚗 Indiv."
-                st.write(f"**{f}** | {t} | **{n}**")
+                fecha = reg.get('fecha', 'S/F')[:10]  # Tomamos solo la fecha
+                nombre = reg.get('n', 'Cliente')
+                
+                # --- AQUÍ ESTÁ EL CAMBIO DEL PASO 2 ---
+                tipo_raw = reg.get("tipo", "Individual") # Si no tiene tipo, asumimos Individual
+                
+                if tipo_raw == "Flota":
+                    tipo_display = "🚚 Flota"
+                else:
+                    tipo_display = "🚗 Individual"
+                
+                # Mostramos la línea del historial
+                st.write(f"**{fecha}** | {tipo_display} | **{nombre}**")
             
             with col_edit:
-                # BOTÓN EDITAR: Carga los datos para verlos en la pestaña FLOTAS
-                if st.button("✏️", key=f"edit_{idx_real}"):
-                    st.session_state.edit_data = registro
-                    st.success("✅ ¡Cargado! Andá a la pestaña FLOTAS.")
+                if st.button("✏️ Editar", key=f"edit_{idx_real}"):
+                    st.session_state.edit_data = reg
+                    st.success(f"Cargado: {nombre}")
+                    st.rerun()
             
             with col_del:
-                # BOTÓN BORRAR: Saca solo este registro
-                if st.button("❌", key=f"btn_del_{idx_real}"):
+                if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
-            st.divider()
+            st.markdown("---")
     else:
-        st.info("No hay registros en el historial.")
+        st.info("No hay cotizaciones guardadas aún.")
+
 
 # --- PESTAÑA ANÁLISIS ---
 with tab_an:
