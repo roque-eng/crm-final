@@ -389,8 +389,8 @@ with tab_cot:
     with col_b:
         t_h_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
         c_h = st.text_area("Hogar:", value=edit_ind.get("ch", t_h_def), height=130, key="hog_v_final")
-        c_a = st.text_area("Alquiler:", value=edit_ind.get("ca", "• Auto cortesía 15 días..."), height=70, key="alq_v_final")
-        c_b = st.text_area("Bici:", value=edit_ind.get("cb", "• Hurto USD 1.000..."), height=70, key="bic_v_final")
+        c_a = st.text_area("Alquiler:", value=edit_ind.get("ca", "• Auto cortesía 15 días en caso de que tu vehículo vaya al taller por un siniestro\nCosto Anual: $3.500"), height=70, key="alq_v_final")
+        c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", "• Hurto USD 1.000\• Accidentes Personales: USD 5.000\• Daños a terceros: USD 10.000\nCosto Anual: USD 120"), height=70, key="bic_v_final")
 
     # 5. Lógica de Guardado (Específica para Individual)
     if st.button("💾 Guardar y Generar Link Individual", use_container_width=True, key="btn_ind_v_final"):
