@@ -388,11 +388,17 @@ with tab_flota:
         cont_f = edit.get('cont') or edit.get('datos_json', {}).get('cont', '099 635 244') if edit else '099 635 244'
         f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_flota")
         
-        # --- FORMATEO DE PRECIOS PARA FLOTAS ---
-        for col in ["Contado", "Deducible"]:
-            if col in df_p_f.columns:
-                df_p_f[col] = pd.to_numeric(df_p_f[col], errors='coerce').fillna(0)
-                # Solo aplicamos el formato si NO estamos editando la celda (para que no se rompa al escribir)
+    # --- TABLA DE VEHÍCULOS (FLOTAS) ---
+        df_p_f = pd.DataFrame(edit["tab"]) if edit and "tab" in edit else pd.DataFrame(columns=cols_f)
+        
+        # Aplicamos el símbolo $ solo si la tabla existe para evitar el cartel rojo
+        if not df_p_f.empty:
+            for col in ["Contado", "Deducible"]:
+                if col in df_p_f.columns:
+                    df_p_f[col] = pd.to_numeric(df_p_f[col], errors='coerce').fillna(0)
+                    # Lo mostramos con $ pero solo para visualización final
+        
+        t_edit = st.data_editor(df_p_f, num_rows="dynamic", key="editor_flotas_v2")
 
     # --- NUEVA TABLA DE VEHÍCULOS ---
     cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
