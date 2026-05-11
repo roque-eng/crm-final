@@ -9,7 +9,7 @@ import base64
 import requests
 
 # 1. Definición Global de Usuarios
-USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
+USUARIOS = {"RDF": "Roque de Freitas", "GS": "Gabriel Silva", "AB": "Andrés Bianchi"}
 
 # 2. Red de seguridad para el Session State
 if 'usuario_actual' not in st.session_state:
@@ -61,133 +61,80 @@ query_params = st.query_params
 # ==========================================
 # 📱 VISTA DE LA PROPUESTA PARA EL CLIENTE
 # ==========================================
-# --- DETECCIÓN DE PROPUESTA (Individual o Flota) ---
-p = None
-if "flota" in st.query_params:
+if "q" in st.query_params or "f" in st.query_params:
+    # 1. Extracción segura de datos
     try:
-        nombre_cliente = base64.b64decode(st.query_params["flota"]).decode()
-        headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-        url_busqueda = f"{SUPABASE_URL}/rest/v1/cotizaciones?asegurado=eq.{nombre_cliente}&tipo=eq.flota&order=created_at.desc&limit=1"
-        res = requests.get(url_busqueda, headers=headers)
-        if res.status_code == 200 and len(res.json()) > 0:
-            p = res.json()[0]["datos_json"]
-    except: st.error("Error al cargar datos de flota.")
-elif "q" in st.query_params or "f" in st.query_params:
-    try:
-        val = st.query_params.get("q") or st.query_params.get("f")
-        p = json.loads(base64.b64decode(val).decode())
-    except: st.error("Error al cargar cotización.")
+        import base64, json
+        query_val = st.query_params.get("q") or st.query_params.get("f")
+        p_raw = base64.b64decode(query_val).decode()
+        p = json.loads(p_raw)
+    except Exception as e:
+        st.error("No se pudo cargar la cotización. El enlace puede estar incompleto.")
+        st.stop()
 
-# Si hay una propuesta, se muestra la vista limpia
-if p:
-# --- ALREDEDOR DE LA FILA 85 ---
-# --- VISTA DEL CLIENTE: ESTILO REFINADO ---
+    # 2. Estilos CSS (Ancho total, cajones azules, alineaciones y títulos)
     st.markdown("""
         <style>
+            /* Forzamos el ancho de la página al máximo */
             .main .block-container { max-width: 100% !important; padding-top: 2rem; }
             
-            /* Título en Gris Muy Oscuro */
-            .titulo-cot { color: #2C2C2C; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
+            .titulo-cot { color: #000; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
+            .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
             
-            /* Línea en Bordó institucional */
-            .linea { border-bottom: 4px solid #800020; margin-bottom: 30px; }
-            
+            /* TABLA AL 100% CON ALINEACIÓN AJUSTADA */
             .tabla-container { width: 100%; margin: 25px 0; }
             table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
             
-            /* Encabezados con toque bordó */
-            thead tr th { background-color: rgba(128, 0, 32, 0.05) !important; color: #800020; padding: 18px; font-size: 20px; text-align: center !important; }
+            /* Encabezados: Aseguradora a la izquierda, el resto al centro */
+            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; }
             thead tr th:first-child { text-align: left !important; padding-left: 20px; }
+            thead tr th:not(:first-child) { text-align: center !important; }
             
-            tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
+            /* Celdas: Aseguradora a la izquierda, el resto al centro */
+            tbody td { padding: 16px; font-size: 18px; border-bottom: 1px solid #eee; }
             tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
+            tbody td:not(:first-child) { text-align: center !important; }
             
-            /* Cajones de Coberturas */
+            /* Cajones de Coberturas Complementarias */
             .caja-azul { 
-                background-color: #ffffff; 
+                background-color: rgba(0, 102, 204, 0.05); 
                 padding: 20px; border-radius: 12px; height: 100%; 
-                border: 1px solid #e0e0e0; 
-                border-top: 5px solid #800020; /* Detalle superior en bordó */
-                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+                border: 1px solid rgba(0, 102, 204, 0.1); 
             }
-            .sub-tit { font-size: 22px !important; font-weight: bold; color: #2C2C2C; margin-bottom: 10px; display: block; }
+            .sub-tit { font-size: 22px !important; font-weight: bold; color: #000; margin-bottom: 10px; display: block; }
+            .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
             
-            /* Costos resaltados en Gris Oscuro */
-            .costo-res { color: #2C2C2C; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f4f4f4; padding: 5px 10px; border-radius: 5px; }
-            
+            /* Beneficios en filas */
             .ben-fila { 
                 background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
-                margin-bottom: 10px; border-left: 6px solid #800020; width: 100%; 
-                font-size: 16px; color: #333; 
+                margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; 
+                font-size: 16px; color: #333;
             }
         </style>
-        <div class="titulo-cot">🛡️ EDF SEGUROS - Propuesta</div>
+        <div class="titulo-cot">🛡️ EDF SEGUROS - Cotización de Seguro</div>
         <div class="linea"></div>
     """, unsafe_allow_html=True)
 
+    # 3. Datos del Asegurado
     c1, c2 = st.columns(2)
-    c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
-    if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
+    nombre_cli = p.get('n', 'N/A')
+    vehiculo_cli = p.get('v', 'N/A')
+    c1.markdown(f"### 👤 Asegurado: {nombre_cli}")
+    if "v" in p:
+        c2.markdown(f"### 🚗 Vehículo: {vehiculo_cli}")
 
-    # --- TABLA SIN NaN ---
-    # --- REEMPLAZO INTELIGENTE DE TABLA (FILA 133) ---
-    df_p = pd.DataFrame(p["tab"]).fillna("")
+    # 4. Tabla de Costos (Ancho total y alineada)
+    st.write("")
+    df_p = pd.DataFrame(p["tab"])
     
-    # 1. Definimos todas las columnas de texto posibles (Individual y Flota)
-    cols_texto = ["Aseguradora", "Marca", "Modelo", "Matrícula", "Cobertura", "Vehículo"]
+    # Formateo de $ con separador de miles
+    for col in df_p.columns:
+        if col != "Aseguradora":
+            df_p[col] = df_p[col].apply(lambda x: f"$ {int(float(x)):,}".replace(',', '.') if str(x).replace('.','').replace(',','').isdigit() else x)
     
-    # 2. Identificamos cuáles de estas están realmente en los datos cargados
-    existentes = [c for c in cols_texto if c in df_p.columns]
-    
-    # 3. Identificamos todas las demás (precios, deducibles, etc.)
-    precios_y_otros = [c for c in df_p.columns if c not in cols_texto]
-    
-    # 4. Mostramos la tabla final con el orden correcto
     st.markdown('<div class="tabla-container">', unsafe_allow_html=True)
-    st.write(df_p[existentes + precios_y_otros].to_html(index=False, escape=False), unsafe_allow_html=True)
+    st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
-    # ... (El resto de beneficios y coberturas complementarias que ya tenés) ...
-    # 5. Beneficios en filas separadas
-    st.write("")
-    st.markdown("### ✅ Beneficios Incluidos")
-    for b in p.get("ben", "").split('\n'):
-        if b.strip():
-            st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
-
-    # 6. Coberturas Complementarias (Signo ⚠️ y Cajones Azules)
-    st.write("")
-    st.markdown("### ⚠️ Coberturas Complementarias")
-    col1, col2, col3 = st.columns(3)
-
-    def bloque_html(titulo, icono, texto, es_hogar=False):
-        html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
-        
-        # Si el texto tiene un signo $ o la palabra Costo, lo resaltamos
-        lineas = texto.split('\n')
-        for linea in lineas:
-            linea = linea.strip()
-            if not linea: continue
-            
-            # Si la línea tiene $ o dice Costo, le ponemos la clase "costo-res"
-            if "$" in linea or "Costo" in linea:
-                # Quitamos puntos previos si los hay para que no se dupliquen iconos
-                l_limpia = linea.replace("•", "").strip()
-                html += f'<span class="costo-res">💰 {l_limpia}</span>'
-            else:
-                html += f'<span>{linea}</span>'
-        
-        html += '</div>'
-        return html
-
-    col1.markdown(bloque_html("Hogar", "🏠", p.get("ch", ""), True), unsafe_allow_html=True)
-    col2.markdown(bloque_html("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
-    col3.markdown(bloque_html("Bici", "🚲", p.get("cb", "")), unsafe_allow_html=True)
-
-    # 7. Firma del Asesor
-    st.markdown("---")
-    st.markdown(f"**Asesor:** {p.get('e', '')} | **Contacto:** {p.get('cont', '')}")
-    st.stop()
 
     # 5. Beneficios en filas separadas
     st.write("")
@@ -269,6 +216,7 @@ if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
 # ==========================================
 
 # Definición de Usuarios (asegurate de tener esto arriba si no estaba)
+USUARIOS = {"RDF": "Roque de Freitas", "GS": "Gabriel Silva", "AB": "Andrés Bianchi"}
 
 # Inicializar estados para Edición V.2
 if "edit_data" not in st.session_state:
@@ -325,7 +273,7 @@ with tab_ven:
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL (CON EDICIÓN V.2) ---
 with tab_cot:
-    st.subheader("📝 Cotizador Seguros para Vehículos")
+    st.subheader("📝 Cotizador Individual")
     edit = st.session_state.edit_data
     if st.session_state.es_edicion:
         st.warning(f"⚠️ Editando cotización de: {edit['n']}. Se guardará como V.2")
@@ -340,109 +288,62 @@ with tab_cot:
         nom_sug = edit["n"] if edit else ""
         if st.session_state.es_edicion and "V.2" not in nom_sug: nom_sug = f"{nom_sug} V.2"
         n_cot = c_nom.text_input("Nombre", value=nom_sug)
-        v_cot = c_veh.text_input("Vehículo", value=edit.get("v", "") if edit else "")
+        v_cot = c_veh.text_input("Vehículo", value=edit["v"] if edit else "")
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
         cont_cot = c_con.text_input("Nombre y Contacto Asesor", value=edit["cont"] if edit else "")
 
     df_p_init = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
-    
-    t_edit = st.data_editor(
-        df_p_init, 
-        num_rows="dynamic", 
-        use_container_width=True,
-        # ESTA LÍNEA FIJA EL ORDEN DE IZQUIERDA A DERECHA
-        column_order=("Aseguradora", "Contado", "10 Cuotas", "Deducible"),
-        column_config={
-            "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
-            "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
-            "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %.0f"),
-            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
-        }
-    )
+    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_config={
+        "Contado": st.column_config.NumberColumn(format="$ %.0f"),
+        "10 Cuotas": st.column_config.NumberColumn(format="$ %.0f"),
+        "Deducible": st.column_config.NumberColumn(format="$ %.0f")
+    })
     
     col_a, col_b = st.columns(2)
     with col_a:
-        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n• Granizo: SANCOR sin deducible"
+        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ílimitado, SANCOR USD 300\n• Granizo: SANCOR sin deducible"
         b_cot = st.text_area("Beneficios:", value=edit["ben"] if edit else t_ben, height=200)
     with col_b:
         t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
-        c_h = st.text_area("Hogar:", value=edit.get("ch", t_h) if edit else t_h, height=130)
-        c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70)
-        c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70)
+        c_h = st.text_area("Hogar:", value=edit["ch"] if edit else t_h, height=130)
+        c_a = st.text_area("Alquiler:", value=edit["ca"] if edit else "• Auto cortesía 15 días en taller\nCosto: UYU 3.500", height=70)
+        c_b = st.text_area("Bici:", value=edit["cb"] if edit else "• Hurto USD 1.000\nCosto: USD 110", height=70)
+
     datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in}
     l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
+    
+    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA", use_container_width=True):
+        db_i = {"tipo": "individual", "documento": doc_in, "asegurado": n_cot, "vehiculo_o_flota": v_cot, "asesor": e_cot, "datos_json": datos_i, "link_cotizacion": l_i}
+        if f"saved_{n_cot}" not in st.session_state:
+            if guardar_en_db(db_i):
+                st.session_state[f"saved_{n_cot}"] = True
+                st.session_state.es_edicion = False
+                st.session_state.edit_data = None
+                st.success("Guardado.")
+        st.link_button("👁️ VER VISTA PREVIA", l_i, use_container_width=True)
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
-    st.subheader("🚛 Cotizador Seguro de Flotas")
-# --- NUEVO ENCABEZADO SIMPLIFICADO ---
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        f_asegurado = st.text_input("Asegurado", value=edit.get('asegurado', '') if edit else "", key="f_nom_flota")
-        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_ase_cia_flota")
-    with col_f2:
-        f_asesor = st.text_input("Asesor", value=edit.get('asesor', '') if edit else "EDF SEGUROS", key="f_ase_nom_flota")
-        f_contacto = st.text_input("Contacto", value=edit.get('datos_json', {}).get('cont', '099 635 244') if edit else "099 635 244", key="f_cont_flota")
-
-    # --- NUEVA TABLA DE VEHÍCULOS ---
-    cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
+    st.subheader("🚛 Cotizador de Flotas Pro")
+    with st.container(border=True):
+        f1, f2, f3, f4, f5, f6 = st.columns([2, 1.2, 1.2, 1.2, 1, 2])
+        f_nom = f1.text_input("Asegurado Flota")
+        f_as1 = f2.text_input("Cía 1", value="SURA"); f_as2 = f3.text_input("Cía 2", value="BSE"); f_as3 = f4.text_input("Cía 3", value="SBI")
+        f_ase = f5.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="f_ase_sel")
+        f_cont = f6.text_input("Contacto", key="f_con_sel")
     
-    if edit and "tab" in edit:
-        df_f_init = pd.DataFrame(edit["tab"])
-    else:
-        # Estructura limpia con las columnas nuevas
-        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
-
-    t_flota = st.data_editor(
-        df_f_init,
-        num_rows="dynamic",
-        use_container_width=True,
-        key="editor_flotas_v_final",
-        column_order=cols_f,
-        column_config={
-            "Marca": st.column_config.TextColumn("Marca", width="medium"),
-            "Modelo": st.column_config.TextColumn("Modelo", width="medium"),
-            "Matrícula": st.column_config.TextColumn("Matrícula", width="small"),
-            "Cobertura": st.column_config.TextColumn("Cobertura", width="medium"),
-            "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
-            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
-        }
-    )
-    t_flota = st.data_editor(
-        df_f_init,
-        num_rows="dynamic",
-        use_container_width=True,
-        key="editor_flotas_final",
-        column_order=columnas_flota,
-        column_config={
-            "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
-            "Vehículo / Modelo": st.column_config.TextColumn("Vehículo / Modelo", width="large"),
-            "Matrícula": st.column_config.TextColumn("Matrícula", width="small"),
-            "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
-            "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %.0f"),
-            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
-        }
-    )
-    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": b_cot}
-if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", key="btn_f_flota_ok"):
-        nombre_cod = base64.b64encode(f_asegurado.encode()).decode()
-        link_f = f"https://dfseguros.streamlit.app/?flota={nombre_cod}"
-        
-        db_f = {
-            "tipo": "flota", 
-            "asegurado": f_asegurado, 
-            "vehiculo_o_flota": f"Flota - {f_aseguradora}", 
-            "asesor": f_asesor, 
-            "datos_json": {
-                "tab": t_flota.to_dict(orient='records'),
-                "ase": f_aseguradora,
-                "cont": f_contacto
-            }, 
-            "link_cotizacion": link_f
-        }
-        if guardar_en_db(db_f):
-            st.success(f"✅ Flota guardada con éxito.")
-            st.link_button("👁️ VER PROPUESTA", link_f, use_container_width=True)
+    df_f_init = pd.DataFrame([{"Vehículo": "Unidad 1", f"Precio {f_as1}": 0, f"Ded {f_as1}": 0, f"Precio {f_as2}": 0, f"Ded {f_as2}": 0, f"Precio {f_as3}": 0, f"Ded {f_as3}": 0}])
+    t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True, column_config={
+        f"Precio {f_as1}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as1}": st.column_config.NumberColumn(format="$ %.0f"),
+        f"Precio {f_as2}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as2}": st.column_config.NumberColumn(format="$ %.0f"),
+        f"Precio {f_as3}": st.column_config.NumberColumn(format="$ %.0f"), f"Ded {f_as3}": st.column_config.NumberColumn(format="$ %.0f")
+    })
+    datos_f = {"n": f_nom, "e": f_ase, "cont": f_cont, "tab": t_flota.to_dict(orient='records'), "ben": "Auxilio mecánico incluido."}
+    l_f = f"https://dfseguros.streamlit.app/?f={base64.b64encode(json.dumps(datos_f).encode()).decode()}"
+    if st.button("🚀 GUARDAR FLOTA", use_container_width=True):
+        db_f = {"tipo": "flota", "asegurado": f_nom, "vehiculo_o_flota": "Flota", "asesor": f_ase, "datos_json": datos_f, "link_cotizacion": l_f}
+        guardar_en_db(db_f)
+        st.link_button("👁️ VER VISTA PREVIA FLOTA", l_f, use_container_width=True)
 
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
