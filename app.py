@@ -326,51 +326,71 @@ with tab_ven:
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False)
         st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
 
-# --- PESTAÑA COTIZADOR INDIVIDUAL ---
+# --- PESTAÑA COTIZADOR INDIVIDUAL (Blindada) ---
 with tab_cot:
     st.subheader("📝 Cotizador Seguros para Vehículos")
-    edit = st.session_state.edit_data
     
-    # 1. Cabecera de Datos
+    # 1. Aseguramos que los datos de edición sean de Individual
+    edit_ind = st.session_state.edit_data if st.session_state.edit_data and "v" in st.session_state.edit_data else {}
+    
+    # 2. Cabecera de Datos
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
-        doc_in = c_doc.text_input("CI/RUT", value=edit["doc"] if edit and "doc" in edit else "", key="ci_ind_v5")
-        n_cot = c_nom.text_input("Nombre", value=edit.get('n', '') if edit else "", key="nom_ind_v5")
-        v_cot = c_veh.text_input("Vehículo", value=edit.get("v", "") if edit else "", key="veh_ind_v5")
-        e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_ind_v5")
-        cont_cot = c_con.text_input("Contacto Asesor", value=edit.get("cont", "099 635 244") if edit else "099 635 244", key="cont_ind_v5")
+        doc_in = c_doc.text_input("CI/RUT", value=edit_ind.get("doc", ""), key="ci_final_ind")
+        n_cot = c_nom.text_input("Nombre", value=edit_ind.get('n', ''), key="nom_final_ind")
+        v_cot = c_veh.text_input("Vehículo", value=edit_ind.get("v", ""), key="veh_final_ind")
+        e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_final_ind")
+        cont_cot = c_con.text_input("Contacto Asesor", value=edit_ind.get("cont", "099 635 244"), key="cont_final_ind")
 
-    # 2. Tabla de 4 columnas (Aseguradora, Contado, 10 Cuotas, Deducible)
-    cols_i = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
-    df_p_init = pd.DataFrame(edit["tab"]) if edit and "tab" in edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+    # 3. TABLA DE 4 COLUMNAS (Forzada por código)
+    st.markdown("#### Cotización")
+    cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
     
-    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_i, key="editor_ind_v5")
+    if edit_ind and "tab" in edit_ind:
+        df_p_init = pd.DataFrame(edit_ind["tab"])
+    else:
+        df_p_init = pd.DataFrame([
+            {"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+            {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+            {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}
+        ])
     
-    # 3. Textos Precargados
+    # El editor de datos con las 4 columnas que me pedís
+    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="tabla_ind_final")
+    
+    # 4. Textos Precargados
     col_a, col_b = st.columns(2)
     with col_a:
         t_ben_def = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n• Granizo: SANCOR sin deducible"
-        b_cot = st.text_area("Beneficios:", value=edit.get("ben", t_ben_def) if edit else t_ben_def, height=200, key="ben_ind_v5")
+        b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", t_ben_def), height=200, key="txt_ben_ind")
     with col_b:
         t_h_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
-        c_h = st.text_area("Hogar:", value=edit.get("ch", t_h_def) if edit else t_h_def, height=130, key="hog_ind_v5")
-        c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70, key="alq_ind_v5")
-        c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70, key="bic_ind_v5")
+        c_h = st.text_area("Hogar:", value=edit_ind.get("ch", t_h_def), height=100, key="txt_hog_ind")
+        c_a = st.text_area("Alquiler:", value=edit_ind.get("ca", "• Auto cortesía 15 días..."), height=70, key="txt_alq_ind")
+        c_b = st.text_area("Bici:", value=edit_ind.get("cb", "• Hurto USD 1.000..."), height=70, key="txt_bic_ind")
 
-    # 4. Lógica de Guardado INDIVIDUAL (Etiqueta 'Individual' corregida)
-    if st.button("💾 Guardar Cotización Individual", use_container_width=True, key="btn_save_ind_v5"):
-        datos_i = {
+    # 5. Lógica de Guardado y VISTA PREVIA
+    if st.button("💾 Guardar Cotización Individual", use_container_width=True, key="btn_save_ind_final"):
+        # Armamos el paquete de datos
+        datos_finales_ind = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, 
-            "tab": t_edit.to_dict(orient='records'), 
-            "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in,
-            "tipo": "Individual" # <--- ESTO ASEGURA QUE NO SE GUARDE COMO FLOTA
+            "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in,
+            "tab": t_edit.to_dict(orient='records'),
+            "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b
         }
         if "historico" not in st.session_state: st.session_state.historico = []
-        st.session_state.historico.append(datos_i)
-        st.session_state.edit_data = datos_i
-        st.success("✅ ¡Cotización Individual Guardada!")
+        st.session_state.historico.append(datos_finales_ind)
+        st.session_state.edit_data = datos_finales_ind # Guardamos para la vista previa
+        st.success(f"✅ Guardado Individual: {n_cot}")
         st.rerun()
+
+    # 6. Botón de Vista Previa (Solo para Individual)
+    if st.session_state.edit_data and "v" in st.session_state.edit_data:
+        st.markdown("---")
+        datos_b64 = base64.b64encode(json.dumps(st.session_state.edit_data).encode()).decode()
+        link_final = f"https://dfseguros.streamlit.app/?q={datos_b64}"
+        st.link_button("🚀 VER VISTA PREVIA INDIVIDUAL", link_final, type="primary", use_container_width=True)
+        st.code(link_final)
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
