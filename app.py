@@ -530,12 +530,13 @@ with tab_flota:
     st.markdown("### 📝 Detalles de la Propuesta")
     f_obs = st.text_area("Observaciones:", value=edit_f.get('ben', ''), height=150, key="f_obs_vfinal_fix")
 
-    # 5. BOTÓN GUARDAR
+    # 5. BOTÓN GUARDAR (Corregido para separar Aseguradora de Asesor)
     if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_vfinal", use_container_width=True):
         nueva_f = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "n": f_asegurado, 
-            "e": f_aseguradora, 
+            "e": f_aseguradora,    # Aquí va BSE, SURA, etc.
+            "e_nombre": f_asesor,  # <--- NUEVA ETIQUETA para el nombre real (ej: Roque)
             "cont": f_contacto,
             "tab": t_flota.to_dict(orient='records'), 
             "ben": f_obs, 
