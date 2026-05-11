@@ -136,87 +136,81 @@ elif "q" in st.query_params or "f" in st.query_params:
     except: st.error("Error al cargar cotización.")
 
 # Si hay una propuesta, se muestra la vista limpia
+# --- LÓGICA DE RECEPCIÓN DE LINKS (Actualizada para ambos tipos) ---
+query_params = st.query_params
+p = None
+
+if "q" in query_params: # Individual
+    p = json.loads(base64.b64decode(query_params["q"]).decode())
+elif "f" in query_params: # Flota
+    p = json.loads(base64.b64decode(query_params["f"]).decode())
+    p["es_flota"] = True
+
 if p:
-    # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO PROFESIONAL) ---
+    # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
         <style>
             .main .block-container { max-width: 95% !important; padding-top: 2rem; }
-            
-            /* Título y Línea */
             .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
             .linea-gris { border-bottom: 4px solid #333333; margin-bottom: 30px; }
-            
-            /* Tablas */
             table { width: 100% !important; border-collapse: collapse; margin: 25px 0; }
-            thead tr th { background-color: #f8f9fa !important; color: #333333; padding: 18px; font-size: 20px; text-align: center !important; border-bottom: 2px solid #333333; }
-            thead tr th:first-child { text-align: left !important; padding-left: 20px; }
-            tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
-            tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
-
-            /* Beneficios y Cajas */
+            thead tr th { background-color: #f8f9fa !important; color: #333333; padding: 12px; font-size: 16px; text-align: center !important; border-bottom: 2px solid #333333; }
+            tbody td { padding: 10px; font-size: 15px; text-align: center; border-bottom: 1px solid #eee; }
             .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #333333; color: #333; }
             .caja-gris { background-color: #ffffff; padding: 20px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #333333; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
             .sub-tit { font-size: 22px !important; font-weight: bold; color: #333333; margin-bottom: 10px; display: block; }
             .costo-res { color: #333333; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f0f0f0; padding: 5px 10px; border-radius: 5px; }
-            
-            /* Pie de Página */
-            .footer-cliente { 
-                margin-top: 50px; 
-                padding-top: 20px; 
-                border-top: 1px solid #ccc; 
-                color: #666; 
-                font-size: 14px; 
-                display: flex; 
-                justify-content: space-between; 
-            }
+            .footer-cliente { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ccc; color: #666; font-size: 14px; display: flex; justify-content: space-between; }
         </style>
         <div class="titulo-gris">EDF SEGUROS - Cotización</div>
         <div class="linea-gris"></div>
     """, unsafe_allow_html=True)
 
-    # Encabezado Asegurado/Vehículo
+    # Encabezado Asegurado
     c1, c2 = st.columns(2)
     c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
-    if "v" in p: 
+    if not p.get("es_flota"):
         c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
+    else:
+        c2.markdown(f"### 🚛 Propuesta de Flota")
 
-    # Tabla de Precios (Formateo manual de moneda)
+    # Tabla Dinámica (Muestra 4 o 6 columnas según los datos)
     df_p = pd.DataFrame(p["tab"]).fillna("")
     for col in ["Contado", "10 Cuotas", "Deducible"]:
         if col in df_p.columns:
             df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0).apply(lambda x: f"$ {int(x):,}".replace(",", "."))
+    
     st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
 
-    # Beneficios
+    # Beneficios / Observaciones
     if p.get("ben"):
-        st.markdown("### ✅ Beneficios Incluidos")
+        st.markdown("### ✅ Detalles y Beneficios")
         for b in p["ben"].split('\n'):
             if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # Coberturas Complementarias
-    st.markdown("### ⚠️ Coberturas Complementarias")
-    col1, col2, col3 = st.columns(3)
-    def bloque_res(tit, ico, txt):
-        if not txt: return ""
-        res = f'<div class="caja-gris"><span class="sub-tit">{ico} {tit}</span>'
-        for l in txt.split('\n'):
-            if "$" in l or "Costo" in l: res += f'<span class="costo-res">💰 {l.strip()}</span>'
-            else: res += f'<span>{l.strip()}</span><br>'
-        return res + '</div>'
-    
-    col1.markdown(bloque_res("Hogar", "🏠", p.get("ch", "")), unsafe_allow_html=True)
-    col2.markdown(bloque_res("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
-    col3.markdown(bloque_res("Bici Eléctrica", "🚲", p.get("cb", "")), unsafe_allow_html=True)
+    # Coberturas Complementarias (Solo si no es flota, o podés dejarlo para ambos)
+    if not p.get("es_flota"):
+        st.markdown("### ⚠️ Coberturas Complementarias")
+        col1, col2, col3 = st.columns(3)
+        def bloque_res(tit, ico, txt):
+            if not txt: return ""
+            res = f'<div class="caja-gris"><span class="sub-tit">{ico} {tit}</span>'
+            for l in txt.split('\n'):
+                if "$" in l or "Costo" in l: res += f'<span class="costo-res">💰 {l.strip()}</span>'
+                else: res += f'<span>{l.strip()}</span><br>'
+            return res + '</div>'
+        
+        col1.markdown(bloque_res("Hogar", "🏠", p.get("ch", "")), unsafe_allow_html=True)
+        col2.markdown(bloque_res("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
+        col3.markdown(bloque_res("Bici Eléctrica", "🚲", p.get("cb", "")), unsafe_allow_html=True)
 
-    # --- PIE DE PÁGINA CON FECHA Y ASESOR ---
-    fecha_hoy = p.get('fecha', datetime.now().strftime("%d/%m/%Y")) # Usa la fecha del guardado o la de hoy
+    # Pie de Página Profesional
     st.markdown(f"""
         <div class="footer-cliente">
-            <div><b>Fecha de Cotización:</b> {fecha_hoy}</div>
+            <div><b>Fecha de Cotización:</b> {p.get('fecha', datetime.now().strftime("%d/%m/%Y"))}</div>
             <div><b>Asesor:</b> {p.get('e', 'EDF SEGUROS')} | <b>Contacto:</b> {p.get('cont', '099 635 244')}</div>
         </div>
     """, unsafe_allow_html=True)
-    
     st.stop()
     
     # --- FORMATEO DE PRECIOS ($ y miles) ---
@@ -525,18 +519,36 @@ with tab_flota:
     obs_val = edit_f.get('ben', '')
     f_obs = st.text_area("Observaciones:", value=obs_val, height=150, key="f_obs_flota_v5")
 
-    if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_v5", use_container_width=True):
+if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_v5", use_container_width=True):
         nueva_f = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "n": f_asegurado, "e": f_aseguradora, "cont": f_contacto,
+            "n": f_asegurado, 
+            "e": f_aseguradora, 
+            "cont": f_contacto,
             "tab": t_flota.to_dict(orient='records'), 
-            "ben": f_obs, "tipo": "Flota" # <--- ETIQUETA CORRECTA
+            "ben": f_obs, 
+            "tipo": "Flota"
         }
         if "historico" not in st.session_state: st.session_state.historico = []
         st.session_state.historico.append(nueva_f)
         st.session_state.edit_data = nueva_f
         st.success("✅ ¡Flota Guardada!")
         st.rerun()
+
+    # --- NUEVO: GENERADOR DE LINK DE FLOTA ---
+    if st.session_state.get('edit_data') and st.session_state.edit_data.get("tipo") == "Flota":
+        st.markdown("---")
+        st.markdown("### 🔗 Link de Flota para enviar")
+        
+        # Encriptamos con la letra 'f' para identificar que es formato Flota
+        datos_f_json = json.dumps(st.session_state.edit_data)
+        datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
+        
+        # Asegúrate de que esta URL sea la de tu app real
+        link_f_final = f"https://dfseguros.streamlit.app/?f={datos_f_b64}" 
+        
+        st.link_button("🚀 VER VISTA PREVIA FLOTA", link_f_final, type="primary", use_container_width=True)
+        st.code(link_f_final)
         
 # --- PESTAÑA HISTORIAL ---
 with tab_historial:
