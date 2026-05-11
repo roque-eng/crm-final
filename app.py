@@ -467,13 +467,13 @@ with tab_historial:
 
     st.divider()
 
-    # 2. Lista con borrado individual
+    # 2. Lista de registros con Edición y Borrado
     if "historico" in st.session_state and st.session_state.historico:
         # Mostramos de la más nueva a la más vieja
         for i, registro in enumerate(reversed(st.session_state.historico)):
             idx_real = len(st.session_state.historico) - 1 - i
             
-            col_info, col_btn = st.columns([0.85, 0.15])
+            col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             
             with col_info:
                 f = registro.get('fecha', 'S/F')[:10]
@@ -481,8 +481,14 @@ with tab_historial:
                 t = "🚚 Flota" if "tab" in registro else "🚗 Indiv."
                 st.write(f"**{f}** | {t} | **{n}**")
             
-            with col_btn:
-                # El botón de borrar individual
+            with col_edit:
+                # BOTÓN EDITAR: Carga los datos para verlos en la pestaña FLOTAS
+                if st.button("✏️", key=f"edit_{idx_real}"):
+                    st.session_state.edit_data = registro
+                    st.success("✅ ¡Cargado! Andá a la pestaña FLOTAS.")
+            
+            with col_del:
+                # BOTÓN BORRAR: Saca solo este registro
                 if st.button("❌", key=f"btn_del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
