@@ -420,32 +420,44 @@ with tab_flota:
     if st.button("💾 Guardar Flota", use_container_width=True):
         st.success("¡Datos listos!")
         
-# --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
+# --- PESTAÑA HISTORIAL ---
 with tab_historial:
-    st.subheader("inteHistorial de Cotizaciones")
+    st.subheader("📋 Gestión de Historial")
     
-    # Supongamos que tus datos están en st.session_state.historico
+    # 1. Botones de acción general
+    c_ref, c_del = st.columns([1, 1])
+    with c_ref:
+        if st.button("🔄 Actualizar Historial", use_container_width=True):
+            st.rerun()
+    with c_del:
+        if st.button("🔥 BORRAR TODO", type="primary", use_container_width=True):
+            st.session_state.historico = []
+            st.rerun()
+
+    st.divider()
+
+    # 2. Lista con borrado individual
     if "historico" in st.session_state and st.session_state.historico:
-        for i, registro in enumerate(st.session_state.historico):
-            # Creamos columnas para que el botón quede al final de la fila
-            col_data, col_accion = st.columns([0.9, 0.1])
+        # Mostramos de la más nueva a la más vieja
+        for i, registro in enumerate(reversed(st.session_state.historico)):
+            idx_real = len(st.session_state.historico) - 1 - i
             
-            with col_data:
-                # Mostramos la info principal en una línea prolija
-                fecha = registro.get('fecha', 'S/F')
-                cliente = registro.get('n') or registro.get('asegurado', 'Cliente')
-                tipo = "Flota" if "tab" in registro else "Indiv."
-                st.write(f"**{fecha}** | {cliente} ({tipo})")
+            col_info, col_btn = st.columns([0.85, 0.15])
             
-            with col_accion:
-                # Botón individual para borrar (usamos el índice i como llave)
-                if st.button("❌", key=f"del_{i}"):
-                    st.session_state.historico.pop(i)
-                    st.rerun() # Refrescamos para que desaparezca al toque
+            with col_info:
+                f = registro.get('fecha', 'S/F')[:10]
+                n = registro.get('n') or registro.get('asegurado', 'Cliente')
+                t = "🚚 Flota" if "tab" in registro else "🚗 Indiv."
+                st.write(f"**{f}** | {t} | **{n}**")
             
-            st.divider() # Una rayita para separar cada caso
+            with col_btn:
+                # El botón de borrar individual
+                if st.button("❌", key=f"btn_del_{idx_real}"):
+                    st.session_state.historico.pop(idx_real)
+                    st.rerun()
+            st.divider()
     else:
-        st.info("No hay cotizaciones en el historial.")
+        st.info("No hay registros en el historial.")
 
 # --- PESTAÑA ANÁLISIS ---
 with tab_an:
