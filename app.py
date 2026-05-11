@@ -205,11 +205,11 @@ if p:
         col2.markdown(bloque_res("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
         col3.markdown(bloque_res("Bici Eléctrica", "🚲", p.get("cb", "")), unsafe_allow_html=True)
 
-    # --- PIE DE PÁGINA DINÁMICO (Paso 3) ---
+# --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
     
-    # Detectamos si es Individual (por la 'v' de vehículo o la etiqueta tipo)
-    if "v" in p or p.get("tipo") == "Individual":
+    if not es_flota:
+        # INDIVIDUAL
         st.markdown(f"""
             <div class="footer-cliente">
                 <div><b>Fecha de Cotización:</b> {fecha_val}</div>
@@ -217,8 +217,11 @@ if p:
             </div>
         """, unsafe_allow_html=True)
     else:
-        # Es Flota: Solo fecha a la derecha, bien limpio
+        # FLOTA
         st.markdown(f'<div class="footer-cliente" style="justify-content: flex-end;">Fecha de Cotización: {fecha_val}</div>', unsafe_allow_html=True)
+    
+    # ESTO ES LO MÁS IMPORTANTE:
+    st.stop()
     
     # --- FORMATEO DE PRECIOS ($ y miles) ---
     for col in ["Contado", "10 Cuotas", "Deducible"]:
