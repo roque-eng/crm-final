@@ -490,53 +490,45 @@ with tab_cot:
         st.code(link_final)
 
 # --- PESTAÑA FLOTAS ---
-# --- PESTAÑA FLOTAS (CORREGIDO PARA TRAER ENCABEZADOS) ---
+# --- PESTAÑA FLOTAS (CON CORRECCIÓN DE ENCABEZADOS Y VISTA PREVIA) ---
 with tab_flota:
     st.subheader("📋 Cotizador Seguro de Flotas")
     
-    # 1. Recuperar datos de edición
+    # 1. Recuperar datos de edición (Detectamos si es Flota)
     edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
     
     col_f1, col_f2 = st.columns(2)
     with col_f1:
         f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_flota_vfinal")
-        # Forzamos a que la aseguradora también se cargue si existe en el historial
-        val_cia = edit_f.get('e', 'BSE')
-        list_cias = ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"]
-        idx_cia = list_cias.index(val_cia) if val_cia in list_cias else 0
-        f_aseguradora = st.selectbox("Aseguradora", list_cias, index=idx_cia, key="f_ase_cia_vfinal")
-        
+        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_ase_cia_vfinal")
     with col_f2:
-        f_asesor = st.text_input("Asesor", value=edit_f.get('e_nombre', 'EDF SEGUROS'), key="f_ase_nom_vfinal")
+        f_asesor = st.text_input("Asesor", value=edit_f.get('e', 'EDF SEGUROS'), key="f_ase_nom_vfinal")
         f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_cont_vfinal")
 
     st.markdown("---")
     
-    # 2. DEFINICIÓN ESTRICTA DE COLUMNAS DE FLOTA
+    # 2. DEFINICIÓN DE COLUMNAS DE FLOTA (6 Columnas)
     cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
     
-    # 3. LÓGICA DE CARGA DE TABLA
+    # 3. CARGA DE TABLA (Forzamos los encabezados del historial)
     if edit_f and "tab" in edit_f:
-        # Si venimos del historial, creamos el DataFrame con los datos guardados
         df_f_init = pd.DataFrame(edit_f["tab"])
-        # Nos aseguramos de que tenga todas las columnas de flota por si acaso
-        for c in cols_f:
-            if c not in df_p_init.columns: df_p_init[c] = ""
+        # Aseguramos que el orden sea el correcto de flota
+        df_f_init = df_f_init.reindex(columns=cols_f).fillna("")
     else:
-        # Si es nueva, tabla vacía con los encabezados correctos
         df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
 
-    # 4. EL EDITOR (Aquí forzamos el orden de las columnas de Flota)
+    # 4. EL EDITOR (Aquí se recuperan Marca, Modelo, etc.)
     t_flota = st.data_editor(
         df_f_init, 
         num_rows="dynamic", 
         use_container_width=True, 
-        column_order=cols_f, # <--- ESTO FUERZA LOS ENCABEZADOS CORRECTOS
-        key="editor_flotas_vfinal"
+        column_order=cols_f, 
+        key="editor_flotas_vfinal_fix"
     )
 
     st.markdown("### 📝 Detalles de la Propuesta")
-    f_obs = st.text_area("Observaciones:", value=edit_f.get('ben', ''), height=150, key="f_obs_vfinal")
+    f_obs = st.text_area("Observaciones:", value=edit_f.get('ben', ''), height=150, key="f_obs_vfinal_fix")
 
     # 5. BOTÓN GUARDAR
     if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_vfinal", use_container_width=True):
@@ -544,7 +536,6 @@ with tab_flota:
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "n": f_asegurado, 
             "e": f_aseguradora, 
-            "e_nombre": f_asesor,
             "cont": f_contacto,
             "tab": t_flota.to_dict(orient='records'), 
             "ben": f_obs, 
@@ -553,8 +544,24 @@ with tab_flota:
         if "historico" not in st.session_state: st.session_state.historico = []
         st.session_state.historico.append(nueva_f)
         st.session_state.edit_data = nueva_f
-        st.success("✅ ¡Flota Guardada!")
+        st.success(f"✅ ¡Flota de {f_asegurado} guardada!")
         st.rerun()
+
+    # 6. RECUPERACIÓN DEL BOTÓN VISTA PREVIA (Gris Oscuro)
+    # Se muestra si acabas de guardar o si cargaste una flota del historial
+    if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota":
+        st.markdown("---")
+        st.markdown("### 🔗 Link de Flota para enviar")
+        
+        # Encriptamos los datos actuales
+        datos_f_json = json.dumps(st.session_state.edit_data)
+        datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
+        
+        # Generamos el link con parámetro 'f' para flotas
+        link_f_final = f"https://dfseguros.streamlit.app/?f={datos_f_b64}" 
+        
+        st.link_button("🚀 VER VISTA PREVIA PARA EL CLIENTE", link_f_final, type="primary", use_container_width=True)
+        st.code(link_f_final)
         
 # --- PESTAÑA HISTORIAL ---
 with tab_historial:
