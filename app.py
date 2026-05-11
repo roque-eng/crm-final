@@ -403,20 +403,17 @@ with tab_flota:
         key="editor_flotas_final_v_ok"
     )
 
-    # 5. CAMPOS DE TEXTO (Para evitar el KeyError 'ben')
-    st.markdown("### 📝 Detalles Adicionales")
-    col_b1, col_b2 = st.columns(2)
-    with col_b1:
-        b_val = edit.get('ben', '') if (edit and isinstance(edit, dict)) else ""
-        st.text_area("Beneficios:", value=b_val, height=200, key="f_ben_flota_ok")
-    
-    with col_b2:
-        st.info("Aquí podés agregar cláusulas específicas para la propuesta de flota.")
+    # 5. CAMPO OBSERVACIONES (De lado a lado)
+    st.markdown("### 📝 Observaciones")
+    # Si edit existe, buscamos 'ben' o 'obs', si no, vacío
+    obs_val = edit.get('ben', '') if (edit and isinstance(edit, dict)) else ""
+    st.text_area("Detalles de la propuesta:", value=obs_val, height=150, key="f_obs_flota_final")
 
     # 6. BOTÓN DE GUARDAR
-    if st.button("💾 Guardar Cambios de Flota", use_container_width=True):
-        st.success("¡Propuesta de flota lista para generar!")
-
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("💾 Guardar Propuesta de Flota", use_container_width=True):
+        st.success("¡Propuesta de flota lista!")
+        
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
     st.subheader("📜 Gestión de Historial")
