@@ -377,51 +377,54 @@ with tab_cot:
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
-    st.subheader("🚛 Cotizador Seguro de Flotas")
-# --- NUEVO ENCABEZADO SIMPLIFICADO ---
+    st.subheader("📋 Cotizador Seguro de Flotas")
+    
+    # 1. Recuperamos datos si es edición
+    edit = st.session_state.edit_data if st.session_state.es_edicion else None
+    
     col_f1, col_f2 = st.columns(2)
     with col_f1:
+        # Usamos .get() para evitar el cartel rojo de KeyError
         nom_f = (edit.get('asegurado') or edit.get('n', '')) if edit else ""
         f_asegurado = st.text_input("Asegurado", value=nom_f, key="f_nom_flota")
         f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_ase_cia_flota")
+    
     with col_f2:
         f_asesor = st.text_input("Asesor", value=edit.get('asesor', 'EDF SEGUROS') if edit else "EDF SEGUROS", key="f_ase_nom_flota")
         cont_f = edit.get('cont') or edit.get('datos_json', {}).get('cont', '099 635 244') if edit else '099 635 244'
         f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_flota")
 
-# --- NUEVA TABLA DE VEHÍCULOS (FLOTAS) ---
-        cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
-        
-        if edit and "tab" in edit:
-            df_f_init = pd.DataFrame(edit["tab"])
-        else:
-            # Estructura limpia para nuevas flotas
-            df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
-        
-        # Limpieza de saltos de línea molestos
-        df_f_init = df_f_init.replace(r'\\n', ' ', regex=True)
-
-        t_flota = st.data_editor(
-            df_f_init,
-            num_rows="dynamic",
-            use_container_width=True,
-            key="editor_flotas_v_final",
-            column_order=cols_f
-        )
+    # 2. Configuración de la Tabla (Ancho completo)
+    st.markdown("#### Vehículos de la Flota")
+    cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
     
-    # --- TABLA DE VEHÍCULOS (FLOTAS) ---
-        cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
-        df_p_f = pd.DataFrame(edit["tab"]) if edit and "tab" in edit else pd.DataFrame(columns=cols_f)
-        
-        if not df_p_f.empty:
-            for col in ["Contado", "Deducible"]:
-                if col in df_p_f.columns:
-                    df_p_f[col] = pd.to_numeric(df_p_f[col], errors='coerce').fillna(0)
-        
-        t_edit = st.data_editor(df_p_f, num_rows="dynamic", key="editor_flotas_v2")
+    if edit and "tab" in edit:
+        df_f_init = pd.DataFrame(edit["tab"])
+    else:
+        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
+    
+    # Limpiamos textos
+    df_f_init = df_f_init.replace(r'\\n', ' ', regex=True)
 
- 
+    # El editor de tabla ocupa todo el ancho
+    t_flota = st.data_editor(
+        df_f_init,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editor_flotas_v_final_pro",
+        column_order=cols_f
+    )
 
+    # 3. Botón de Guardar Flota
+    if st.button("🚀 GENERAR PROPUESTA DE FLOTA"):
+        datos_i = {
+            "n": f_asegurado, "v": f"Flota - {f_aseguradora}", 
+            "e": f_asesor, "cont": f_contacto,
+            "tab": t_flota.to_dict(orient='records'),
+            "tipo": "flota"
+        }
+        # Aquí iría tu lógica de guardado (supabase/gsheets)
+        st.success("¡Propuesta de flota generada!")
 
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
