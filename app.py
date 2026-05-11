@@ -334,117 +334,83 @@ with tab_cot:
     # 1. Cabecera de Datos
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
-        doc_in = c_doc.text_input("CI/RUT", value=edit["doc"] if edit and "doc" in edit else "", key="ci_v4")
-        n_cot = c_nom.text_input("Nombre", value=edit.get('n', '') if edit else "", key="nom_v4")
-        v_cot = c_veh.text_input("Vehículo", value=edit.get("v", "") if edit else "", key="veh_v4")
-        e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v4")
-        cont_cot = c_con.text_input("Contacto Asesor", value=edit.get("cont", "099 635 244") if edit else "099 635 244", key="cont_v4")
+        doc_in = c_doc.text_input("CI/RUT", value=edit["doc"] if edit and "doc" in edit else "", key="ci_ind_v5")
+        n_cot = c_nom.text_input("Nombre", value=edit.get('n', '') if edit else "", key="nom_ind_v5")
+        v_cot = c_veh.text_input("Vehículo", value=edit.get("v", "") if edit else "", key="veh_ind_v5")
+        e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_ind_v5")
+        cont_cot = c_con.text_input("Contacto Asesor", value=edit.get("cont", "099 635 244") if edit else "099 635 244", key="cont_ind_v5")
 
     # 2. Tabla de 4 columnas (Aseguradora, Contado, 10 Cuotas, Deducible)
     cols_i = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
     df_p_init = pd.DataFrame(edit["tab"]) if edit and "tab" in edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
     
-    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_i, key="editor_ind_v4")
+    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_i, key="editor_ind_v5")
     
-    # 3. Textos Precargados (Recuperados)
+    # 3. Textos Precargados
     col_a, col_b = st.columns(2)
     with col_a:
         t_ben_def = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n• Granizo: SANCOR sin deducible"
-        b_cot = st.text_area("Beneficios:", value=edit.get("ben", t_ben_def) if edit else t_ben_def, height=200, key="ben_v4")
+        b_cot = st.text_area("Beneficios:", value=edit.get("ben", t_ben_def) if edit else t_ben_def, height=200, key="ben_ind_v5")
     with col_b:
         t_h_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
-        c_h = st.text_area("Hogar:", value=edit.get("ch", t_h_def) if edit else t_h_def, height=130, key="hog_v4")
-        c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70, key="alq_v4")
-        c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70, key="bic_v4")
+        c_h = st.text_area("Hogar:", value=edit.get("ch", t_h_def) if edit else t_h_def, height=130, key="hog_ind_v5")
+        c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70, key="alq_ind_v5")
+        c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70, key="bic_ind_v5")
 
-    # 4. Guardar y Link (Todo adentro del 'with tab_cot')
-    if st.button("💾 Guardar y Generar Link Individual", use_container_width=True, key="btn_ind_v4"):
-        datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in, "fecha": datetime.now().strftime("%d/%m/%Y %H:%M")}
+    # 4. Lógica de Guardado INDIVIDUAL (Etiqueta 'Individual' corregida)
+    if st.button("💾 Guardar Cotización Individual", use_container_width=True, key="btn_save_ind_v5"):
+        datos_i = {
+            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, 
+            "tab": t_edit.to_dict(orient='records'), 
+            "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in,
+            "tipo": "Individual" # <--- ESTO ASEGURA QUE NO SE GUARDE COMO FLOTA
+        }
         if "historico" not in st.session_state: st.session_state.historico = []
         st.session_state.historico.append(datos_i)
         st.session_state.edit_data = datos_i
-        st.success("✅ ¡Guardado!")
+        st.success("✅ ¡Cotización Individual Guardada!")
         st.rerun()
-
-    if st.session_state.get('edit_data') and "v" in st.session_state.edit_data:
-        l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(st.session_state.edit_data).encode()).decode()}"
-        st.link_button("🚀 VER VISTA PREVIA INDIVIDUAL", l_i, type="primary", use_container_width=True)
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
     st.subheader("📋 Cotizador Seguro de Flotas")
     
-    # 1. Cabecera de Datos
+    # Verificamos si los datos en memoria son realmente de una flota
+    edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
+
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        nom_f = (edit.get('asegurado') or edit.get('n', '')) if (edit and isinstance(edit, dict)) else ""
-        f_asegurado = st.text_input("Asegurado", value=nom_f, key="f_nom_v3")
-        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "BERKLEY", "BARBUS"], key="f_cia_v3")
-    
+        f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_flota_v5")
+        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_cia_flota_v5")
     with col_f2:
-        f_asesor = st.text_input("Asesor", value=edit.get('asesor', 'EDF SEGUROS') if (edit and isinstance(edit, dict)) else "EDF SEGUROS", key="f_ase_v3")
-        cont_f = edit.get('cont') or "099 635 244" if (edit and isinstance(edit, dict)) else "099 635 244"
-        f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_v3")
+        f_asesor = st.text_input("Asesor", value=edit_f.get('e', 'EDF SEGUROS'), key="f_ase_nom_v5")
+        f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_cont_flota_v5")
 
     st.markdown("---")
-
-    # 2. Definición de Columnas (Crucial para que no de NameError)
     cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
     
-    # 3. Lógica de la Tabla
-    if edit and isinstance(edit, dict) and "tab" in edit:
-        df_f_init = pd.DataFrame(edit["tab"])
-        for c in cols_f:
-            if c not in df_f_init.columns: df_f_init[c] = ""
-    else:
-        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total Riesgo", "Contado": 0, "Deducible": 0}])
+    # Inicializamos tabla de flotas
+    df_f_init = pd.DataFrame(edit_f["tab"]) if edit_f and "tab" in edit_f else pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
 
-    # 4. El Editor de Tabla
-    t_flota = st.data_editor(
-        df_f_init[cols_f], 
-        num_rows="dynamic",
-        use_container_width=True,
-        key="editor_final_v10"
-    )
+    t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas_v5")
 
-    # 5. Observaciones Finales
     st.markdown("### 📝 Detalles de la Propuesta")
-    obs_val = edit.get('ben', '') if (edit and isinstance(edit, dict)) else ""
-    st.text_area("Observaciones:", value=obs_val, height=150, key="f_obs_v3")
+    obs_val = edit_f.get('ben', '')
+    f_obs = st.text_area("Observaciones:", value=obs_val, height=150, key="f_obs_flota_v5")
 
-    # 6. BOTÓN DE GUARDAR Y GENERAR
-    if st.button("💾 Guardar y Generar Link de Flota", use_container_width=True):
-        # Creamos el diccionario con toda la info de la cabecera y la tabla
-        nueva_flota = {
+    if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_v5", use_container_width=True):
+        nueva_f = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "asegurado": f_asegurado,
-            "n": f_asegurado, # Para que sea compatible con el historial
-            "aseguradora": f_aseguradora,
-            "asesor": f_asesor,
-            "cont": f_contacto,
-            "tab": t_flota.to_dict('records'), # Guarda los vehículos de la tabla
-            "ben": obs_val, # Guarda las observaciones
-            "tipo": "Flota"
+            "n": f_asegurado, "e": f_aseguradora, "cont": f_contacto,
+            "tab": t_flota.to_dict(orient='records'), 
+            "ben": f_obs, "tipo": "Flota" # <--- ETIQUETA CORRECTA
         }
-        
-        # Lo metemos en el historial
-        if "historico" not in st.session_state:
-            st.session_state.historico = []
-        
-        st.session_state.historico.append(nueva_flota)
-        
-        # Guardamos en 'edit_data' para que la vista previa sepa qué mostrar
-        st.session_state.edit_data = nueva_flota
-        
-        st.success("✅ ¡Flota guardada en el historial!")
-        st.rerun() # Refrescamos para que aparezca en el historial al toque
-
-    # 7. BOTÓN DE VISTA PREVIA (Solo aparece si hay algo guardado)
-    if st.session_state.get('edit_data') and "tab" in st.session_state.edit_data:
-        st.markdown("---")
-        # Aquí ponés el link a tu web de cliente (propuesta.streamlit.app o la que uses)
-        url_cliente = "https://tu-app-de-propuestas.streamlit.app/" 
-        st.link_button("🔗 Ver Vista Previa para el Cliente", url_cliente, use_container_width=True, type="primary")
+        if "historico" not in st.session_state: st.session_state.historico = []
+        st.session_state.historico.append(nueva_f)
+        st.session_state.edit_data = nueva_f
+        st.success("✅ ¡Flota Guardada!")
+        st.rerun()
         
 # --- PESTAÑA HISTORIAL ---
 with tab_historial:
