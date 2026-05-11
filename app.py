@@ -50,7 +50,7 @@ def leer_historial():
 st.markdown("""
     <style>
     @media print { .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header { display: none !important; } }
-    .titulo-bordo { color: #800020; font-size: 22px; font-weight: bold; border-bottom: 3px solid #800020; padding-bottom: 8px; margin-bottom: 20px; text-transform: uppercase; }
+    .titulo-bordo { color: #000; font-size: 22px; font-weight: bold; border-bottom: 3px solid #000; padding-bottom: 8px; margin-bottom: 20px; text-transform: uppercase; }
     .quote-card { background-color: #fdfdfd; padding: 20px; border-radius: 10px; border: 1px solid #eee; white-space: pre-wrap; font-family: sans-serif; font-size: 14px; line-height: 1.6; }
     [data-testid="stTable"] td { text-align: right !important; }
     </style>
