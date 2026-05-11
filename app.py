@@ -339,7 +339,8 @@ with tab_cot:
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
         doc_in = c_doc.text_input("CI/RUT", value=edit["doc"] if edit and "doc" in edit else "")
-        nom_sug = edit["n"] if edit else ""
+        # Reemplazo de seguridad para que no explote si no hay datos
+        nom_sug = edit.get('n') or edit.get('asegurado', '') if edit else ""
         if st.session_state.es_edicion and "V.2" not in nom_sug: nom_sug = f"{nom_sug} V.2"
         n_cot = c_nom.text_input("Nombre", value=nom_sug)
         v_cot = c_veh.text_input("Vehículo", value=edit.get("v", "") if edit else "")
@@ -388,57 +389,25 @@ with tab_flota:
         cont_f = edit.get('cont') or edit.get('datos_json', {}).get('cont', '099 635 244') if edit else '099 635 244'
         f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_flota")
 
-    # --- NUEVA TABLA DE VEHÍCULOS ---
-    cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
-    if edit and "tab" in edit:
-        df_f_init = pd.DataFrame(edit["tab"])
-    else:
-        # Estructura limpia con las columnas nuevas
-        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
-
-    t_flota = st.data_editor(
-        df_f_init,
-        num_rows="dynamic",
-        use_container_width=True,
-        key="editor_flotas_v_final",
-        column_order=cols_f,
-        column_config={
-            "Marca": st.column_config.TextColumn("Marca", width="medium"),
-            "Modelo": st.column_config.TextColumn("Modelo", width="medium"),
-            "Matrícula": st.column_config.TextColumn("Matrícula", width="small"),
-            "Cobertura": st.column_config.TextColumn("Cobertura", width="medium"),
-            "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
-            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
-        }
-    )
-    datos_f = {
-        "n": f_asegurado, 
-        "e": f_aseguradora, 
-        "cont": f_contacto, 
-        "tab": t_flota.to_dict(orient='records'), 
-        "ben": b_cot # o b_col, verificá cómo se llama tu variable de beneficios
-    }
-
-    if st.button("🚀 GUARDAR Y GENERAR PROPUESTA DE FLOTA", key="btn_f_flota_ok"):
-        nombre_cod = base64.b64encode(f_asegurado.encode()).decode()
-        link_f = f"https://dfseguros.streamlit.app/?flota={nombre_cod}"
+# --- NUEVA TABLA DE VEHÍCULOS (FLOTAS) ---
+        cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
         
-        db_f = {
-            "tipo": "flota", 
-            "asegurado": f_asegurado, 
-            "vehiculo_o_flota": f"Flota - {f_aseguradora}", 
-            "asesor": f_asesor, 
-            "datos_json": {
-                "tab": t_flota.to_dict(orient='records'),
-                "ase": f_aseguradora,
-                "cont": f_contacto
-            }, 
-            "link_cotizacion": link_f
-        }
-        if guardar_en_db(db_f):
-            st.success(f"✅ Flota guardada con éxito.")
-            st.link_button("👁️ VER PROPUESTA", link_f, use_container_width=True)
-   
+        if edit and "tab" in edit:
+            df_f_init = pd.DataFrame(edit["tab"])
+        else:
+            # Estructura limpia para nuevas flotas
+            df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
+        
+        # Limpieza de saltos de línea molestos
+        df_f_init = df_f_init.replace(r'\\n', ' ', regex=True)
+
+        t_flota = st.data_editor(
+            df_f_init,
+            num_rows="dynamic",
+            use_container_width=True,
+            key="editor_flotas_v_final",
+            column_order=cols_f
+        )
     
     # --- TABLA DE VEHÍCULOS (FLOTAS) ---
         cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
