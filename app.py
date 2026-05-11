@@ -326,68 +326,49 @@ with tab_ven:
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False)
         st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
 
-# --- PESTAÑA COTIZADOR INDIVIDUAL (CON EDICIÓN V.2) ---
+# --- PESTAÑA COTIZADOR INDIVIDUAL ---
 with tab_cot:
     st.subheader("📝 Cotizador Seguros para Vehículos")
     edit = st.session_state.edit_data
-    if st.session_state.es_edicion:
-        # Solo mostramos el aviso si 'edit' existe y tiene contenido
-        if isinstance(edit, dict) and edit:
-            nom_cliente_edit = edit.get('n') or edit.get('asegurado', 'Cliente')
-            st.warning(f"⚠️ Editando cotización de: {nom_cliente_edit}. Se guardará como V.2")
-
+    
+    # 1. Cabecera de Datos
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
-        doc_in = c_doc.text_input("CI/RUT", value=edit["doc"] if edit and "doc" in edit else "")
-        # Reemplazo de seguridad para que no explote si no hay datos
-        nom_sug = edit.get('n') or edit.get('asegurado', '') if edit else ""
-        if st.session_state.es_edicion and "V.2" not in nom_sug: nom_sug = f"{nom_sug} V.2"
-        n_cot = c_nom.text_input("Nombre", value=nom_sug)
-        v_cot = c_veh.text_input("Vehículo", value=edit.get("v", "") if edit else "")
-        e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), index=0)
-        cont_cot = c_con.text_input("Nombre y Contacto Asesor", value=edit["cont"] if edit else "")
+        doc_in = c_doc.text_input("CI/RUT", value=edit["doc"] if edit and "doc" in edit else "", key="ci_v4")
+        n_cot = c_nom.text_input("Nombre", value=edit.get('n', '') if edit else "", key="nom_v4")
+        v_cot = c_veh.text_input("Vehículo", value=edit.get("v", "") if edit else "", key="veh_v4")
+        e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v4")
+        cont_cot = c_con.text_input("Contacto Asesor", value=edit.get("cont", "099 635 244") if edit else "099 635 244", key="cont_v4")
 
-    df_p_init = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+    # 2. Tabla de 4 columnas (Aseguradora, Contado, 10 Cuotas, Deducible)
+    cols_i = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
+    df_p_init = pd.DataFrame(edit["tab"]) if edit and "tab" in edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
     
-# Definir columnas para Individual
-cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
+    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_i, key="editor_ind_v4")
+    
+    # 3. Textos Precargados (Recuperados)
+    col_a, col_b = st.columns(2)
+    with col_a:
+        t_ben_def = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n• Granizo: SANCOR sin deducible"
+        b_cot = st.text_area("Beneficios:", value=edit.get("ben", t_ben_def) if edit else t_ben_def, height=200, key="ben_v4")
+    with col_b:
+        t_h_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
+        c_h = st.text_area("Hogar:", value=edit.get("ch", t_h_def) if edit else t_h_def, height=130, key="hog_v4")
+        c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70, key="alq_v4")
+        c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70, key="bic_v4")
 
-df_p_init = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+    # 4. Guardar y Link (Todo adentro del 'with tab_cot')
+    if st.button("💾 Guardar y Generar Link Individual", use_container_width=True, key="btn_ind_v4"):
+        datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in, "fecha": datetime.now().strftime("%d/%m/%Y %H:%M")}
+        if "historico" not in st.session_state: st.session_state.historico = []
+        st.session_state.historico.append(datos_i)
+        st.session_state.edit_data = datos_i
+        st.success("✅ ¡Guardado!")
+        st.rerun()
 
-t_edit = st.data_editor(
-    df_p_init, 
-    num_rows="dynamic", 
-    use_container_width=True,
-    column_order=cols_individual, # Esto fija las columnas
-    column_config={
-        "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
-        "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
-        "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %.0f"),
-        "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
-    }
-)
-    
-col_a, col_b = st.columns(2)
-with col_a:
-    # Definimos el texto por defecto ANTES de usarlo
-    t_ben_defecto = (
-        "• Auxilio mecánico 24hs: Todas las aseguradoras\n"
-        "• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n"
-        "• Granizo: SANCOR sin deducible"
-    )
-    
-    # Lógica: Si hay datos de edición úsalos, si no, usa el texto por defecto
-    valor_final = edit.get("ben", t_ben_defecto) if edit else t_ben_defecto
-    
-    b_cot = st.text_area("Beneficios:", value=valor_final, height=200, key="text_area_ben_v2")
-
-with col_b:
-    # Textos de Hogar, Alquiler y Bici con la misma lógica
-    t_hogar_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
-    c_h = st.text_area("Hogar:", value=edit.get("ch", t_hogar_def) if edit else t_hogar_def, height=130)
-    
-    c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días en caso que tengas un siniestro y tu auto entre al taller\nCosto Anual: $ 3.500") if edit else "• Auto cortesía 15 días en caso que tengas un siniestro y tu auto entre al taller\nCosto Anual: $ 3.500", height=70)
-    c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000\n• Daños a Terceros: USD 10.000\nCosto Anual: USD 110") if edit else "• Hurto USD 1.000\n• Daños a Terceros: USD 10.000\nCosto Anual: USD 110", height=70)
+    if st.session_state.get('edit_data') and "v" in st.session_state.edit_data:
+        l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(st.session_state.edit_data).encode()).decode()}"
+        st.link_button("🚀 VER VISTA PREVIA INDIVIDUAL", l_i, type="primary", use_container_width=True)
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
