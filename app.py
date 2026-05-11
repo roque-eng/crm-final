@@ -48,65 +48,67 @@ def leer_historial():
     except: return pd.DataFrame()
 
 # Estilos CSS - Cambiados de Bordo a Azul Profesional y Celeste para tablas
+# Estilos CSS - Solo Vista Cliente en Azul Profesional
 st.markdown("""
     <style>
     @media print { .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header { display: none !important; } }
     
-    /* Títulos y líneas que antes eran bordó, ahora azules */
-    .titulo-azul { 
-        color: #1E3A8A; 
-        font-size: 24px; 
-        font-weight: bold; 
-        border-bottom: 3px solid #3B82F6; 
-        padding-bottom: 8px; 
-        margin-bottom: 20px; 
-        text-transform: uppercase; 
+    /* Línea principal debajo del título en la vista del cliente */
+    .linea-azul { 
+        border-bottom: 4px solid #1E3A8A !important; 
+        margin-bottom: 30px; 
     }
     
-    /* Las líneas separadoras de beneficios */
+    /* Encabezados de la tabla en la vista del cliente */
+    thead tr th { 
+        background-color: #f0f7ff !important; 
+        color: #1E3A8A !important; 
+        padding: 18px; 
+        font-size: 20px; 
+        text-align: center !important; 
+    }
+    
+    /* Líneas laterales de los beneficios */
     .ben-fila { 
-        background-color: #f0f7ff; 
+        background-color: #f8f9fa; 
         padding: 12px 20px; 
         border-radius: 8px; 
         margin-bottom: 10px; 
-        border-left: 6px solid #3B82F6; 
+        border-left: 6px solid #1E3A8A !important; 
         width: 100%; 
         font-size: 16px; 
-        color: #1E3A8A; 
+        color: #333; 
     }
     
-    /* Cajas de Hogar/Bici/Alquiler con borde azul */
+    /* Cajones de Coberturas Complementarias (Borde superior azul) */
     .caja-azul { 
         background-color: #ffffff; 
         padding: 20px; 
         border-radius: 12px; 
         height: 100%; 
-        border: 1px solid #e0e7ff; 
-        border-top: 5px solid #1E3A8A; 
+        border: 1px solid #e0e0e0; 
+        border-top: 5px solid #1E3A8A !important; 
         box-shadow: 2px 2px 10px rgba(0,0,0,0.05); 
     }
     
-    /* Color de los costos dentro de las cajas */
+    /* Resaltado de costos dentro de los cajones */
     .costo-res { 
-        color: #1E3A8A; 
+        color: #1E3A8A !important; 
         font-weight: bold; 
         display: block; 
         margin-top: 10px; 
         font-size: 19px; 
-        background: #e0f2fe; 
+        background: #f0f7ff !important; 
         padding: 5px 10px; 
         border-radius: 5px; 
     }
 
-    /* ESTILO PARA LAS TABLAS EN MODO EDICIÓN (Cabezales Azul Clarito) */
-    [data-testid="stTable"] th, [data-testid="stDataTableWidget"] th {
-        background-color: #DBEAFE !important;
-        color: #1E3A8A !important;
-    }
-    
-    /* Cambiar el color de los divisores st.divider() a azul */
-    hr {
-        border-top: 2px solid #3B82F6 !important;
+    /* Firma del asesor al final */
+    .firma-asesor {
+        border-top: 1px solid #1E3A8A !important;
+        padding-top: 10px;
+        color: #1E3A8A;
+        font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
