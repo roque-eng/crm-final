@@ -490,6 +490,53 @@ with tab_cot:
         st.code(link_final)
 
 # --- PESTAÑA FLOTAS ---
+    # --- PESTAÑA FLOTAS (BLOQUE CORREGIDO) ---
+with tab_flota:
+    st.subheader("📋 Cotizador Seguro de Flotas")
+    
+    # 1. Cabecera
+    edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_flota_final")
+        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_ase_cia_final")
+    with col_f2:
+        f_asesor = st.text_input("Asesor", value=edit_f.get('e', 'EDF SEGUROS'), key="f_ase_nom_final")
+        f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_cont_final")
+
+    # 2. Tabla de Vehículos
+    st.markdown("---")
+    cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
+    df_f_init = pd.DataFrame(edit_f["tab"]) if edit_f and "tab" in edit_f else pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
+    t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas_final")
+
+    # 3. Observaciones
+    st.markdown("### 📝 Detalles de la Propuesta")
+    f_obs = st.text_area("Observaciones:", value=edit_f.get('ben', ''), height=150, key="f_obs_final")
+
+    # 4. Guardado
+    if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_final", use_container_width=True):
+        nueva_f = {
+            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "n": f_asegurado, "e": f_aseguradora, "cont": f_contacto,
+            "tab": t_flota.to_dict(orient='records'), 
+            "ben": f_obs, "tipo": "Flota"
+        }
+        if "historico" not in st.session_state: st.session_state.historico = []
+        st.session_state.historico.append(nueva_f)
+        st.session_state.edit_data = nueva_f
+        st.success("✅ ¡Flota Guardada!")
+        st.rerun()
+
+    # 5. Generador de Link de Flota (Identación corregida para evitar error de línea 539)
+    if st.session_state.get('edit_data') and st.session_state.edit_data.get("tipo") == "Flota":
+        st.markdown("---")
+        datos_f_json = json.dumps(st.session_state.edit_data)
+        datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
+        link_f_final = f"https://dfseguros.streamlit.app/?f={datos_f_b64}" 
+        
+        st.link_button("🚀 VER VISTA PREVIA FLOTA", link_f_final, type="primary", use_container_width=True)
+        st.code(link_f_final)
 # --- DENTRO DE TAB_FLOTA ---
     st.markdown("---")
     cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
