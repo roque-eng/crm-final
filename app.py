@@ -379,60 +379,46 @@ with tab_cot:
 with tab_flota:
     st.subheader("📋 Cotizador Seguro de Flotas")
     
-    # --- CAMPOS DE CABECERA DE FLOTA ---
+    # 1. Cabecera de Datos
     col_f1, col_f2 = st.columns(2)
-    
     with col_f1:
-        # Recuperamos nombre del asegurado
-        nom_f = edit.get('asegurado') or edit.get('n', '') if edit else ""
-        f_asegurado = st.text_input("Asegurado", value=nom_f, key="f_nom_flota_new")
-        
-        f_aseguradora = st.selectbox("Aseguradora", 
-            ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], 
-            key="f_ase_cia_flota_new")
+        nom_f = (edit.get('asegurado') or edit.get('n', '')) if (edit and isinstance(edit, dict)) else ""
+        f_asegurado = st.text_input("Asegurado", value=nom_f, key="f_nom_v3")
+        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_cia_v3")
     
     with col_f2:
-        # Asesor y Contacto
-        f_asesor = st.text_input("Asesor", 
-            value=edit.get('asesor', 'EDF SEGUROS') if edit else "EDF SEGUROS", 
-            key="f_ase_nom_flota_new")
-            
-        cont_f = edit.get('cont') or "099 635 244" if edit else "099 635 244"
-        f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_flota_new")
+        f_asesor = st.text_input("Asesor", value=edit.get('asesor', 'EDF SEGUROS') if (edit and isinstance(edit, dict)) else "EDF SEGUROS", key="f_ase_v3")
+        cont_f = edit.get('cont') or "099 635 244" if (edit and isinstance(edit, dict)) else "099 635 244"
+        f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_v3")
 
-    st.markdown("---") # Una línea divisoria para que quede prolijo
+    st.markdown("---")
+
+    # 2. Definición de Columnas (Crucial para que no de NameError)
+    cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
     
-    # 2. Verificamos si hay datos para editar
-    edit = st.session_state.get('edit_data')
+    # 3. Lógica de la Tabla
     if edit and isinstance(edit, dict) and "tab" in edit:
         df_f_init = pd.DataFrame(edit["tab"])
-        # Aseguramos que tenga todas las columnas
         for c in cols_f:
             if c not in df_f_init.columns: df_f_init[c] = ""
     else:
-        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
-    
-    # 3. Limpieza de datos
-    df_f_init = df_f_init.replace(r'\\n', ' ', regex=True)
+        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total Riesgo", "Contado": 0, "Deducible": 0}])
 
     # 4. El Editor de Tabla
     t_flota = st.data_editor(
         df_f_init[cols_f], 
         num_rows="dynamic",
         use_container_width=True,
-        key="editor_flotas_final_v_ok"
+        key="editor_final_v10"
     )
 
-    # 5. CAMPO OBSERVACIONES (De lado a lado)
-    st.markdown("### 📝 Observaciones")
-    # Si edit existe, buscamos 'ben' o 'obs', si no, vacío
+    # 5. Observaciones Finales
+    st.markdown("### 📝 Detalles de la Propuesta")
     obs_val = edit.get('ben', '') if (edit and isinstance(edit, dict)) else ""
-    st.text_area("Detalles de la propuesta:", value=obs_val, height=150, key="f_obs_flota_final")
+    st.text_area("Observaciones:", value=obs_val, height=150, key="f_obs_v3")
 
-    # 6. BOTÓN DE GUARDAR
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("💾 Guardar Propuesta de Flota", use_container_width=True):
-        st.success("¡Propuesta de flota lista!")
+    if st.button("💾 Guardar Flota", use_container_width=True):
+        st.success("¡Datos listos!")
         
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
