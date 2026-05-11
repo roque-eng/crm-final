@@ -137,40 +137,70 @@ elif "q" in st.query_params or "f" in st.query_params:
 
 # Si hay una propuesta, se muestra la vista limpia
 if p:
-    # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (AZUL PROFESIONAL) ---
+    # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO PROFESIONAL) ---
     st.markdown("""
         <style>
             .main .block-container { max-width: 95% !important; padding-top: 2rem; }
             
-            /* Título y Línea Divisoria */
-            .titulo-azul { color: #1E3A8A; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
-            .linea-azul { border-bottom: 4px solid #1E3A8A; margin-bottom: 30px; }
+            /* Título en Gris Oscuro y Línea Divisoria */
+            .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
+            .linea-gris { border-bottom: 4px solid #333333; margin-bottom: 30px; }
             
-            /* Formato de Tablas para el Cliente */
+            /* Tablas */
             table { width: 100% !important; border-collapse: collapse; margin: 25px 0; }
-            thead tr th { background-color: #f0f7ff !important; color: #1E3A8A; padding: 18px; font-size: 20px; text-align: center !important; border-bottom: 2px solid #1E3A8A; }
+            thead tr th { background-color: #f8f9fa !important; color: #333333; padding: 18px; font-size: 20px; text-align: center !important; border-bottom: 2px solid #333333; }
             thead tr th:first-child { text-align: left !important; padding-left: 20px; }
             tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
             tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
 
-            /* Beneficios y Secciones Complementarias */
-            .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #1E3A8A; color: #333; }
-            .caja-azul { background-color: #ffffff; padding: 20px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #1E3A8A; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
-            .sub-tit { font-size: 22px !important; font-weight: bold; color: #1E3A8A; margin-bottom: 10px; display: block; }
-            .costo-res { color: #1E3A8A; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f0f7ff; padding: 5px 10px; border-radius: 5px; }
+            /* Beneficios y Cajas (Borde Gris) */
+            .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #333333; color: #333; }
+            .caja-gris { background-color: #ffffff; padding: 20px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #333333; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
+            .sub-tit { font-size: 22px !important; font-weight: bold; color: #333333; margin-bottom: 10px; display: block; }
+            .costo-res { color: #333333; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f0f0f0; padding: 5px 10px; border-radius: 5px; }
         </style>
-        <div class="titulo-azul">🛡️ EDF SEGUROS - Propuesta</div>
-        <div class="linea-azul"></div>
+        <div class="titulo-gris">EDF SEGUROS - Cotización</div>
+        <div class="linea-gris"></div>
     """, unsafe_allow_html=True)
 
-    # Encabezado con datos del Asegurado
+    # Encabezado
     c1, c2 = st.columns(2)
     c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
     if "v" in p: 
         c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
-    # --- DESDE AQUÍ CONTINÚA TU LÓGICA DE FORMATEO DE PRECIOS (Fila 190) ---
+    # Tabla de Precios
     df_p = pd.DataFrame(p["tab"]).fillna("")
+    for col in ["Contado", "10 Cuotas", "Deducible"]:
+        if col in df_p.columns:
+            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0).apply(lambda x: f"$ {int(x):,}".replace(",", "."))
+    st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
+
+    # Beneficios
+    if p.get("ben"):
+        st.markdown("### ✅ Beneficios Incluidos")
+        for b in p["ben"].split('\n'):
+            if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
+
+    # Coberturas Complementarias (Aquí actualicé a Bici Eléctrica)
+    st.markdown("### ⚠️ Coberturas Complementarias")
+    col1, col2, col3 = st.columns(3)
+    
+    def bloque_res(tit, ico, txt):
+        if not txt: return ""
+        res = f'<div class="caja-gris"><span class="sub-tit">{ico} {tit}</span>'
+        for l in txt.split('\n'):
+            if "$" in l or "Costo" in l: res += f'<span class="costo-res">💰 {l.strip()}</span>'
+            else: res += f'<span>{l.strip()}</span><br>'
+        return res + '</div>'
+    
+    col1.markdown(bloque_res("Hogar", "🏠", p.get("ch", "")), unsafe_allow_html=True)
+    col2.markdown(bloque_res("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
+    col3.markdown(bloque_res("Bici Eléctrica", "🚲", p.get("cb", "")), unsafe_allow_html=True) # <-- Título actualizado
+
+    st.markdown("---")
+    st.markdown(f"**Asesor:** {p.get('e', 'EDF SEGUROS')} | **Contacto:** {p.get('cont', '099 635 244')}")
+    st.stop()
     
     # --- FORMATEO DE PRECIOS ($ y miles) ---
     for col in ["Contado", "10 Cuotas", "Deducible"]:
