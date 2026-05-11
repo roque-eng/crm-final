@@ -410,6 +410,29 @@ with tab_flota:
             # Aquí iría tu lógica de guardado que ya tenías
             st.success("¡Cambios guardados correctamente!")
 
+        # 4. El Editor de Tabla
+        t_flota = st.data_editor(
+            df_f_init[cols_f], 
+            num_rows="dynamic",
+            use_container_width=True,
+            key="editor_flotas_final_v3"
+        )
+
+        # 5. CAMPOS DE TEXTO (Para que no de KeyError 'ben')
+        st.markdown("### 📝 Detalles Adicionales")
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            # Si edit existe, sacamos el beneficio, si no, vacío
+            b_val = edit.get('ben', '') if edit else ""
+            b_cot = st.text_area("Beneficios:", value=b_val, height=200, key="f_ben_flota")
+        
+        with col_b2:
+            st.info("Aquí podés agregar cláusulas específicas para la flota.")
+
+        # 6. BOTÓN DE GUARDAR
+        if st.button("💾 Guardar Propuesta de Flota", use_container_width=True):
+            st.success("¡Propuesta generada!")
+
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
     st.subheader("📜 Gestión de Historial")
