@@ -417,8 +417,39 @@ with tab_flota:
     obs_val = edit.get('ben', '') if (edit and isinstance(edit, dict)) else ""
     st.text_area("Observaciones:", value=obs_val, height=150, key="f_obs_v3")
 
-    if st.button("💾 Guardar Flota", use_container_width=True):
-        st.success("¡Datos listos!")
+    # 6. BOTÓN DE GUARDAR Y GENERAR
+    if st.button("💾 Guardar y Generar Link de Flota", use_container_width=True):
+        # Creamos el diccionario con toda la info de la cabecera y la tabla
+        nueva_flota = {
+            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "asegurado": f_asegurado,
+            "n": f_asegurado, # Para que sea compatible con el historial
+            "aseguradora": f_aseguradora,
+            "asesor": f_asesor,
+            "cont": f_contacto,
+            "tab": t_flota.to_dict('records'), # Guarda los vehículos de la tabla
+            "ben": obs_val, # Guarda las observaciones
+            "tipo": "Flota"
+        }
+        
+        # Lo metemos en el historial
+        if "historico" not in st.session_state:
+            st.session_state.historico = []
+        
+        st.session_state.historico.append(nueva_flota)
+        
+        # Guardamos en 'edit_data' para que la vista previa sepa qué mostrar
+        st.session_state.edit_data = nueva_flota
+        
+        st.success("✅ ¡Flota guardada en el historial!")
+        st.rerun() # Refrescamos para que aparezca en el historial al toque
+
+    # 7. BOTÓN DE VISTA PREVIA (Solo aparece si hay algo guardado)
+    if st.session_state.get('edit_data') and "tab" in st.session_state.edit_data:
+        st.markdown("---")
+        # Aquí ponés el link a tu web de cliente (propuesta.streamlit.app o la que uses)
+        url_cliente = "https://tu-app-de-propuestas.streamlit.app/" 
+        st.link_button("🔗 Ver Vista Previa para el Cliente", url_cliente, use_container_width=True, type="primary")
         
 # --- PESTAÑA HISTORIAL ---
 with tab_historial:
