@@ -380,25 +380,20 @@ with tab_flota:
     st.subheader("📋 Cotizador Seguro de Flotas") # 1 Tab
     
     # Aquí empieza tu bloque nuevo:
-        # --- BLOQUE DE FLOTAS RECONSTRUIDO ---
-        # 1. Definimos las columnas primero (para evitar NameError)
+# --- BLOQUE DE FLOTAS RECONSTRUIDO ---
         cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
         
-        # 2. Cargamos los datos para editar o creamos una fila vacía
-        if edit and "tab" in edit:
+        if edit and isinstance(edit, dict) and "tab" in edit:
             df_f_init = pd.DataFrame(edit["tab"])
-            # Aseguramos que tenga todas las columnas necesarias
             for c in cols_f:
                 if c not in df_f_init.columns: df_f_init[c] = ""
         else:
             df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
         
-        # 3. Limpieza de datos
         df_f_init = df_f_init.replace(r'\\n', ' ', regex=True)
 
-        # 4. El Editor de Tabla (con todas las columnas)
         t_flota = st.data_editor(
-            df_f_init[cols_f], # Forzamos el orden de las columnas aquí
+            df_f_init[cols_f], 
             num_rows="dynamic",
             use_container_width=True,
             key="editor_flotas_final_v3"
