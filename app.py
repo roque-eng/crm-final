@@ -147,7 +147,7 @@ elif "f" in query_params: # Flota
     p["es_flota"] = True
 
 if p:
-    # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
+    # --- ESTILOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
         <style>
             .main .block-container { max-width: 95% !important; padding-top: 2rem; }
@@ -166,15 +166,12 @@ if p:
         <div class="linea-gris"></div>
     """, unsafe_allow_html=True)
 
-    # Encabezado Asegurado
     c1, c2 = st.columns(2)
     c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
-    if not p.get("es_flota"):
-        c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
-    else:
-        c2.markdown(f"### 🚛 Propuesta de Flota")
+    if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
+    else: c2.markdown(f"### 🚛 Propuesta de Flota")
 
-    # Tabla Dinámica (Muestra 4 o 6 columnas según los datos)
+    # Tabla Dinámica (4 o 6 columnas)
     df_p = pd.DataFrame(p["tab"]).fillna("")
     for col in ["Contado", "10 Cuotas", "Deducible"]:
         if col in df_p.columns:
@@ -182,14 +179,14 @@ if p:
     
     st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
 
-    # Beneficios / Observaciones
+    # Beneficios / Detalles de Propuesta
     if p.get("ben"):
         st.markdown("### ✅ Detalles y Beneficios")
         for b in p["ben"].split('\n'):
             if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # Coberturas Complementarias (Solo si no es flota, o podés dejarlo para ambos)
-    if not p.get("es_flota"):
+    # Coberturas Complementarias (Solo si NO es flota)
+    if "v" in p:
         st.markdown("### ⚠️ Coberturas Complementarias")
         col1, col2, col3 = st.columns(3)
         def bloque_res(tit, ico, txt):
@@ -204,10 +201,10 @@ if p:
         col2.markdown(bloque_res("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
         col3.markdown(bloque_res("Bici Eléctrica", "🚲", p.get("cb", "")), unsafe_allow_html=True)
 
-    # Pie de Página Profesional
+    # Pie de Página con Fecha y Asesor
     st.markdown(f"""
         <div class="footer-cliente">
-            <div><b>Fecha de Cotización:</b> {p.get('fecha', datetime.now().strftime("%d/%m/%Y"))}</div>
+            <div><b>Fecha:</b> {p.get('fecha', datetime.now().strftime("%d/%m/%Y"))}</div>
             <div><b>Asesor:</b> {p.get('e', 'EDF SEGUROS')} | <b>Contacto:</b> {p.get('cont', '099 635 244')}</div>
         </div>
     """, unsafe_allow_html=True)
@@ -493,41 +490,27 @@ with tab_cot:
         st.code(link_final)
 
 # --- PESTAÑA FLOTAS ---
-with tab_flota:
-    st.subheader("📋 Cotizador Seguro de Flotas")
-    
-    # Verificamos si los datos en memoria son realmente de una flota
-    edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
-
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_flota_v5")
-        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_cia_flota_v5")
-    with col_f2:
-        f_asesor = st.text_input("Asesor", value=edit_f.get('e', 'EDF SEGUROS'), key="f_ase_nom_v5")
-        f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_cont_flota_v5")
-
+# --- DENTRO DE TAB_FLOTA ---
     st.markdown("---")
     cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
     
     # Inicializamos tabla de flotas
-    df_f_init = pd.DataFrame(edit_f["tab"]) if edit_f and "tab" in edit_f else pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
+    if edit_f and "tab" in edit_f:
+        df_f_init = pd.DataFrame(edit_f["tab"])
+    else:
+        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
 
-    t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas_v5")
+    t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas_v_final")
 
     st.markdown("### 📝 Detalles de la Propuesta")
-    obs_val = edit_f.get('ben', '')
-    f_obs = st.text_area("Observaciones:", value=obs_val, height=150, key="f_obs_flota_v5")
+    f_obs = st.text_area("Observaciones:", value=edit_f.get('ben', ''), height=150, key="f_obs_flota_v_final")
 
-if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_v5", use_container_width=True):
+    if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_v_final", use_container_width=True):
         nueva_f = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "n": f_asegurado, 
-            "e": f_aseguradora, 
-            "cont": f_contacto,
+            "n": f_asegurado, "e": f_aseguradora, "cont": f_contacto,
             "tab": t_flota.to_dict(orient='records'), 
-            "ben": f_obs, 
-            "tipo": "Flota"
+            "ben": f_obs, "tipo": "Flota"
         }
         if "historico" not in st.session_state: st.session_state.historico = []
         st.session_state.historico.append(nueva_f)
@@ -535,16 +518,11 @@ if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_v5", use_con
         st.success("✅ ¡Flota Guardada!")
         st.rerun()
 
-    # --- NUEVO: GENERADOR DE LINK DE FLOTA ---
+    # --- GENERADOR DE LINK (Aquí estaba el error de espacios) ---
     if st.session_state.get('edit_data') and st.session_state.edit_data.get("tipo") == "Flota":
         st.markdown("---")
-        st.markdown("### 🔗 Link de Flota para enviar")
-        
-        # Encriptamos con la letra 'f' para identificar que es formato Flota
         datos_f_json = json.dumps(st.session_state.edit_data)
         datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
-        
-        # Asegúrate de que esta URL sea la de tu app real
         link_f_final = f"https://dfseguros.streamlit.app/?f={datos_f_b64}" 
         
         st.link_button("🚀 VER VISTA PREVIA FLOTA", link_f_final, type="primary", use_container_width=True)
