@@ -384,7 +384,7 @@ with tab_flota:
     with col_f1:
         nom_f = (edit.get('asegurado') or edit.get('n', '')) if (edit and isinstance(edit, dict)) else ""
         f_asegurado = st.text_input("Asegurado", value=nom_f, key="f_nom_v3")
-        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_cia_v3")
+        f_aseguradora = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "BERKLEY", "BARBUS"], key="f_cia_v3")
     
     with col_f2:
         f_asesor = st.text_input("Asesor", value=edit.get('asesor', 'EDF SEGUROS') if (edit and isinstance(edit, dict)) else "EDF SEGUROS", key="f_ase_v3")
@@ -421,30 +421,31 @@ with tab_flota:
         st.success("¡Datos listos!")
         
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
-with tab_hist:
-    st.subheader("📜 Gestión de Historial")
-    c_bus, c_ref, c_del_all = st.columns([3, 1, 2])
-    bus_h = c_bus.text_input("🔍 Buscar por cliente...", key="bus_hist")
-    if c_ref.button("🔄 ACTUALIZAR"): st.rerun()
-    if c_del_all.button("🔥 BORRAR TODO EL HISTORIAL", type="primary"):
-        headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-        res = requests.delete(f"{SUPABASE_URL}/rest/v1/cotizaciones?id=not.is.null", headers=headers)
-        if res.status_code in [200, 204]: st.success("Vaciado."); st.rerun()
-
-    df_h = leer_historial()
-    if not df_h.empty:
-        df_h['Fecha'] = pd.to_datetime(df_h['created_at']).dt.strftime('%d/%m/%Y %H:%M')
-        if bus_h: df_h = df_h[df_h['asegurado'].str.contains(bus_h, case=False, na=False)]
-        for index, row in df_h.iterrows():
-            with st.container(border=True):
-                h1, h2, h3 = st.columns([4, 1, 1])
-                h1.write(f"📅 {row['Fecha']} | 👤 **{row['asegurado']}**")
-                h2.link_button("📂 VER", row['link_cotizacion'], use_container_width=True)
-                if h3.button("📝 EDITAR", key=f"btn_ed_{row['id']}", use_container_width=True):
-                    st.session_state.edit_data = row['datos_json']
-                    st.session_state.es_edicion = True
-                    st.success("Cargado. Ve a COTIZADOR.")
-                    st.rerun()
+with tab_historial:
+    st.subheader("inteHistorial de Cotizaciones")
+    
+    # Supongamos que tus datos están en st.session_state.historico
+    if "historico" in st.session_state and st.session_state.historico:
+        for i, registro in enumerate(st.session_state.historico):
+            # Creamos columnas para que el botón quede al final de la fila
+            col_data, col_accion = st.columns([0.9, 0.1])
+            
+            with col_data:
+                # Mostramos la info principal en una línea prolija
+                fecha = registro.get('fecha', 'S/F')
+                cliente = registro.get('n') or registro.get('asegurado', 'Cliente')
+                tipo = "Flota" if "tab" in registro else "Indiv."
+                st.write(f"**{fecha}** | {cliente} ({tipo})")
+            
+            with col_accion:
+                # Botón individual para borrar (usamos el índice i como llave)
+                if st.button("❌", key=f"del_{i}"):
+                    st.session_state.historico.pop(i)
+                    st.rerun() # Refrescamos para que desaparezca al toque
+            
+            st.divider() # Una rayita para separar cada caso
+    else:
+        st.info("No hay cotizaciones en el historial.")
 
 # --- PESTAÑA ANÁLISIS ---
 with tab_an:
