@@ -47,24 +47,68 @@ def leer_historial():
         return pd.DataFrame(response.json()) if response.status_code == 200 else pd.DataFrame()
     except: return pd.DataFrame()
 
-    st.markdown("""
-        <style>
-            .main .block-container { max-width: 100% !important; padding-top: 2rem; }
-            .titulo-cot { color: #000; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
-            .linea { border-bottom: 3px solid #000; margin-bottom: 30px; }
-            .tabla-container { width: 100%; margin: 25px 0; }
-            table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
-            thead tr th { background-color: rgba(0, 102, 204, 0.1) !important; color: #000; padding: 18px; font-size: 20px; text-align: center !important; }
-            thead tr th:first-child { text-align: left !important; padding-left: 20px; }
-            tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
-            tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
-            .caja-azul { background-color: rgba(0, 102, 204, 0.05); padding: 20px; border-radius: 12px; height: 100%; border: 1px solid rgba(0, 102, 204, 0.1); }
-            .sub-tit { font-size: 22px !important; font-weight: bold; color: #000; margin-bottom: 10px; display: block; }
-            .costo-res { color: #0066cc; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; }
-            .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #28a745; width: 100%; font-size: 16px; color: #333; }
-        </style>
-        <div class="titulo-cot">🛡️ EDF SEGUROS - Propuesta</div>
-        <div class="linea"></div>
+# Estilos CSS - Cambiados de Bordo a Azul Profesional y Celeste para tablas
+st.markdown("""
+    <style>
+    @media print { .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header { display: none !important; } }
+    
+    /* Títulos y líneas que antes eran bordó, ahora azules */
+    .titulo-azul { 
+        color: #1E3A8A; 
+        font-size: 24px; 
+        font-weight: bold; 
+        border-bottom: 3px solid #3B82F6; 
+        padding-bottom: 8px; 
+        margin-bottom: 20px; 
+        text-transform: uppercase; 
+    }
+    
+    /* Las líneas separadoras de beneficios */
+    .ben-fila { 
+        background-color: #f0f7ff; 
+        padding: 12px 20px; 
+        border-radius: 8px; 
+        margin-bottom: 10px; 
+        border-left: 6px solid #3B82F6; 
+        width: 100%; 
+        font-size: 16px; 
+        color: #1E3A8A; 
+    }
+    
+    /* Cajas de Hogar/Bici/Alquiler con borde azul */
+    .caja-azul { 
+        background-color: #ffffff; 
+        padding: 20px; 
+        border-radius: 12px; 
+        height: 100%; 
+        border: 1px solid #e0e7ff; 
+        border-top: 5px solid #1E3A8A; 
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.05); 
+    }
+    
+    /* Color de los costos dentro de las cajas */
+    .costo-res { 
+        color: #1E3A8A; 
+        font-weight: bold; 
+        display: block; 
+        margin-top: 10px; 
+        font-size: 19px; 
+        background: #e0f2fe; 
+        padding: 5px 10px; 
+        border-radius: 5px; 
+    }
+
+    /* ESTILO PARA LAS TABLAS EN MODO EDICIÓN (Cabezales Azul Clarito) */
+    [data-testid="stTable"] th, [data-testid="stDataTableWidget"] th {
+        background-color: #DBEAFE !important;
+        color: #1E3A8A !important;
+    }
+    
+    /* Cambiar el color de los divisores st.divider() a azul */
+    hr {
+        border-top: 2px solid #3B82F6 !important;
+    }
+    </style>
     """, unsafe_allow_html=True)
 
 query_params = st.query_params
