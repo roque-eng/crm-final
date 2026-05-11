@@ -386,7 +386,7 @@ with col_b:
     t_hogar_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
     c_h = st.text_area("Hogar:", value=edit.get("ch", t_hogar_def) if edit else t_hogar_def, height=130)
     
-    c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70)
+    c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días en caso que tengas un siniestro y tu auto entre al taller") if edit else "• Auto cortesía 15 días en caso que tengas un siniestro y tu auto entre al taller", height=70)
     c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70)
 
 # --- PESTAÑA FLOTAS ---
