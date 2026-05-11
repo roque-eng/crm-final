@@ -147,7 +147,7 @@ elif "f" in query_params: # Flota
     p["es_flota"] = True
 
 if p:
-    # --- ESTILOS VISTA CLIENTE (GRIS OSCURO) ---
+    # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
         <style>
             .main .block-container { max-width: 95% !important; padding-top: 2rem; }
@@ -160,7 +160,7 @@ if p:
             .caja-gris { background-color: #ffffff; padding: 20px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #333333; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
             .sub-tit { font-size: 22px !important; font-weight: bold; color: #333333; margin-bottom: 10px; display: block; }
             .costo-res { color: #333333; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f0f0f0; padding: 5px 10px; border-radius: 5px; }
-            .footer-cliente { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ccc; color: #666; font-size: 14px; display: flex; justify-content: space-between; }
+            .footer-cliente { margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; color: #888; font-size: 14px; display: flex; justify-content: space-between; }
         </style>
         <div class="titulo-gris">EDF SEGUROS - Cotización</div>
         <div class="linea-gris"></div>
@@ -168,25 +168,29 @@ if p:
 
     c1, c2 = st.columns(2)
     c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
-    if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
-    else: c2.markdown(f"### 🚛 Propuesta de Flota")
+    
+    es_flota = "v" not in p # Si no hay 'v', es flota
+    
+    if not es_flota:
+        c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
+    else:
+        c2.markdown(f"### 🚛 Propuesta de Flota")
 
-    # Tabla Dinámica (4 o 6 columnas)
+    # Tabla de Precios
     df_p = pd.DataFrame(p["tab"]).fillna("")
     for col in ["Contado", "10 Cuotas", "Deducible"]:
         if col in df_p.columns:
             df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0).apply(lambda x: f"$ {int(x):,}".replace(",", "."))
-    
     st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
 
-    # Beneficios / Detalles de Propuesta
+    # Beneficios
     if p.get("ben"):
         st.markdown("### ✅ Detalles y Beneficios")
         for b in p["ben"].split('\n'):
             if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # Coberturas Complementarias (Solo si NO es flota)
-    if "v" in p:
+    # Coberturas Complementarias (SOLO INDIVIDUAL)
+    if not es_flota:
         st.markdown("### ⚠️ Coberturas Complementarias")
         col1, col2, col3 = st.columns(3)
         def bloque_res(tit, ico, txt):
@@ -201,13 +205,21 @@ if p:
         col2.markdown(bloque_res("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
         col3.markdown(bloque_res("Bici Eléctrica", "🚲", p.get("cb", "")), unsafe_allow_html=True)
 
-    # Pie de Página con Fecha y Asesor
-    st.markdown(f"""
-        <div class="footer-cliente">
-            <div><b>Fecha:</b> {p.get('fecha', datetime.now().strftime("%d/%m/%Y"))}</div>
-            <div><b>Asesor:</b> {p.get('e', 'EDF SEGUROS')} | <b>Contacto:</b> {p.get('cont', '099 635 244')}</div>
-        </div>
-    """, unsafe_allow_html=True)
+    # --- PIE DE PÁGINA DIFERENCIADO ---
+    fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
+    
+    if not es_flota:
+        # INDIVIDUAL: Muestra Fecha + Asesor
+        st.markdown(f"""
+            <div class="footer-cliente">
+                <div><b>Fecha de Cotización:</b> {fecha_val}</div>
+                <div><b>Asesor:</b> {p.get('e', 'EDF SEGUROS')} | <b>Contacto:</b> {p.get('cont', '099 635 244')}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        # FLOTA: Muestra solo Fecha (limpio)
+        st.markdown(f'<div class="footer-cliente" style="justify-content: flex-end;">Fecha de Cotización: {fecha_val}</div>', unsafe_allow_html=True)
+    
     st.stop()
     
     # --- FORMATEO DE PRECIOS ($ y miles) ---
