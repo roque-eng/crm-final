@@ -349,12 +349,16 @@ with tab_cot:
 
     df_p_init = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
     
+# Definir columnas para Individual
+cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
+
+df_p_init = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+
     t_edit = st.data_editor(
         df_p_init, 
         num_rows="dynamic", 
         use_container_width=True,
-        # ESTA LÍNEA FIJA EL ORDEN DE IZQUIERDA A DERECHA
-        column_order=("Aseguradora", "Contado", "10 Cuotas", "Deducible"),
+        column_order=cols_individual, # Esto fija las columnas
         column_config={
             "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
             "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
@@ -365,15 +369,25 @@ with tab_cot:
     
     col_a, col_b = st.columns(2)
     with col_a:
-        t_ben = "• Auxilio mecánico 24hs: Todas las aseguradoras\n• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n• Granizo: SANCOR sin deducible"
-        b_cot = st.text_area("Beneficios:", value=edit["ben"] if edit else t_ben, height=200)
+        # Definimos el texto por defecto ANTES de usarlo
+        t_ben_defecto = (
+            "• Auxilio mecánico 24hs: Todas las aseguradoras\n"
+            "• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n"
+            "• Granizo: SANCOR sin deducible"
+        )
+        
+        # Lógica: Si hay datos de edición úsalos, si no, usa el texto por defecto
+        valor_final = edit.get("ben", t_ben_defecto) if edit else t_ben_defecto
+        
+        b_cot = st.text_area("Beneficios:", value=valor_final, height=200, key="text_area_ben_v2")
+    
     with col_b:
-        t_h = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n• Remoción de Escombros: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
-        c_h = st.text_area("Hogar:", value=edit.get("ch", t_h) if edit else t_h, height=130)
+        # Textos de Hogar, Alquiler y Bici con la misma lógica
+        t_hogar_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
+        c_h = st.text_area("Hogar:", value=edit.get("ch", t_hogar_def) if edit else t_hogar_def, height=130)
+        
         c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70)
         c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70)
-    datos_i = {"n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "doc": doc_in}
-    l_i = f"https://dfseguros.streamlit.app/?q={base64.b64encode(json.dumps(datos_i).encode()).decode()}"
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
