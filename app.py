@@ -280,7 +280,7 @@ if "es_edicion" not in st.session_state:
     st.session_state.es_edicion = False
 
 # Crear Pestañas
-tab_car, tab_ven, tab_cot, tab_flota, tab_hist, tab_an = st.tabs([
+tab_car, tab_ven, tab_cot, tab_flota, tab_historial, tab_an = st.tabs([
     "👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"
 ])
 
