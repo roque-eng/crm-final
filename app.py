@@ -377,56 +377,45 @@ with tab_cot:
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
-    st.subheader("📋 Cotizador Seguro de Flotas") # 1 Tab
+    st.subheader("📋 Cotizador Seguro de Flotas")
     
-    # Aquí empieza tu bloque nuevo:
-        # --- BLOQUE DE FLOTAS RECONSTRUIDO ---
-        cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
-        
-        if edit and isinstance(edit, dict) and "tab" in edit:
-            df_f_init = pd.DataFrame(edit["tab"])
-            for c in cols_f:
-                if c not in df_f_init.columns: df_f_init[c] = ""
-        else:
-            df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
-        
-        df_f_init = df_f_init.replace(r'\\n', ' ', regex=True)
+    # 1. Definimos las columnas
+    cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
+    
+    # 2. Verificamos si hay datos para editar
+    edit = st.session_state.get('edit_data')
+    if edit and isinstance(edit, dict) and "tab" in edit:
+        df_f_init = pd.DataFrame(edit["tab"])
+        # Aseguramos que tenga todas las columnas
+        for c in cols_f:
+            if c not in df_f_init.columns: df_f_init[c] = ""
+    else:
+        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
+    
+    # 3. Limpieza de datos
+    df_f_init = df_f_init.replace(r'\\n', ' ', regex=True)
 
-        t_flota = st.data_editor(
-            df_f_init[cols_f], 
-            num_rows="dynamic",
-            use_container_width=True,
-            key="editor_flotas_final_v3"
-        )
+    # 4. El Editor de Tabla
+    t_flota = st.data_editor(
+        df_f_init[cols_f], 
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editor_flotas_final_v_ok"
+    )
 
-        # 5. Botón de Guardar (para que no quede "flotando")
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("💾 Guardar Cambios en Flota", use_container_width=True):
-            # Aquí iría tu lógica de guardado que ya tenías
-            st.success("¡Cambios guardados correctamente!")
+    # 5. CAMPOS DE TEXTO (Para evitar el KeyError 'ben')
+    st.markdown("### 📝 Detalles Adicionales")
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        b_val = edit.get('ben', '') if (edit and isinstance(edit, dict)) else ""
+        st.text_area("Beneficios:", value=b_val, height=200, key="f_ben_flota_ok")
+    
+    with col_b2:
+        st.info("Aquí podés agregar cláusulas específicas para la propuesta de flota.")
 
-        # 4. El Editor de Tabla
-        t_flota = st.data_editor(
-            df_f_init[cols_f], 
-            num_rows="dynamic",
-            use_container_width=True,
-            key="editor_flotas_final_v3"
-        )
-
-        # 5. CAMPOS DE TEXTO (Para que no de KeyError 'ben')
-        st.markdown("### 📝 Detalles Adicionales")
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            # Si edit existe, sacamos el beneficio, si no, vacío
-            b_val = edit.get('ben', '') if edit else ""
-            b_cot = st.text_area("Beneficios:", value=b_val, height=200, key="f_ben_flota")
-        
-        with col_b2:
-            st.info("Aquí podés agregar cláusulas específicas para la flota.")
-
-        # 6. BOTÓN DE GUARDAR
-        if st.button("💾 Guardar Propuesta de Flota", use_container_width=True):
-            st.success("¡Propuesta generada!")
+    # 6. BOTÓN DE GUARDAR
+    if st.button("💾 Guardar Cambios de Flota", use_container_width=True):
+        st.success("¡Propuesta de flota lista para generar!")
 
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
