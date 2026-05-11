@@ -354,40 +354,40 @@ cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
 
 df_p_init = pd.DataFrame(edit["tab"]) if edit else pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
 
-    t_edit = st.data_editor(
-        df_p_init, 
-        num_rows="dynamic", 
-        use_container_width=True,
-        column_order=cols_individual, # Esto fija las columnas
-        column_config={
-            "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
-            "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
-            "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %.0f"),
-            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
-        }
+t_edit = st.data_editor(
+    df_p_init, 
+    num_rows="dynamic", 
+    use_container_width=True,
+    column_order=cols_individual, # Esto fija las columnas
+    column_config={
+        "Aseguradora": st.column_config.TextColumn("Aseguradora", width="medium"),
+        "Contado": st.column_config.NumberColumn("Contado", format="$ %.0f"),
+        "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %.0f"),
+        "Deducible": st.column_config.NumberColumn("Deducible", format="$ %.0f")
+    }
+)
+    
+col_a, col_b = st.columns(2)
+with col_a:
+    # Definimos el texto por defecto ANTES de usarlo
+    t_ben_defecto = (
+        "• Auxilio mecánico 24hs: Todas las aseguradoras\n"
+        "• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n"
+        "• Granizo: SANCOR sin deducible"
     )
     
-    col_a, col_b = st.columns(2)
-    with col_a:
-        # Definimos el texto por defecto ANTES de usarlo
-        t_ben_defecto = (
-            "• Auxilio mecánico 24hs: Todas las aseguradoras\n"
-            "• Cristales: BSE/SBI USD 200, SURA USD 100, MAPFRE ilimitado, SANCOR USD 300\n"
-            "• Granizo: SANCOR sin deducible"
-        )
-        
-        # Lógica: Si hay datos de edición úsalos, si no, usa el texto por defecto
-        valor_final = edit.get("ben", t_ben_defecto) if edit else t_ben_defecto
-        
-        b_cot = st.text_area("Beneficios:", value=valor_final, height=200, key="text_area_ben_v2")
+    # Lógica: Si hay datos de edición úsalos, si no, usa el texto por defecto
+    valor_final = edit.get("ben", t_ben_defecto) if edit else t_ben_defecto
     
-    with col_b:
-        # Textos de Hogar, Alquiler y Bici con la misma lógica
-        t_hogar_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
-        c_h = st.text_area("Hogar:", value=edit.get("ch", t_hogar_def) if edit else t_hogar_def, height=130)
-        
-        c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70)
-        c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70)
+    b_cot = st.text_area("Beneficios:", value=valor_final, height=200, key="text_area_ben_v2")
+
+with col_b:
+    # Textos de Hogar, Alquiler y Bici con la misma lógica
+    t_hogar_def = "• Incendio Edificio: USD 100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\nCosto Anual Apartamentos: USD 120\nCosto Anual Casas: USD 190"
+    c_h = st.text_area("Hogar:", value=edit.get("ch", t_hogar_def) if edit else t_hogar_def, height=130)
+    
+    c_a = st.text_area("Alquiler:", value=edit.get("ca", "• Auto cortesía 15 días...") if edit else "• Auto cortesía 15 días...", height=70)
+    c_b = st.text_area("Bici:", value=edit.get("cb", "• Hurto USD 1.000...") if edit else "• Hurto USD 1.000...", height=70)
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
