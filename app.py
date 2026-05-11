@@ -387,22 +387,9 @@ with tab_flota:
         f_asesor = st.text_input("Asesor", value=edit.get('asesor', 'EDF SEGUROS') if edit else "EDF SEGUROS", key="f_ase_nom_flota")
         cont_f = edit.get('cont') or edit.get('datos_json', {}).get('cont', '099 635 244') if edit else '099 635 244'
         f_contacto = st.text_input("Contacto", value=cont_f, key="f_cont_flota")
-        
-    # --- TABLA DE VEHÍCULOS (FLOTAS) ---
-        df_p_f = pd.DataFrame(edit["tab"]) if edit and "tab" in edit else pd.DataFrame(columns=cols_f)
-        
-        # Aplicamos el símbolo $ solo si la tabla existe para evitar el cartel rojo
-        if not df_p_f.empty:
-            for col in ["Contado", "Deducible"]:
-                if col in df_p_f.columns:
-                    df_p_f[col] = pd.to_numeric(df_p_f[col], errors='coerce').fillna(0)
-                    # Lo mostramos con $ pero solo para visualización final
-        
-        t_edit = st.data_editor(df_p_f, num_rows="dynamic", key="editor_flotas_v2")
 
     # --- NUEVA TABLA DE VEHÍCULOS ---
     cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
-    
     if edit and "tab" in edit:
         df_f_init = pd.DataFrame(edit["tab"])
     else:
@@ -451,6 +438,21 @@ with tab_flota:
         if guardar_en_db(db_f):
             st.success(f"✅ Flota guardada con éxito.")
             st.link_button("👁️ VER PROPUESTA", link_f, use_container_width=True)
+   
+    
+    # --- TABLA DE VEHÍCULOS (FLOTAS) ---
+        cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
+        df_p_f = pd.DataFrame(edit["tab"]) if edit and "tab" in edit else pd.DataFrame(columns=cols_f)
+        
+        if not df_p_f.empty:
+            for col in ["Contado", "Deducible"]:
+                if col in df_p_f.columns:
+                    df_p_f[col] = pd.to_numeric(df_p_f[col], errors='coerce').fillna(0)
+        
+        t_edit = st.data_editor(df_p_f, num_rows="dynamic", key="editor_flotas_v2")
+
+ 
+
 
 # --- PESTAÑA HISTORIAL (CON EDICIÓN) ---
 with tab_hist:
