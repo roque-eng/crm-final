@@ -137,56 +137,41 @@ elif "q" in st.query_params or "f" in st.query_params:
 
 # Si hay una propuesta, se muestra la vista limpia
 if p:
-# --- ALREDEDOR DE LA FILA 85 ---
-# --- VISTA DEL CLIENTE: ESTILO REFINADO ---
+    # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (AZUL PROFESIONAL) ---
     st.markdown("""
         <style>
-            .main .block-container { max-width: 100% !important; padding-top: 2rem; }
+            .main .block-container { max-width: 95% !important; padding-top: 2rem; }
             
-            /* Título en Gris Muy Oscuro */
-            .titulo-cot { color: #2C2C2C; font-size: 42px !important; font-weight: 800; margin-bottom: 0px; }
+            /* Título y Línea Divisoria */
+            .titulo-azul { color: #1E3A8A; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
+            .linea-azul { border-bottom: 4px solid #1E3A8A; margin-bottom: 30px; }
             
-            /* Línea en Bordó institucional */
-            .linea { border-bottom: 4px solid #800020; margin-bottom: 30px; }
-            
-            .tabla-container { width: 100%; margin: 25px 0; }
-            table { width: 100% !important; border-collapse: collapse; margin: 0 auto; }
-            
-            /* Encabezados con toque bordó */
-            thead tr th { background-color: rgba(128, 0, 32, 0.05) !important; color: #800020; padding: 18px; font-size: 20px; text-align: center !important; }
+            /* Formato de Tablas para el Cliente */
+            table { width: 100% !important; border-collapse: collapse; margin: 25px 0; }
+            thead tr th { background-color: #f0f7ff !important; color: #1E3A8A; padding: 18px; font-size: 20px; text-align: center !important; border-bottom: 2px solid #1E3A8A; }
             thead tr th:first-child { text-align: left !important; padding-left: 20px; }
-            
             tbody td { padding: 16px; font-size: 18px; text-align: center; border-bottom: 1px solid #eee; }
             tbody td:first-child { text-align: left !important; font-weight: bold; padding-left: 20px; width: 30%; }
-            
-            /* Cajones de Coberturas */
-            .caja-azul { 
-                background-color: #ffffff; 
-                padding: 20px; border-radius: 12px; height: 100%; 
-                border: 1px solid #e0e0e0; 
-                border-top: 5px solid #800020; /* Detalle superior en bordó */
-                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-            }
-            .sub-tit { font-size: 22px !important; font-weight: bold; color: #2C2C2C; margin-bottom: 10px; display: block; }
-            
-            /* Costos resaltados en Gris Oscuro */
-            .costo-res { color: #2C2C2C; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f4f4f4; padding: 5px 10px; border-radius: 5px; }
-            
-            .ben-fila { 
-                background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; 
-                margin-bottom: 10px; border-left: 6px solid #800020; width: 100%; 
-                font-size: 16px; color: #333; 
-            }
+
+            /* Beneficios y Secciones Complementarias */
+            .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #1E3A8A; color: #333; }
+            .caja-azul { background-color: #ffffff; padding: 20px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #1E3A8A; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
+            .sub-tit { font-size: 22px !important; font-weight: bold; color: #1E3A8A; margin-bottom: 10px; display: block; }
+            .costo-res { color: #1E3A8A; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f0f7ff; padding: 5px 10px; border-radius: 5px; }
         </style>
-        <div class="titulo-cot">🛡️ EDF SEGUROS - Propuesta</div>
-        <div class="linea"></div>
+        <div class="titulo-azul">🛡️ EDF SEGUROS - Propuesta</div>
+        <div class="linea-azul"></div>
     """, unsafe_allow_html=True)
 
+    # Encabezado con datos del Asegurado
     c1, c2 = st.columns(2)
     c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
-    if "v" in p: c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
+    if "v" in p: 
+        c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
 
+    # --- DESDE AQUÍ CONTINÚA TU LÓGICA DE FORMATEO DE PRECIOS (Fila 190) ---
     df_p = pd.DataFrame(p["tab"]).fillna("")
+    
     # --- FORMATEO DE PRECIOS ($ y miles) ---
     for col in ["Contado", "10 Cuotas", "Deducible"]:
         if col in df_p.columns:
