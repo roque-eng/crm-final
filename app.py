@@ -380,7 +380,7 @@ with tab_flota:
     st.subheader("📋 Cotizador Seguro de Flotas") # 1 Tab
     
     # Aquí empieza tu bloque nuevo:
-# --- BLOQUE DE FLOTAS RECONSTRUIDO ---
+        # --- BLOQUE DE FLOTAS RECONSTRUIDO ---
         cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
         
         if edit and isinstance(edit, dict) and "tab" in edit:
