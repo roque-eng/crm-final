@@ -145,8 +145,9 @@ if not p:
 # --- 2. VISTA DEL CLIENTE ---
 if p:
     # --- 1. ENCABEZADO ---
-    cliente = p.get('cliente') or "ASEGURADO"
-    aseguradora = p.get('aseguradora') or "SBI"
+    cliente = p.get('cliente') or p.get('nombre_cliente') or "CABLEX"
+    aseguradora = p.get('aseguradora') or p.get('compania') or "SBI"
+    es_flota = True  # Definimos esto para evitar el error NameError de abajo
     
     col_logo, col_info = st.columns([1, 2])
     with col_logo:
@@ -156,12 +157,12 @@ if p:
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora}**")
 
     # --- 2. TABLA DE VEHÍCULOS ---
-    # Buscamos la lista de vehículos en cualquier rincón del archivo
+    # Buscamos la lista de vehículos en cualquier nombre posible
     lista_v = p.get('vehiculos') or p.get('items') or []
     
     if lista_v:
         tabla_html = """
-        <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
+        <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
                 <tr style="background-color: #333; color: white; text-align: center;">
                     <th style="padding: 10px; border: 1px solid #ddd;">MARCA</th>
@@ -176,13 +177,13 @@ if p:
             <tbody>
         """
         for v in lista_v:
-            # Formateo de números sin decimales y alineado a la derecha
-            def clean_num(n):
-                try: return f"{int(float(n)):,}"
-                except: return str(n)
+            # Función rápida para limpiar decimales y alinear
+            def n_fmt(val):
+                try: return f"{int(float(val)):,}"
+                except: return str(val)
 
-            p_fmt = f"USD {clean_num(v.get('cuota') or v.get('precio', 0))}"
-            d_fmt = clean_num(v.get('deducible', 0))
+            p_f = f"USD {n_fmt(v.get('cuota') or v.get('precio', 0))}"
+            d_f = n_fmt(v.get('deducible', 0))
             
             tabla_html += f"""
                 <tr style="text-align: center; border-bottom: 1px solid #eee;">
@@ -191,19 +192,19 @@ if p:
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('anio') or v.get('año', '')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('matricula', '-')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('cobertura', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{p_fmt}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{d_fmt}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{p_f}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{d_f}</td>
                 </tr>
             """
         tabla_html += "</tbody></table>"
         st.markdown(tabla_html, unsafe_allow_html=True)
     else:
-        st.error("⚠️ No se encontraron vehículos. Generá un LINK NUEVO en el CRM.")
+        st.error("⚠️ No se encontraron vehículos. Por favor, generá un LINK NUEVO en el CRM.")
 
     # --- 3. COMENTARIOS ---
     st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
     st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
-    st.info(p.get('beneficios') or p.get('observaciones') or "Revisar condiciones.")
+    st.info(p.get('beneficios') or p.get('observaciones') or "Revisar condiciones de póliza.")
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
