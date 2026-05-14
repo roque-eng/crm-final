@@ -144,12 +144,13 @@ if not p:
     elif "q" in query_params:
         p = json.loads(base64.b64decode(query_params["q"]).decode())
 
-# --- VISTA CLIENTE ---
+# --- VISTA CLIENTE (UNIFICADA) ---
 if p:
     st.markdown("""
         <style>
             .main .block-container { max-width: 95% !important; padding-top: 2rem; }
             .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
+            .linea-gris { border-bottom: 4px solid #333333; margin-bottom: 30px; }
         
     # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
