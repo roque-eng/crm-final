@@ -147,26 +147,26 @@ if p:
 # --- 1. DATOS DE CONTROL Y ENCABEZADO ---
     es_flota = True 
     
-    # Buscamos los datos tal cual se llaman en tu estado de sesión
-    # Intentamos varias opciones por si el guardado en Supabase cambió el nombre
-    cliente_final = p.get('cliente') or p.get('nombre_cliente') or "CABLEX"
-    aseguradora_final = p.get('aseguradora') or p.get('compania') or "SBI"
+    # Buscamos los datos probando todas las etiquetas posibles que usamos hoy
+    cliente_final = p.get('cliente') or p.get('nombre_cliente') or p.get('Asegurado') or "CABLEX"
+    aseguradora_final = p.get('aseguradora') or p.get('compania') or p.get('Aseguradora') or "SBI"
     
     col_logo, col_info = st.columns([1, 2])
     with col_logo:
         st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
     with col_info:
-        st.markdown(f"<h1 style='margin:0;'>Asegurado: {cliente_final}</h1>", unsafe_allow_html=True)
-        st.markdown(f"<h2 style='margin:0; color: #555;'>Aseguradora: {aseguradora_final}</h2>", unsafe_allow_html=True)
+        st.markdown(f"## Asegurado: {cliente_final}")
+        st.markdown(f"### Aseguradora: **{aseguradora_final}**")
 
     # --- 2. TABLA DE VEHÍCULOS ---
-    vehiculos_lista = p.get('vehiculos') or []
+    # Probamos buscar la lista en 'vehiculos', 'items' o 'data'
+    vehiculos_lista = p.get('vehiculos') or p.get('items') or []
     
     if vehiculos_lista:
         tabla_html = """
         <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
             <thead>
-                <tr style="background-color: #333; color: white;">
+                <tr style="background-color: #333; color: white; text-align: center;">
                     <th style="padding: 10px; border: 1px solid #ddd;">MARCA</th>
                     <th style="padding: 10px; border: 1px solid #ddd;">MODELO</th>
                     <th style="padding: 10px; border: 1px solid #ddd;">AÑO</th>
@@ -179,39 +179,33 @@ if p:
             <tbody>
         """
         for v in vehiculos_lista:
-            # Buscamos el precio (cuota)
-            precio = v.get('cuota') or v.get('precio') or 0
+            # Buscamos precio y año con todas las variantes
+            precio = v.get('cuota') or v.get('precio') or v.get('CONTADO') or 0
             fmt_precio = f"USD {precio:,.0f}" if isinstance(precio, (int, float)) else str(precio)
+            anio = v.get('anio') or v.get('año') or v.get('AÑO') or ''
             
             tabla_html += f"""
                 <tr style="text-align: center;">
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('marca', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('modelo', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('anio') or v.get('año', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('matricula', '-')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('cobertura', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('marca') or v.get('MARCA', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('modelo') or v.get('MODELO', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{anio}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('matricula') or v.get('MATRICULA', '-')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('cobertura') or v.get('COBERTURA', '')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">{fmt_precio}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('deducible', 'S/D')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('deducible') or v.get('DEDUCIBLE', 'S/D')}</td>
                 </tr>
             """
         tabla_html += "</tbody></table>"
         st.markdown(tabla_html, unsafe_allow_html=True)
-    else:
-        st.warning("No se encontraron vehículos en esta cotización.")
 
-    # --- 3. OBSERVACIONES (COMENTARIOS) ---
+    # --- 3. OBSERVACIONES ---
     st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold; margin-bottom: 5px;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
     st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
     
-    # Buscamos el campo exacto de observaciones
-    observaciones = p.get('beneficios') or p.get('observaciones') or p.get('comentarios')
-    
-    if observaciones:
-        # Usamos un contenedor que resalte el texto
-        st.info(observaciones)
-    else:
-        # Si sigue fallando, es que el dato está en 'p' pero con otro nombre
-        st.write(p.get('beneficios_texto', 'No hay observaciones registradas.'))
+    # Buscamos el texto en todas las variantes posibles
+    obs = p.get('beneficios') or p.get('observaciones') or p.get('comentarios') or p.get('beneficios_texto')
+    if obs:
+        st.info(obs)
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
