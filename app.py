@@ -143,7 +143,6 @@ if not p:
         p = json.loads(base64.b64decode(query_params["f"]).decode())
     elif "q" in query_params:
         p = json.loads(base64.b64decode(query_params["q"]).decode())
-
 # --- VISTA CLIENTE (UNIFICADA) ---
 if p:
     st.markdown("""
@@ -151,6 +150,9 @@ if p:
             .main .block-container { max-width: 95% !important; padding-top: 2rem; }
             .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
             .linea-gris { border-bottom: 4px solid #333333; margin-bottom: 30px; }
+            table { width: 100% !important; border-collapse: collapse; margin: 25px 0; }
+            thead tr th { background-color: #f8f9fa !important; color: #333333; padding: 12px; font-size: 16px; text-align: center !important; border-bottom: 2px solid #333333; }
+            tbody td { padding: 10px; font-size: 15px; text-align: center; border-bottom: 1px solid #eee; }
         
     # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
