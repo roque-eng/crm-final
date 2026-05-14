@@ -408,7 +408,7 @@ with tab_ven:
         )
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False)
-        st.download_button(label="📥 EXCEL VENCIMIENTOS", data=output.getvalue(), file_name='vencimientos.xlsx')
+        st.download_button(label="📥 Exportar a Excel", data=output.getvalue(), file_name='vencimientos.xlsx')
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL (Con todas las columnas) ---
 with tab_cot:
@@ -466,7 +466,7 @@ with tab_cot:
         c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", "• Hurto USD 1.000\n• Accidentes Personales: USD 5.000\n• Daños a terceros: USD 10.000\nCosto Anual: USD 120"), height=70, key="bic_v_final")
 
     # 5. Lógica de Guardado (Específica para Individual)
-    if st.button("💾 Guardar y Generar Link Individual", use_container_width=True):
+    if st.button("💾 Guardar y ver Vista Previa", use_container_width=True):
         datos_i = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in,
@@ -488,7 +488,7 @@ with tab_cot:
         datos_b64 = base64.b64encode(json.dumps(st.session_state.edit_data).encode()).decode()
         link_final = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         
-        st.link_button("🚀 VER VISTA PREVIA PARA EL CLIENTE", link_final, type="primary", use_container_width=True)
+        st.link_button("🚀 VER VISTA PREVIA", link_final, type="primary", use_container_width=True)
         st.code(link_final)
 
 # --- PESTAÑA FLOTAS ---
@@ -539,7 +539,7 @@ with tab_flota:
     f_obs = st.text_area("Observaciones:", value=edit_f.get('ben', ''), height=150, key="f_obs_vfinal_fix")
 
     # 5. BOTÓN GUARDAR (Corregido para separar Aseguradora de Asesor)
-    if st.button("🚀 GUARDAR PROPUESTA DE FLOTA", key="btn_save_flota_vfinal", use_container_width=True):
+    if st.button("🚀 GUARDAR PROPUESTA", key="btn_save_flota_vfinal", use_container_width=True):
         nueva_f = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "n": f_asegurado, 
@@ -567,7 +567,7 @@ with tab_flota:
         datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
         
     # --- BOTÓN PARA FLOTAS GRANDES (Línea 580 aprox) ---
-    if st.button("🔗 GENERAR LINK SEGURO (Flotas Grandes)", use_container_width=True):
+    if st.button("🔗 GENERAR LINK", use_container_width=True):
             try:
                 import uuid
                 # CAMBIO CLAVE: Usamos el código largo que Supabase espera
@@ -587,9 +587,9 @@ with tab_flota:
                 
                 if res.status_code in [200, 201]:
                     link_f = f"https://dfseguros.streamlit.app/?f_id={f_id}"
-                    st.success("✅ ¡AHORA SÍ! Link generado con éxito")
+                    st.success("✅ ¡Link generado con éxito!")
                     st.code(link_f)
-                    st.link_button("🚀 PROBAR VISTA PREVIA", link_f, type="primary", use_container_width=True)
+                    st.link_button("🚀 VISTA PREVIA", link_f, type="primary", use_container_width=True)
                 else:
                     st.error(f"Error: {res.text}")
             except Exception as e:
