@@ -145,59 +145,68 @@ if not p:
 # --- 2. VISTA DEL CLIENTE ---
 if p:
 # --- 1. DATOS DE CONTROL Y ENCABEZADO ---
-    # Definimos es_flota para que no dé error el pie de página
-    es_flota = p.get('es_flota', True) 
+    es_flota = True 
+    
+    # Extraemos los datos con nombres alternativos por si acaso
+    cliente = p.get('nombre_cliente') or p.get('cliente') or "Asegurado"
+    aseguradora = p.get('aseguradora') or p.get('compania') or "SBI"
     
     col_logo, col_info = st.columns([1, 2])
     with col_logo:
         st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
     with col_info:
-        st.markdown(f"## Cotización: {p.get('cliente', 'Cliente')}")
-        st.markdown(f"### 🏦 Aseguradora: **{p.get('aseguradora', 'A definir')}**")
+        st.markdown(f"## Asegurado: {cliente}")
+        st.markdown(f"### 🏦 Aseguradora: **{aseguradora}**")
 
     # --- 2. TABLA DE VEHÍCULOS REORDENADA ---
     tabla_html = """
-    <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
+    <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
         <thead>
-            <tr style="background-color: #f8f9fa; border-bottom: 2px solid #333;">
-                <th style="padding: 10px;">MARCA</th>
-                <th style="padding: 10px;">MODELO</th>
-                <th style="padding: 10px;">AÑO</th>
-                <th style="padding: 10px;">MATRICULA</th>
-                <th style="padding: 10px;">COBERTURA</th>
-                <th style="padding: 10px;">CONTADO</th>
-                <th style="padding: 10px;">DEDUCIBLE</th>
+            <tr style="background-color: #333333; color: white; text-align: center;">
+                <th style="padding: 12px; border: 1px solid #ddd;">MARCA</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">MODELO</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">AÑO</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">MATRICULA</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">COBERTURA</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">CONTADO</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">DEDUCIBLE</th>
             </tr>
         </thead>
         <tbody>
     """
     
-    for v in p.get('vehiculos', []):
-        cuota = v.get('cuota', 0)
-        p_final = f"USD {cuota:,.0f}" if isinstance(cuota, (int, float)) else cuota
+    # Buscamos la lista de vehículos, sea cual sea el nombre que tenga
+    vehiculos = p.get('vehiculos') or p.get('items') or []
+    
+    for v in vehiculos:
+        cuota = v.get('cuota') or v.get('precio') or 0
+        p_final = f"USD {cuota:,.0f}" if isinstance(cuota, (int, float)) else str(cuota)
         
         tabla_html += f"""
-            <tr style="border-bottom: 1px solid #eee; text-align: center;">
-                <td style="padding: 10px;">{v.get('marca', '')}</td>
-                <td style="padding: 10px;">{v.get('modelo', '')}</td>
-                <td style="padding: 10px;">{v.get('anio', '')}</td>
-                <td style="padding: 10px;">{v.get('matricula', '-')}</td>
-                <td style="padding: 10px;">{v.get('cobertura', '')}</td>
-                <td style="padding: 10px;">{p_final}</td>
-                <td style="padding: 10px;">{v.get('deducible', 'S/D')}</td>
+            <tr style="text-align: center; border-bottom: 1px solid #eee;">
+                <td style="padding: 10px; border: 1px solid #ddd;">{v.get('marca', '')}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{v.get('modelo', '')}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{v.get('anio') or v.get('año', '')}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{v.get('matricula') or v.get('patente', '-')}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{v.get('cobertura', '')}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">{p_final}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">{v.get('deducible', 'S/D')}</td>
             </tr>
         """
     
     tabla_html += "</tbody></table>"
     st.markdown(tabla_html, unsafe_allow_html=True)
 
-    # --- 3. COMENTARIOS EDF SEGUROS ---
-    st.markdown('<p class="titulo-gris">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
-    st.markdown('<div class="linea-gris"></div>', unsafe_allow_html=True)
+    # --- 3. COMENTARIOS EDF SEGUROS (OBSERVACIONES) ---
+    st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold; margin-bottom: 5px;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
+    st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
     
-    comentarios = p.get('beneficios', '')
-    if comentarios:
-        st.info(comentarios)
+    # Buscamos las observaciones en beneficios o comentarios
+    obs = p.get('beneficios') or p.get('observaciones') or p.get('comentarios')
+    if obs:
+        st.info(obs)
+    else:
+        st.warning("No hay observaciones adicionales para esta cotización.")
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
