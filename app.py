@@ -122,36 +122,34 @@ st.markdown("""
     """, unsafe_allow_html=True)
 ¿
 
-if p: # <--- Este IF manda todo lo que sigue. Está pegado a la izquierda.
-    # --- RECEPCIÓN DE PARÁMETROS (Con 4 espacios de sangría) ---
-    query_params = st.query_params
-    p = None
+query_params = st.query_params
+p = None
 
-    if "f_id" in query_params:
-        f_id = query_params["f_id"]
-        headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-        url_get = f"{SUPABASE_URL}/rest/v1/cotizaciones?id=eq.{f_id}&select=data"
-        try:
-            response = requests.get(url_get, headers=headers_sp).json()
-            if response:
-                p = response[0]["data"]
-                if "tipo" not in p: p["tipo"] = "Flota"
-        except Exception as e:
-            st.error(f"Error en nube: {e}")
+# 1. Intentamos cargar p desde la Nube (f_id)
+if "f_id" in query_params:
+    f_id = query_params["f_id"]
+    headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+    url_get = f"{SUPABASE_URL}/rest/v1/cotizaciones?id=eq.{f_id}&select=data"
+    try:
+        response = requests.get(url_get, headers=headers_sp).json()
+        if response:
+            p = response[0]["data"]
+    except:
+        pass
 
-    elif "f" in query_params:
-        try:
-            p = json.loads(base64.b64decode(query_params["f"]).decode())
-        except:
-            st.error("Error en link flota")
-
+# 2. Si no hay f_id, intentamos los otros (f o q)
+if not p:
+    if "f" in query_params:
+        p = json.loads(base64.b64decode(query_params["f"]).decode())
     elif "q" in query_params:
-        try:
-            p = json.loads(base64.b64decode(query_params["q"]).decode())
-        except:
-            st.error("Error en link individual")
+        p = json.loads(base64.b64decode(query_params["q"]).decode())
 
-    # Aquí abajo sigue tu bloque de # --- ESTILOS EXCLUSIVOS...
+# 3. SI ENCONTRAMOS UNA PROPUESTA (p), MOSTRAMOS LA VISTA CLIENTE
+if p:
+    st.markdown("""
+        <style>
+            .main .block-container { max-width: 95% !important; padding-top: 2rem; }
+            .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
         
     # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
