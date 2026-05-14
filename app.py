@@ -121,7 +121,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-    # --- RECEPCIÓN DE PARÁMETROS ---
+# --- RECEPCIÓN DE PARÁMETROS ---
 query_params = st.query_params
 p = None
 
@@ -149,6 +149,7 @@ if p:
     st.markdown("""
         <style>
             .main .block-container { max-width: 95% !important; padding-top: 2rem; }
+            .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
         
     # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
