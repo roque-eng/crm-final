@@ -121,7 +121,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- RECEPCIÓN DE PARÁMETROS ---
+    # --- RECEPCIÓN DE PARÁMETROS ---
     query_params = st.query_params
     p = None
 
