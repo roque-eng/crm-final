@@ -120,11 +120,12 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
+¿
 
 # --- RECEPCIÓN DE PARÁMETROS (Actualizado para Flotas Grandes) ---
-query_params = st.query_params
-p = None
-
+    query_params = st.query_params
+    p = None
+    
     # 1. Caso Link Seguro (f_id de Supabase)
     if "f_id" in query_params:
         f_id = query_params["f_id"]
