@@ -145,23 +145,24 @@ if not p:
 # --- 2. VISTA DEL CLIENTE ---
 if p:
     # --- 1. ENCABEZADO ---
-    # Forzamos que busque en 'p' o en 'p['data']'
+    # Extraemos la data real (si viene de Supabase estará en p['data'])
     d = p.get('data', p) 
-    cliente_txt = d.get('cliente') or d.get('nombre_cliente') or "CABLEX"
-    aseguradora_txt = d.get('aseguradora') or d.get('compania') or "SBI"
-    es_flota = True
+    
+    cliente_v = d.get('cliente') or d.get('nombre_cliente') or "CABLEX"
+    aseguradora_v = d.get('aseguradora') or d.get('compania') or "SBI"
+    es_flota = True  # Para evitar errores en el pie de página
     
     col_l, col_i = st.columns([1, 2])
     with col_l:
         st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
     with col_i:
-        st.markdown(f"## Asegurado: {cliente_txt}")
-        st.markdown(f"### 🏦 Aseguradora: **{aseguradora_txt}**")
+        st.markdown(f"## Asegurado: {cliente_v}")
+        st.markdown(f"### 🏦 Aseguradora: **{aseguradora_v}**")
 
-    # --- 2. TABLA DE VEHÍCULOS ---
-    lista = d.get('vehiculos') or d.get('items') or []
+    # --- 2. TABLA DE VEHÍCULOS (ORDEN SOLICITADO) ---
+    vehiculos = d.get('vehiculos') or d.get('items') or []
     
-    if lista:
+    if vehiculos:
         t_html = """
         <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
@@ -177,13 +178,14 @@ if p:
             </thead>
             <tbody>
         """
-        for v in lista:
-            def clean(val):
-                try: return f"{int(float(val)):,}"
-                except: return str(val)
-            
-            p_f = f"USD {clean(v.get('cuota') or v.get('precio', 0))}"
-            d_f = clean(v.get('deducible', 0))
+        for v in vehiculos:
+            # Función para limpiar decimales (.0) y alinear
+            def f_num(n):
+                try: return f"{int(float(n)):,}"
+                except: return str(n)
+
+            precio = f"USD {f_num(v.get('cuota') or v.get('precio', 0))}"
+            deduc = f_num(v.get('deducible', 0))
             
             t_html += f"""
                 <tr style="text-align: center; border-bottom: 1px solid #eee;">
@@ -192,20 +194,20 @@ if p:
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('anio') or v.get('año', '')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('matricula', '-')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('cobertura', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{p_f}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{d_f}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{precio}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{deduc}</td>
                 </tr>
             """
         t_html += "</tbody></table>"
         st.markdown(t_html, unsafe_allow_html=True)
     else:
-        st.error("⚠️ No se encontraron vehículos. Generá un LINK NUEVO.")
+        st.error("⚠️ No se encontraron vehículos. Por favor, generá un LINK NUEVO en el CRM.")
 
-    # --- 3. COMENTARIOS ---
+    # --- 3. COMENTARIOS UNIFICADOS ---
     st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
     st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
-    st.info(d.get('beneficios') or d.get('observaciones') or "Revisar condiciones.")
-    
+    obs_txt = d.get('beneficios') or d.get('observaciones') or "Revisar condiciones generales."
+    st.info(obs_txt)    
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
     
