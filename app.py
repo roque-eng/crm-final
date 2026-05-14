@@ -142,14 +142,15 @@ if not p:
     elif "q" in query_params:
         p = json.loads(base64.b64decode(query_params["q"]).decode())
 
-# --- 2. VISTA DEL CLIENTE (LIMPIA Y SIN ERRORES) ---
+# --- 2. VISTA DEL CLIENTE (CORREGIDA) ---
 if p:
     # 1. Extraemos los datos (abrimos el paquete de Supabase)
     d = p.get('data', p) 
     
-    # 2. Mapeo de datos para el encabezado
-    cliente_v = d.get('n') or d.get('cliente') or "Asegurado"
+    # 2. Mapeo de datos para el encabezado (Asegurado y Aseguradora)
+    cliente_v = d.get('n') or d.get('cliente') or d.get('nombre_cliente') or "Asegurado"
     aseguradora_v = d.get('e') or d.get('aseguradora') or "Compañía"
+    es_flota = True  
     
     # 3. Logo y Títulos
     col_l, col_i = st.columns([1, 2])
@@ -159,16 +160,16 @@ if p:
         st.markdown(f"## Asegurado: {cliente_v}")
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora_v}**")
 
-    # 4. Construcción de la Tabla (HTML Puro para que no se corra nada)
+    # 4. Construcción de la Tabla (HTML Puro para evitar desajustes)
+    # Buscamos la lista de vehículos en 'tab' o 'vehiculos'
     vehiculos = d.get('tab') or d.get('vehiculos') or []
     
     if vehiculos:
-        # Iniciamos la variable de la tabla vacía
         t_html = """
         <style>
             .tabla-cliente { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; }
-            .tabla-cliente th { background-color: #f0f2f6; color: #31333F; padding: 10px; border: 1px solid #ddd; text-align: center; }
-            .tabla-cliente td { padding: 8px; border: 1px solid #ddd; text-align: center; }
+            .tabla-cliente th { background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: center; }
+            .tabla-cliente td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 14px; }
             .derecha { text-align: right !important; font-weight: bold; }
         </style>
         <table class="tabla-cliente">
@@ -187,45 +188,47 @@ if p:
         """
         
         for v in vehiculos:
-            # Limpiador de números para evitar el .0
+            # Función para limpiar decimales y dar formato de miles
             def clean(val):
-                try: return f"{int(float(val)):,}".replace(",", ".")
-                except: return str(val)
+                try: 
+                    return f"{int(float(val)):,}".replace(",", ".")
+                except: 
+                    return str(val)
 
-            # Mapeo de columnas según tu editor de flotas
-            m = v.get('Marca') or v.get('marca') or ""
-            mo = v.get('Modelo') or v.get('modelo') or ""
-            an = v.get('Año') or v.get('anio') or ""
-            ma = v.get('Matrícula') or v.get('matricula') or "-"
-            co = v.get('Cobertura') or v.get('cobertura') or ""
-            precio = f"USD {clean(v.get('Contado') or v.get('cuota') or 0)}"
+            # Mapeo de columnas manual para asegurar el orden
+            marca = v.get('Marca') or v.get('marca') or ""
+            modelo = v.get('Modelo') or v.get('modelo') or ""
+            anio = v.get('Año') or v.get('anio') or ""
+            matr = v.get('Matrícula') or v.get('matricula') or "-"
+            cober = v.get('Cobertura') or v.get('cobertura') or ""
+            contado = f"USD {clean(v.get('Contado') or v.get('cuota') or 0)}"
             deduc = clean(v.get('Deducible') or v.get('deducible') or 0)
             
             t_html += f"""
                 <tr>
-                    <td>{m}</td>
-                    <td>{mo}</td>
-                    <td>{an}</td>
-                    <td>{ma}</td>
-                    <td>{co}</td>
-                    <td class="derecha">{precio}</td>
+                    <td>{marca}</td>
+                    <td>{modelo}</td>
+                    <td>{anio}</td>
+                    <td>{matr}</td>
+                    <td>{cober}</td>
+                    <td class="derecha">{contado}</td>
                     <td class="derecha">{deduc}</td>
                 </tr>
             """
         
         t_html += "</tbody></table>"
-        # Mostramos la tabla UNA SOLA VEZ
+        # USAMOS st.markdown con unsafe_allow_html=True para que se vea como tabla y no como código
         st.markdown(t_html, unsafe_allow_html=True)
     else:
         st.warning("No se encontraron vehículos. Generá un link nuevo.")
 
-    # 5. Observaciones
+    # 5. Observaciones (Unificadas en un solo cuadro)
     st.markdown("<br>", unsafe_allow_html=True)
     st.subheader("Comentarios EDF Seguros")
-    obs_txt = d.get('ben') or d.get('beneficios') or "Sin observaciones."
+    obs_txt = d.get('ben') or d.get('beneficios') or "Sin observaciones adicionales."
     st.info(obs_txt)
     
-    st.stop() # Esto es vital para que no se dibuje el CRM abajo
+    st.stop() # Vital para que no se vea el CRM debajo
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
