@@ -143,59 +143,58 @@ if not p:
         p = json.loads(base64.b64decode(query_params["q"]).decode())
 
 # --- 2. VISTA DEL CLIENTE ---
-if p:
-    st.markdown("""
-        <style>
-            .main .block-container { max-width: 95% !important; padding-top: 2rem; }
-            .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
-            .linea-gris { border-bottom: 4px solid #333333; margin-bottom: 30px; }
-            table { width: 100% !important; border-collapse: collapse; margin: 25px 0; }
-            thead tr th { background-color: #f8f9fa !important; color: #333333; padding: 12px; font-size: 16px; text-align: center !important; border-bottom: 2px solid #333333; }
-            tbody td { padding: 10px; font-size: 15px; text-align: center; border-bottom: 1px solid #eee; }
-        </style>
-    """, unsafe_allow_html=True)
+# --- 1. LOGO Y ENCABEZADO CON ASEGURADORA ---
+    col_logo, col_info = st.columns([1, 2])
+    with col_logo:
+        st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
+    with col_info:
+        st.markdown(f"## Cotización: {p.get('cliente', 'Cliente')}")
+        aseg = p.get('aseguradora', 'A definir')
+        st.markdown(f"### 🏦 Aseguradora: **{aseg}**")
+
+    # --- 2. TABLA DE VEHÍCULOS REORDENADA ---
+    tabla_html = """
+    <table>
+        <thead>
+            <tr>
+                <th>MARCA</th>
+                <th>MODELO</th>
+                <th>AÑO</th>
+                <th>MATRICULA</th>
+                <th>COBERTURA</th>
+                <th>CONTADO</th>
+                <th>DEDUCIBLE</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
     
-    # Aquí sigue el resto de la visualización (logo, tabla, etc.)
-
-    c1, c2 = st.columns(2)
-    c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
-    
-    es_flota = "v" not in p # Si no hay 'v', es flota
-    
-    if not es_flota:
-        c2.markdown(f"### 🚗 Vehículo: {p.get('v', 'N/A')}")
-    else:
-        c2.markdown(f"### 🚛 Propuesta de Flota")
-
-    # Tabla de Precios
-    df_p = pd.DataFrame(p["tab"]).fillna("")
-    for col in ["Contado", "10 Cuotas", "Deducible"]:
-        if col in df_p.columns:
-            df_p[col] = pd.to_numeric(df_p[col], errors='coerce').fillna(0).apply(lambda x: f"$ {int(x):,}".replace(",", "."))
-    st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
-
-    # Beneficios
-    if p.get("ben"):
-        st.markdown("### ✅ Detalles y Beneficios")
-        for b in p["ben"].split('\n'):
-            if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
-
-    # Coberturas Complementarias (SOLO INDIVIDUAL)
-    if not es_flota:
-        st.markdown("### ⚠️ Coberturas Complementarias")
-        col1, col2, col3 = st.columns(3)
-        def bloque_res(tit, ico, txt):
-            if not txt: return ""
-            res = f'<div class="caja-gris"><span class="sub-tit">{ico} {tit}</span>'
-            for l in txt.split('\n'):
-                if "$" in l or "Costo" in l: res += f'<span class="costo-res">💰 {l.strip()}</span>'
-                else: res += f'<span>{l.strip()}</span><br>'
-            return res + '</div>'
+    for v in p.get('vehiculos', []):
+        cuota = v.get('cuota', 0)
+        p_final = f"USD {cuota:,.0f}" if isinstance(cuota, (int, float)) else cuota
         
-        col1.markdown(bloque_res("Hogar", "🏠", p.get("ch", "")), unsafe_allow_html=True)
-        col2.markdown(bloque_res("Alquiler", "🚗", p.get("ca", "")), unsafe_allow_html=True)
-        col3.markdown(bloque_res("Bici Eléctrica", "🚲", p.get("cb", "")), unsafe_allow_html=True)
+        tabla_html += f"""
+            <tr>
+                <td>{v.get('marca', '')}</td>
+                <td>{v.get('modelo', '')}</td>
+                <td>{v.get('anio', '')}</td>
+                <td>{v.get('matricula', '-')}</td>
+                <td>{v.get('cobertura', '')}</td>
+                <td>{p_final}</td>
+                <td>{v.get('deducible', 'S/D')}</td>
+            </tr>
+        """
+    
+    tabla_html += "</tbody></table>"
+    st.markdown(tabla_html, unsafe_allow_html=True)
 
+    # --- 3. COMENTARIOS EDF SEGUROS (UNIFICADOS) ---
+    st.markdown('<p class="titulo-gris">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
+    st.markdown('<div class="linea-gris"></div>', unsafe_allow_html=True)
+    
+    comentarios = p.get('beneficios', '')
+    if comentarios:
+        st.info(comentarios)
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
     
