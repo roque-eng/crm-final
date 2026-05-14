@@ -145,24 +145,24 @@ if not p:
 # --- 2. VISTA DEL CLIENTE ---
 if p:
     # --- 1. ENCABEZADO ---
-    # Buscamos los datos dentro de 'p' o dentro de 'p['data']'
-    info = p.get('data', p) 
-    cliente = info.get('cliente') or info.get('nombre_cliente') or "CABLEX"
-    aseguradora = info.get('aseguradora') or info.get('compania') or "SBI"
+    # Forzamos que busque en 'p' o en 'p['data']'
+    d = p.get('data', p) 
+    cliente_txt = d.get('cliente') or d.get('nombre_cliente') or "CABLEX"
+    aseguradora_txt = d.get('aseguradora') or d.get('compania') or "SBI"
     es_flota = True
     
-    col_logo, col_info = st.columns([1, 2])
-    with col_logo:
+    col_l, col_i = st.columns([1, 2])
+    with col_l:
         st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
-    with col_info:
-        st.markdown(f"## Asegurado: {cliente}")
-        st.markdown(f"### 🏦 Aseguradora: **{aseguradora}**")
+    with col_i:
+        st.markdown(f"## Asegurado: {cliente_txt}")
+        st.markdown(f"### 🏦 Aseguradora: **{aseguradora_txt}**")
 
-    # --- 2. TABLA DE VEHÍCULOS (RASTREO INTERNO) ---
-    lista_v = info.get('vehiculos') or info.get('items') or []
+    # --- 2. TABLA DE VEHÍCULOS ---
+    lista = d.get('vehiculos') or d.get('items') or []
     
-    if lista_v:
-        tabla_html = """
+    if lista:
+        t_html = """
         <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
                 <tr style="background-color: #333; color: white; text-align: center;">
@@ -177,15 +177,15 @@ if p:
             </thead>
             <tbody>
         """
-        for v in lista_v:
-            def n_fmt(val):
+        for v in lista:
+            def clean(val):
                 try: return f"{int(float(val)):,}"
                 except: return str(val)
-
-            p_f = f"USD {n_fmt(v.get('cuota') or v.get('precio', 0))}"
-            d_f = n_fmt(v.get('deducible', 0))
             
-            tabla_html += f"""
+            p_f = f"USD {clean(v.get('cuota') or v.get('precio', 0))}"
+            d_f = clean(v.get('deducible', 0))
+            
+            t_html += f"""
                 <tr style="text-align: center; border-bottom: 1px solid #eee;">
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('marca', '')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('modelo', '')}</td>
@@ -196,15 +196,15 @@ if p:
                     <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{d_f}</td>
                 </tr>
             """
-        tabla_html += "</tbody></table>"
-        st.markdown(tabla_html, unsafe_allow_html=True)
+        t_html += "</tbody></table>"
+        st.markdown(t_html, unsafe_allow_html=True)
     else:
-        st.error("⚠️ No se encontraron vehículos. Por favor, generá un LINK NUEVO en el CRM.")
+        st.error("⚠️ No se encontraron vehículos. Generá un LINK NUEVO.")
 
     # --- 3. COMENTARIOS ---
     st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
     st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
-    st.info(info.get('beneficios') or info.get('observaciones') or "Revisar condiciones de póliza.")
+    st.info(d.get('beneficios') or d.get('observaciones') or "Revisar condiciones.")
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
