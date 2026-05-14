@@ -121,40 +121,39 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-query_params = st.query_params
-# Esta parte suele ir arriba del todo en tu código principal
-# ==========================================
-# 📱 VISTA DE LA PROPUESTA PARA EL CLIENTE
-# ==========================================
-# --- DETECCIÓN DE PROPUESTA (Individual o Flota) ---
-p = None
-if "flota" in st.query_params:
-    try:
-        nombre_cliente = base64.b64decode(st.query_params["flota"]).decode()
-        headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-        url_busqueda = f"{SUPABASE_URL}/rest/v1/cotizaciones?asegurado=eq.{nombre_cliente}&tipo=eq.flota&order=created_at.desc&limit=1"
-        res = requests.get(url_busqueda, headers=headers)
-        if res.status_code == 200 and len(res.json()) > 0:
-            p = res.json()[0]["datos_json"]
-    except: st.error("Error al cargar datos de flota.")
-elif "q" in st.query_params or "f" in st.query_params:
-    try:
-        val = st.query_params.get("q") or st.query_params.get("f")
-        p = json.loads(base64.b64decode(val).decode())
-    except: st.error("Error al cargar cotización.")
-
-# Si hay una propuesta, se muestra la vista limpia
-# --- LÓGICA DE RECEPCIÓN DE LINKS (Actualizada para ambos tipos) ---
+# --- RECEPCIÓN DE PARÁMETROS (Actualizado para Flotas Grandes) ---
 query_params = st.query_params
 p = None
 
-if "q" in query_params: # Individual
-    p = json.loads(base64.b64decode(query_params["q"]).decode())
-elif "f" in query_params: # Flota
-    p = json.loads(base64.b64decode(query_params["f"]).decode())
-    p["es_flota"] = True
+# 1. Caso Link Seguro (f_id de Supabase)
+if "f_id" in query_params:
+    f_id = query_params["f_id"]
+    headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+    url_get = f"{SUPABASE_URL}/rest/v1/cotizaciones?id=eq.{f_id}&select=data"
+    
+    try:
+        response = requests.get(url_get, headers=headers_sp).json()
+        if response:
+            p = response[0]["data"]
+            # Nos aseguramos que el sistema sepa que es una flota
+            if "tipo" not in p: p["tipo"] = "Flota"
+    except Exception as e:
+        st.error(f"Error al recuperar datos de la nube: {e}")
 
-if p:
+# 2. Caso Link Viejo (Flotas chicas)
+elif "f" in query_params:
+    try:
+        p = json.loads(base64.b64decode(query_params["f"]).decode())
+    except:
+        st.error("Error al decodificar link de flota.")
+
+# 3. Caso Link Individual (Autos)
+elif "q" in query_params:
+    try:
+        p = json.loads(base64.b64decode(query_params["q"]).decode())
+    except:
+        st.error("Error al decodificar link individual.")
+        
     # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
         <style>
@@ -583,11 +582,35 @@ with tab_flota:
         datos_f_json = json.dumps(st.session_state.edit_data)
         datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
         
-        # Generamos el link con parámetro 'f' para flotas
-        link_f_final = f"https://dfseguros.streamlit.app/?f={datos_f_b64}" 
-        
-        st.link_button("🚀 VER VISTA PREVIA PARA EL CLIENTE", link_f_final, type="primary", use_container_width=True)
-        st.code(link_f_final)
+    # --- GENERADOR DE LINK SEGURO (Adaptado a tu tabla existente) ---
+    if st.session_state.get('edit_data') and st.session_state.edit_data.get("tipo") == "Flota":
+        st.markdown("---")
+        if st.button("🔗 GENERAR LINK SEGURO (Para Flotas Grandes)", use_container_width=True):
+            try:
+                import uuid
+                # 1. Generamos un código único
+                f_id = str(uuid.uuid4())
+                datos_f = st.session_state.edit_data
+                
+                # 2. Guardamos en tu tabla existente
+                headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"}
+                # Usamos los nombres de columna que se ven en tu captura: id, data, tipo
+                payload = {
+                    "id": f_id, 
+                    "data": datos_f, 
+                    "tipo": "flota" 
+                }
+                res = requests.post(f"{SUPABASE_URL}/rest/v1/cotizaciones", headers=headers_sp, json=payload)
+                
+                if res.status_code in [200, 201]:
+                    link_f = f"https://dfseguros.streamlit.app/?f_id={f_id}"
+                    st.success("✅ ¡Link generado! Copialo y envialo:")
+                    st.code(link_f)
+                    st.link_button("🚀 PROBAR VISTA PREVIA", link_f, type="primary", use_container_width=True)
+                else:
+                    st.error(f"Error de base de datos: {res.text}")
+            except Exception as e:
+                st.error(f"Error técnico: {e}")
         
 # --- PESTAÑA HISTORIAL (CORREGIDA) ---
 with tab_historial:
