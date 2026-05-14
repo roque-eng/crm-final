@@ -144,15 +144,15 @@ if not p:
 
 # --- 2. VISTA DEL CLIENTE (CORREGIDA) ---
 if p:
-    # 1. Extraemos los datos (abrimos el paquete de Supabase)
+    # --- 1. ENCABEZADO UNIFICADO ---
+    # Extraemos la data (abrimos el paquete de Supabase)
     d = p.get('data', p) 
     
-    # 2. Mapeo de datos para el encabezado (Asegurado y Aseguradora)
-    cliente_v = d.get('n') or d.get('cliente') or d.get('nombre_cliente') or "Asegurado"
-    aseguradora_v = d.get('e') or d.get('aseguradora') or "Compañía"
+    # Mapeo de nombres exactos según tu CRM de Flotas
+    cliente_v = d.get('n') or d.get('cliente') or "CABLEX"
+    aseguradora_v = d.get('e') or d.get('aseguradora') or "SBI"
     es_flota = True  
     
-    # 3. Logo y Títulos
     col_l, col_i = st.columns([1, 2])
     with col_l:
         st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
@@ -160,19 +160,19 @@ if p:
         st.markdown(f"## Asegurado: {cliente_v}")
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora_v}**")
 
-    # 4. Construcción de la Tabla (HTML Puro para evitar desajustes)
-    # Buscamos la lista de vehículos en 'tab' o 'vehiculos'
+    # --- 2. TABLA DE VEHÍCULOS (ORDENADA Y ALINEADA) ---
+    # En tu CRM las flotas se guardan en la clave 'tab'
     vehiculos = d.get('tab') or d.get('vehiculos') or []
     
     if vehiculos:
         t_html = """
         <style>
-            .tabla-cliente { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; }
-            .tabla-cliente th { background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: center; }
-            .tabla-cliente td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 14px; }
+            .tabla-edf { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; }
+            .tabla-edf th { background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: center; }
+            .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: center; }
             .derecha { text-align: right !important; font-weight: bold; }
         </style>
-        <table class="tabla-cliente">
+        <table class="tabla-edf">
             <thead>
                 <tr>
                     <th>MARCA</th>
@@ -186,49 +186,46 @@ if p:
             </thead>
             <tbody>
         """
-        
         for v in vehiculos:
-            # Función para limpiar decimales y dar formato de miles
-            def clean(val):
-                try: 
-                    return f"{int(float(val)):,}".replace(",", ".")
-                except: 
-                    return str(val)
+            # Función para quitar el .0 y poner puntos de miles
+            def f_num(n):
+                try: return f"{int(float(n)):,}".replace(",", ".")
+                except: return str(n)
 
-            # Mapeo de columnas manual para asegurar el orden
+            # Mapeo manual para que la info NO se corra
             marca = v.get('Marca') or v.get('marca') or ""
             modelo = v.get('Modelo') or v.get('modelo') or ""
             anio = v.get('Año') or v.get('anio') or ""
-            matr = v.get('Matrícula') or v.get('matricula') or "-"
-            cober = v.get('Cobertura') or v.get('cobertura') or ""
-            contado = f"USD {clean(v.get('Contado') or v.get('cuota') or 0)}"
-            deduc = clean(v.get('Deducible') or v.get('deducible') or 0)
+            mat = v.get('Matrícula') or v.get('matricula') or "-"
+            cob = v.get('Cobertura') or v.get('cobertura') or ""
+            contado = f"USD {f_num(v.get('Contado') or v.get('cuota') or 0)}"
+            deduc = f_num(v.get('Deducible') or v.get('deducible') or 0)
             
             t_html += f"""
                 <tr>
                     <td>{marca}</td>
                     <td>{modelo}</td>
                     <td>{anio}</td>
-                    <td>{matr}</td>
-                    <td>{cober}</td>
+                    <td>{mat}</td>
+                    <td>{cob}</td>
                     <td class="derecha">{contado}</td>
                     <td class="derecha">{deduc}</td>
                 </tr>
             """
-        
         t_html += "</tbody></table>"
-        # USAMOS st.markdown con unsafe_allow_html=True para que se vea como tabla y no como código
+        # RENDERIZADO ÚNICO (Evita que se vea el código)
         st.markdown(t_html, unsafe_allow_html=True)
     else:
-        st.warning("No se encontraron vehículos. Generá un link nuevo.")
+        st.error("⚠️ No se encontraron vehículos en esta cotización.")
 
-    # 5. Observaciones (Unificadas en un solo cuadro)
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("Comentarios EDF Seguros")
-    obs_txt = d.get('ben') or d.get('beneficios') or "Sin observaciones adicionales."
+    # --- 3. OBSERVACIONES (CUADRO ÚNICO) ---
+    st.markdown("<br>### Comentarios EDF Seguros", unsafe_allow_html=True)
+    # En flotas el campo se guarda como 'ben'
+    obs_txt = d.get('ben') or d.get('observaciones') or "Sin observaciones."
     st.info(obs_txt)
     
-    st.stop() # Vital para que no se vea el CRM debajo
+    # Detenemos para que el cliente no vea el panel interno
+    st.stop()
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
