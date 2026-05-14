@@ -120,7 +120,6 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
-¿
 
 query_params = st.query_params
 p = None
@@ -137,19 +136,20 @@ if "f_id" in query_params:
     except:
         pass
 
-# 2. Si no hay f_id, intentamos los otros (f o q)
+# 2. Si no hay f_id, intentamos los otros
 if not p:
     if "f" in query_params:
         p = json.loads(base64.b64decode(query_params["f"]).decode())
     elif "q" in query_params:
         p = json.loads(base64.b64decode(query_params["q"]).decode())
 
-# 3. SI ENCONTRAMOS UNA PROPUESTA (p), MOSTRAMOS LA VISTA CLIENTE
+# 3. SI HAY DATOS, MOSTRAMOS LA VISTA
 if p:
     st.markdown("""
         <style>
             .main .block-container { max-width: 95% !important; padding-top: 2rem; }
             .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
+            .linea-gris { border-bottom: 4px solid #333333; margin-bottom: 30px; }
         
     # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
