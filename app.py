@@ -145,8 +145,9 @@ if not p:
 # --- 2. VISTA DEL CLIENTE ---
 if p:
 # --- 1. ENCABEZADO ---
-    cliente = p.get('cliente') or p.get('nombre_cliente') or "CABLEX"
-    aseguradora = p.get('aseguradora') or p.get('compania') or "SBI"
+    # Buscamos cliente y aseguradora con nombres simples
+    cliente = p.get('cliente') or "CABLEX"
+    aseguradora = p.get('aseguradora') or "SBI"
     
     col_logo, col_info = st.columns([1, 2])
     with col_logo:
@@ -155,14 +156,18 @@ if p:
         st.markdown(f"## Asegurado: {cliente}")
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora}**")
 
-    # --- 2. TABLA DE VEHÍCULOS (CON AJUSTE DE DEDUCIBLE Y ALINEACIÓN) ---
-    vehiculos_lista = p.get('vehiculos') or p.get('items') or []
-    
-    if vehiculos_lista:
+    # --- 2. TABLA DE VEHÍCULOS (VERSIÓN FINAL RESISTENTE) ---
+    # Intentamos capturar la lista de vehículos de cualquier forma
+    lista_v = []
+    if 'vehiculos' in p: lista_v = p['vehiculos']
+    elif 'items' in p: lista_v = p['items']
+    elif 'data' in p and isinstance(p['data'], dict): lista_v = p['data'].get('vehiculos', [])
+
+    if lista_v:
         tabla_html = """
         <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
-                <tr style="background-color: #333; color: white; text-align: center;">
+                <tr style="background-color: #333; color: white;">
                     <th style="padding: 10px; border: 1px solid #ddd;">MARCA</th>
                     <th style="padding: 10px; border: 1px solid #ddd;">MODELO</th>
                     <th style="padding: 10px; border: 1px solid #ddd;">AÑO</th>
@@ -174,40 +179,36 @@ if p:
             </thead>
             <tbody>
         """
-        for v in vehiculos_lista:
-            # --- Formateo de Contado (sin decimales) ---
-            pre = v.get('cuota') or v.get('precio') or v.get('CONTADO') or 0
-            p_fmt = f"USD {int(pre):,}" if isinstance(pre, (int, float)) else str(pre)
-            
-            # --- Formateo de Deducible (quitamos el .0) ---
-            ded = v.get('deducible') or v.get('DEDUCIBLE') or 0
-            # Si es un número (como 150.0), lo pasamos a entero (150)
-            if isinstance(ded, (int, float)):
-                ded_fmt = f"{int(ded):,}"
-            else:
-                ded_fmt = str(ded)
+        for v in lista_v:
+            # Limpiamos decimales de los números
+            def a_entero(valor):
+                try: return f"{int(float(valor)):,}"
+                except: return str(valor)
+
+            p_fmt = f"USD {a_entero(v.get('cuota') or v.get('precio', 0))}"
+            d_fmt = a_entero(v.get('deducible', 0))
             
             tabla_html += f"""
                 <tr style="text-align: center; border-bottom: 1px solid #eee;">
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('marca') or v.get('MARCA', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('modelo') or v.get('MODELO', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('anio') or v.get('año') or ''}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('matricula') or '-'}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('marca', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('modelo', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('anio') or v.get('año', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('matricula', '-')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd;">{v.get('cobertura', '')}</td>
                     <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{p_fmt}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{ded_fmt}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{d_fmt}</td>
                 </tr>
             """
         tabla_html += "</tbody></table>"
         st.markdown(tabla_html, unsafe_allow_html=True)
     else:
-        st.error("⚠️ No se encontraron vehículos. Por favor, generá un LINK NUEVO en el CRM.")
+        st.warning("⚠️ No se encontraron vehículos en esta cotización. Probá generar un link nuevo.")
 
     # --- 3. COMENTARIOS ---
+    obs = p.get('beneficios') or p.get('observaciones') or "Revisar condiciones de póliza."
     st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
     st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
-    obs = p.get('beneficios') or p.get('observaciones') or p.get('comentarios')
-    if obs: st.info(obs)
+    st.info(obs)
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
