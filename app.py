@@ -567,41 +567,30 @@ with tab_flota:
         datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
         
 # --- BOTÓN PARA FLOTAS GRANDES (Línea 580 aprox) ---
+# Este es el bloque que va en la pestaña de flotas
         if st.button("🔗 GENERAR LINK SEGURO (Flotas Grandes)", use_container_width=True):
             try:
                 import uuid
-                # 1. Creamos un ID único
                 f_id = str(uuid.uuid4())[:8] 
+                datos_f = st.session_state.edit_data
                 
-                # 2. Preparamos los datos
-                # Asegurate que 'edit_data' tenga la info de la flota
-                datos_a_guardar = st.session_state.edit_data
-                
-                # 3. Mandamos a Supabase
                 headers_sp = {
                     "apikey": SUPABASE_KEY, 
                     "Authorization": f"Bearer {SUPABASE_KEY}", 
-                    "Content-Type": "application/json",
-                    "Prefer": "return=minimal"
+                    "Content-Type": "application/json"
                 }
                 
-                payload = {
-                    "id": f_id,
-                    "data": datos_a_guardar,
-                    "tipo": "flota"
-                }
+                # 'data' es el nombre que acabamos de crear en Supabase
+                payload = {"id": f_id, "data": datos_f, "tipo": "flota"}
                 
-                url_post = f"{SUPABASE_URL}/rest/v1/cotizaciones"
-                res = requests.post(url_post, headers=headers_sp, json=payload)
+                res = requests.post(f"{SUPABASE_URL}/rest/v1/cotizaciones", headers=headers_sp, json=payload)
                 
                 if res.status_code in [200, 201]:
-                    link_final = f"https://dfseguros.streamlit.app/?f_id={f_id}"
-                    st.success("✅ ¡Flota guardada en la nube!")
-                    st.code(link_final)
-                    st.link_button("🚀 VER VISTA PREVIA", link_final, type="primary", use_container_width=True)
+                    link_f = f"https://dfseguros.streamlit.app/?f_id={f_id}"
+                    st.success("✅ ¡LOGRAMOS EL LINK!")
+                    st.code(link_f)
                 else:
-                    st.error(f"Error al guardar: {res.text}")
-                    
+                    st.error(f"Error de Supabase: {res.text}")
             except Exception as e:
                 st.error(f"Error técnico: {e}")
         
