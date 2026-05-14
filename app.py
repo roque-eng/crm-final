@@ -566,12 +566,12 @@ with tab_flota:
         datos_f_json = json.dumps(st.session_state.edit_data)
         datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
         
-# --- BOTÓN PARA FLOTAS GRANDES (Línea 580 aprox) ---
-# Este es el bloque que va en la pestaña de flotas
-        if st.button("🔗 GENERAR LINK SEGURO (Flotas Grandes)", use_container_width=True):
+    # --- BOTÓN PARA FLOTAS GRANDES (Línea 580 aprox) ---
+    if st.button("🔗 GENERAR LINK SEGURO (Flotas Grandes)", use_container_width=True):
             try:
                 import uuid
-                f_id = str(uuid.uuid4())[:8] 
+                # CAMBIO CLAVE: Usamos el código largo que Supabase espera
+                f_id = str(uuid.uuid4()) 
                 datos_f = st.session_state.edit_data
                 
                 headers_sp = {
@@ -580,17 +580,18 @@ with tab_flota:
                     "Content-Type": "application/json"
                 }
                 
-                # 'data' es el nombre que acabamos de crear en Supabase
+                # Mandamos el f_id largo
                 payload = {"id": f_id, "data": datos_f, "tipo": "flota"}
                 
                 res = requests.post(f"{SUPABASE_URL}/rest/v1/cotizaciones", headers=headers_sp, json=payload)
                 
                 if res.status_code in [200, 201]:
                     link_f = f"https://dfseguros.streamlit.app/?f_id={f_id}"
-                    st.success("✅ ¡LOGRAMOS EL LINK!")
+                    st.success("✅ ¡AHORA SÍ! Link generado con éxito")
                     st.code(link_f)
+                    st.link_button("🚀 PROBAR VISTA PREVIA", link_f, type="primary", use_container_width=True)
                 else:
-                    st.error(f"Error de Supabase: {res.text}")
+                    st.error(f"Error: {res.text}")
             except Exception as e:
                 st.error(f"Error técnico: {e}")
         
