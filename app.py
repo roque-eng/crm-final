@@ -142,16 +142,16 @@ if not p:
     elif "q" in query_params:
         p = json.loads(base64.b64decode(query_params["q"]).decode())
 
-# --- 2. VISTA DEL CLIENTE ---
+# --- 2. VISTA DEL CLIENTE (LIMPIA Y SIN ERRORES) ---
 if p:
-    # --- 1. DATOS Y ENCABEZADO ---
+    # 1. Extraemos los datos (abrimos el paquete de Supabase)
     d = p.get('data', p) 
     
-    # Mapeo de nombres según tu CRM
-    cliente_v = d.get('n') or d.get('cliente') or "CABLEX"
-    aseguradora_v = d.get('e') or d.get('aseguradora') or "SBI"
-    es_flota = True  
+    # 2. Mapeo de datos para el encabezado
+    cliente_v = d.get('n') or d.get('cliente') or "Asegurado"
+    aseguradora_v = d.get('e') or d.get('aseguradora') or "Compañía"
     
+    # 3. Logo y Títulos
     col_l, col_i = st.columns([1, 2])
     with col_l:
         st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
@@ -159,67 +159,73 @@ if p:
         st.markdown(f"## Asegurado: {cliente_v}")
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora_v}**")
 
-    # --- 2. TABLA DE VEHÍCULOS (ORDEN FIJO Y ALINEADO) ---
-    # En tu CRM las flotas se guardan en la clave 'tab'
+    # 4. Construcción de la Tabla (HTML Puro para que no se corra nada)
     vehiculos = d.get('tab') or d.get('vehiculos') or []
     
     if vehiculos:
+        # Iniciamos la variable de la tabla vacía
         t_html = """
-        <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
+        <style>
+            .tabla-cliente { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; }
+            .tabla-cliente th { background-color: #f0f2f6; color: #31333F; padding: 10px; border: 1px solid #ddd; text-align: center; }
+            .tabla-cliente td { padding: 8px; border: 1px solid #ddd; text-align: center; }
+            .derecha { text-align: right !important; font-weight: bold; }
+        </style>
+        <table class="tabla-cliente">
             <thead>
-                <tr style="background-color: #f0f7ff; color: #1E3A8A; text-align: center;">
-                    <th style="padding: 12px; border: 1px solid #ddd;">MARCA</th>
-                    <th style="padding: 12px; border: 1px solid #ddd;">MODELO</th>
-                    <th style="padding: 12px; border: 1px solid #ddd;">AÑO</th>
-                    <th style="padding: 12px; border: 1px solid #ddd;">MATRICULA</th>
-                    <th style="padding: 12px; border: 1px solid #ddd;">COBERTURA</th>
-                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
-                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
+                <tr>
+                    <th>MARCA</th>
+                    <th>MODELO</th>
+                    <th>AÑO</th>
+                    <th>MATRICULA</th>
+                    <th>COBERTURA</th>
+                    <th style="text-align: right;">CONTADO</th>
+                    <th style="text-align: right;">DEDUCIBLE</th>
                 </tr>
             </thead>
             <tbody>
         """
+        
         for v in vehiculos:
-            # Función para limpiar decimales y dar formato de miles con punto
-            def f_num(n):
-                try: 
-                    return f"{int(float(n)):,}".replace(",", ".")
-                except: 
-                    return str(n)
+            # Limpiador de números para evitar el .0
+            def clean(val):
+                try: return f"{int(float(val)):,}".replace(",", ".")
+                except: return str(val)
 
-            # Extraemos datos mapeando exactamente como los guarda tu editor de flotas
-            marca = v.get('Marca') or v.get('marca') or ""
-            modelo = v.get('Modelo') or v.get('modelo') or ""
-            anio = v.get('Año') or v.get('anio') or ""
-            mat = v.get('Matrícula') or v.get('matricula') or "-"
-            cob = v.get('Cobertura') or v.get('cobertura') or ""
-            contado = f"USD {f_num(v.get('Contado') or v.get('cuota') or v.get('precio') or 0)}"
-            deduc = f_num(v.get('Deducible') or v.get('deducible') or 0)
+            # Mapeo de columnas según tu editor de flotas
+            m = v.get('Marca') or v.get('marca') or ""
+            mo = v.get('Modelo') or v.get('modelo') or ""
+            an = v.get('Año') or v.get('anio') or ""
+            ma = v.get('Matrícula') or v.get('matricula') or "-"
+            co = v.get('Cobertura') or v.get('cobertura') or ""
+            precio = f"USD {clean(v.get('Contado') or v.get('cuota') or 0)}"
+            deduc = clean(v.get('Deducible') or v.get('deducible') or 0)
             
             t_html += f"""
-                <tr style="text-align: center; border-bottom: 1px solid #eee;">
-                    <td style="padding: 10px; border: 1px solid #ddd;">{marca}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{modelo}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{anio}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{mat}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">{cob}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{contado}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{deduc}</td>
+                <tr>
+                    <td>{m}</td>
+                    <td>{mo}</td>
+                    <td>{an}</td>
+                    <td>{ma}</td>
+                    <td>{co}</td>
+                    <td class="derecha">{precio}</td>
+                    <td class="derecha">{deduc}</td>
                 </tr>
             """
+        
         t_html += "</tbody></table>"
+        # Mostramos la tabla UNA SOLA VEZ
         st.markdown(t_html, unsafe_allow_html=True)
     else:
-        st.error("No se encontraron vehículos. Por favor, generá un link nuevo en la pestaña FLOTAS.")
+        st.warning("No se encontraron vehículos. Generá un link nuevo.")
 
-    # --- 3. OBSERVACIONES UNIFICADAS ---
-    st.markdown('<br><h3 style="color: #1E3A8A;">Comentarios EDF Seguros</h3>', unsafe_allow_html=True)
-    # En flotas el campo se guarda como 'ben'
-    obs_txt = d.get('ben') or d.get('observaciones') or "Sin observaciones adicionales."
+    # 5. Observaciones
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("Comentarios EDF Seguros")
+    obs_txt = d.get('ben') or d.get('beneficios') or "Sin observaciones."
     st.info(obs_txt)
     
-    # Detenemos para que no se vea el CRM debajo
-    st.stop()
+    st.stop() # Esto es vital para que no se dibuje el CRM abajo
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
