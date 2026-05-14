@@ -145,28 +145,11 @@ if not p:
 # --- 2. VISTA DEL CLIENTE ---
 if p:
     # --- 1. ENCABEZADO ---
-    d = p.get('data', p)  # Esto asegura que lea tanto links viejos como nuevos
-    cliente_v = d.get('cliente') or d.get('nombre_cliente') or "CABLEX"
-    aseguradora_v = d.get('aseguradora') or d.get('compania') or "SBI"
-    es_flota = True 
-    
-    col_l, col_i = st.columns([1, 2])
-    with col_l:
-        st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
-    with col_i:
-        st.markdown(f"## Asegurado: {cliente_v}")
-        st.markdown(f"### 🏦 Aseguradora: **{aseguradora_v}**")
-
-    # --- 2. TABLA DE VEHÍCULOS (USANDO PANDAS PARA QUE NO FALLE) ---
-    # --- 2. VISTA DEL CLIENTE ---
-if p:
-    # --- 1. ENCABEZADO Y DATOS ---
-    # Buscamos la data real (si viene de Supabase estará en p['data'])
+    # Extraemos la data real (si viene de Supabase estará en p['data'])
     d = p.get('data', p) 
     
-    # Mapeo de nombres: 'n' es como guardas el nombre en el CRM
-    cliente_v = d.get('n') or d.get('cliente') or d.get('nombre_cliente') or "CABLEX"
-    # 'e' es como guardas la Aseguradora en el CRM
+    # Mapeo de nombres según tu CRM
+    cliente_v = d.get('n') or d.get('cliente') or "CABLEX"
     aseguradora_v = d.get('e') or d.get('aseguradora') or "SBI"
     es_flota = True  
     
@@ -177,15 +160,15 @@ if p:
         st.markdown(f"## Asegurado: {cliente_v}")
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora_v}**")
 
-    # --- 2. TABLA DE VEHÍCULOS (CON RASTREO DE COLUMNAS) ---
-    # 'tab' es el nombre de la lista de vehiculos que guardas en el CRM
-    vehiculos = d.get('tab') or d.get('vehiculos') or d.get('items') or []
+    # --- 2. TABLA DE VEHÍCULOS (ORDEN FIJO Y ALINEADO) ---
+    # En tu CRM las flotas se guardan en la clave 'tab'
+    vehiculos = d.get('tab') or d.get('vehiculos') or []
     
     if vehiculos:
         t_html = """
         <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
-                <tr style="background-color: #333; color: white; text-align: center;">
+                <tr style="background-color: #f0f7ff; color: #1E3A8A; text-align: center;">
                     <th style="padding: 10px; border: 1px solid #ddd;">MARCA</th>
                     <th style="padding: 10px; border: 1px solid #ddd;">MODELO</th>
                     <th style="padding: 10px; border: 1px solid #ddd;">AÑO</th>
@@ -198,20 +181,20 @@ if p:
             <tbody>
         """
         for v in vehiculos:
-            # Función para limpiar números y alinear
+            # Función para limpiar decimales y dar formato de miles
             def f_num(n):
                 try: 
                     return f"{int(float(n)):,}".replace(",", ".")
                 except: 
                     return str(n)
 
-            # Buscamos cada dato por sus posibles nombres en el CRM
+            # Extraemos datos mapeando mayúsculas y minúsculas que genera el editor
             marca = v.get('Marca') or v.get('marca') or ""
             modelo = v.get('Modelo') or v.get('modelo') or ""
-            anio = v.get('Año') or v.get('anio') or v.get('año') or ""
-            mat = v.get('Matrícula') or v.get('matricula') or v.get('Matricula') or "-"
+            anio = v.get('Año') or v.get('anio') or ""
+            mat = v.get('Matrícula') or v.get('matricula') or "-"
             cob = v.get('Cobertura') or v.get('cobertura') or ""
-            contado = f"USD {f_num(v.get('Contado') or v.get('cuota') or v.get('precio') or 0)}"
+            contado = f"USD {f_num(v.get('Contado') or v.get('precio') or 0)}"
             deduc = f_num(v.get('Deducible') or v.get('deducible') or 0)
             
             t_html += f"""
@@ -226,21 +209,18 @@ if p:
                 </tr>
             """
         t_html += "</tbody></table>"
+        # Usamos markdown con unsafe_allow_html para que se procese la tabla correctamente
         st.markdown(t_html, unsafe_allow_html=True)
     else:
-        st.error("⚠️ No se encontraron vehículos. Por favor, generá un LINK NUEVO en el CRM.")
+        st.error("No se encontraron vehículos. Por favor, generá un link nuevo.")
 
     # --- 3. OBSERVACIONES UNIFICADAS ---
-    st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
-    st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
-    
-    # 'ben' es como guardas las observaciones en el CRM de Flotas
-    obs_txt = d.get('ben') or d.get('beneficios') or d.get('observaciones') or "Revisar condiciones generales."
+    st.markdown('<br><h3 style="color: #1E3A8A;">Comentarios EDF Seguros</h3>', unsafe_allow_html=True)
+    # En flotas el campo se guarda como 'ben'
+    obs_txt = d.get('ben') or d.get('observaciones') or "Sin observaciones adicionales."
     st.info(obs_txt)
     
-    # --- PIE DE PÁGINA ---
-    fecha_val = d.get('fecha', datetime.now().strftime("%d/%m/%Y"))
-    st.markdown(f'<div style="text-align: right; color: gray; margin-top: 20px;">Fecha de Cotización: {fecha_val}</div>', unsafe_allow_html=True)
+    # Detenemos para que no se vea el CRM abajo
     st.stop()
     
 # --- PIE DE PÁGINA DINÁMICO ---
