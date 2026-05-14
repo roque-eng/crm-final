@@ -528,24 +528,28 @@ with tab_flota:
 
     st.markdown("---")
     
-    # 2. DEFINICIÓN DE COLUMNAS DE FLOTA (6 Columnas)
-    cols_f = ["Marca", "Modelo", "Matrícula", "Cobertura", "Contado", "Deducible"]
+    # 2. DEFINICIÓN DE COLUMNAS DE FLOTA (Ahora con Año)
+    cols_f = ["Marca", "Modelo", "Año", "Matrícula", "Cobertura", "Contado", "Deducible"]
     
-    # 3. CARGA DE TABLA (Forzamos los encabezados del historial)
+    # 3. CARGA DE TABLA
     if edit_f and "tab" in edit_f:
         df_f_init = pd.DataFrame(edit_f["tab"])
-        # Aseguramos que el orden sea el correcto de flota
+        # Reindexamos para que tome la nueva columna Año si no existe en el registro viejo
         df_f_init = df_f_init.reindex(columns=cols_f).fillna("")
     else:
-        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Matrícula": "", "Cobertura": "Total", "Contado": 0, "Deducible": 0}])
+        # Fila inicial vacía con la columna Año
+        df_f_init = pd.DataFrame([{
+            "Marca": "", "Modelo": "", "Año": "", "Matrícula": "", 
+            "Cobertura": "Total", "Contado": 0, "Deducible": 0
+        }])
 
-    # 4. EL EDITOR (Aquí se recuperan Marca, Modelo, etc.)
+    # 4. EL EDITOR
     t_flota = st.data_editor(
         df_f_init, 
         num_rows="dynamic", 
         use_container_width=True, 
         column_order=cols_f, 
-        key="editor_flotas_vfinal_fix"
+        key="editor_flotas_v_final_año"
     )
 
     st.markdown("### 📝 Detalles de la Propuesta")
