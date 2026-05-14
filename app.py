@@ -145,12 +145,10 @@ if not p:
 # --- 2. VISTA DEL CLIENTE ---
 if p:
     # --- 1. ENCABEZADO ---
-    # Extraemos la data real (si viene de Supabase estará en p['data'])
-    d = p.get('data', p) 
-    
+    d = p.get('data', p)  # Esto asegura que lea tanto links viejos como nuevos
     cliente_v = d.get('cliente') or d.get('nombre_cliente') or "CABLEX"
     aseguradora_v = d.get('aseguradora') or d.get('compania') or "SBI"
-    es_flota = True  # Para evitar errores en el pie de página
+    es_flota = True 
     
     col_l, col_i = st.columns([1, 2])
     with col_l:
@@ -159,55 +157,44 @@ if p:
         st.markdown(f"## Asegurado: {cliente_v}")
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora_v}**")
 
-    # --- 2. TABLA DE VEHÍCULOS (ORDEN SOLICITADO) ---
+    # --- 2. TABLA DE VEHÍCULOS (USANDO PANDAS PARA QUE NO FALLE) ---
     vehiculos = d.get('vehiculos') or d.get('items') or []
     
     if vehiculos:
-        t_html = """
-        <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
-            <thead>
-                <tr style="background-color: #333; color: white; text-align: center;">
-                    <th style="padding: 10px; border: 1px solid #ddd;">MARCA</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">MODELO</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">AÑO</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">MATRICULA</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">COBERTURA</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
-        for v in vehiculos:
-            # Función para limpiar decimales (.0) y alinear
-            def f_num(n):
-                try: return f"{int(float(n)):,}"
-                except: return str(n)
+        import pandas as pd
+        df_p = pd.DataFrame(vehiculos)
+        
+        # Renombramos columnas para que coincidan con lo que pide el visor
+        columnas_map = {
+            'marca': 'MARCA', 'modelo': 'MODELO', 'anio': 'AÑO', 'año': 'AÑO',
+            'matricula': 'MATRICULA', 'cobertura': 'COBERTURA', 
+            'cuota': 'CONTADO', 'precio': 'CONTADO', 'deducible': 'DEDUCIBLE'
+        }
+        df_p = df_p.rename(columns=columnas_map)
 
-            precio = f"USD {f_num(v.get('cuota') or v.get('precio', 0))}"
-            deduc = f_num(v.get('deducible', 0))
-            
-            t_html += f"""
-                <tr style="text-align: center; border-bottom: 1px solid #eee;">
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('marca', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('modelo', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('anio') or v.get('año', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('matricula', '-')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('cobertura', '')}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{precio}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{deduc}</td>
-                </tr>
-            """
-        t_html += "</tbody></table>"
-        st.markdown(t_html, unsafe_allow_html=True)
+        # FORZAMOS EL ORDEN QUE ME PEDISTE
+        orden_columnas = ['MARCA', 'MODELO', 'AÑO', 'MATRICULA', 'COBERTURA', 'CONTADO', 'DEDUCIBLE']
+        # Solo mostramos las que existan para que no de error
+        columnas_finales = [c for c in orden_columnas if c in df_p.columns]
+        df_p = df_p[columnas_finales]
+
+        # Formateo de números (limpiar el .0 y poner USD)
+        if 'CONTADO' in df_p.columns:
+            df_p['CONTADO'] = df_p['CONTADO'].apply(lambda x: f"USD {int(float(x)):,}" if pd.notnull(x) else "")
+        if 'DEDUCIBLE' in df_p.columns:
+            df_p['DEDUCIBLE'] = df_p['DEDUCIBLE'].apply(lambda x: f"{int(float(x)):,}" if pd.notnull(x) and str(x).replace('.','').isdigit() else x)
+
+        # Mostramos la tabla con el estilo de Streamlit que no falla
+        st.write(df_p.to_html(index=False, escape=False), unsafe_allow_html=True)
     else:
-        st.error("⚠️ No se encontraron vehículos. Por favor, generá un LINK NUEVO en el CRM.")
+        st.error("No se encontraron vehículos. Por favor, generá un link nuevo.")
 
-    # --- 3. COMENTARIOS UNIFICADOS ---
-    st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
-    st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
-    obs_txt = d.get('beneficios') or d.get('observaciones') or "Revisar condiciones generales."
-    st.info(obs_txt)    
+    # --- 3. OBSERVACIONES ---
+    st.markdown("---")
+    st.markdown("### Comentarios EDF Seguros")
+    obs = d.get('beneficios') or d.get('observaciones') or "Revisar condiciones."
+    st.info(obs)    
+    
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
     
