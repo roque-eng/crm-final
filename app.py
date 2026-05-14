@@ -566,33 +566,42 @@ with tab_flota:
         datos_f_json = json.dumps(st.session_state.edit_data)
         datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
         
-    # --- GENERADOR DE LINK SEGURO (Adaptado a tu tabla existente) ---
-    if st.session_state.get('edit_data') and st.session_state.edit_data.get("tipo") == "Flota":
-        st.markdown("---")
-        if st.button("🔗 GENERAR LINK SEGURO (Para Flotas Grandes)", use_container_width=True):
+# --- BOTÓN PARA FLOTAS GRANDES (Línea 580 aprox) ---
+        if st.button("🔗 GENERAR LINK SEGURO (Flotas Grandes)", use_container_width=True):
             try:
                 import uuid
-                # 1. Generamos un código único
-                f_id = str(uuid.uuid4())
-                datos_f = st.session_state.edit_data
+                # 1. Creamos un ID único
+                f_id = str(uuid.uuid4())[:8] 
                 
-                # 2. Guardamos en tu tabla existente
-                headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"}
-                # Usamos los nombres de columna que se ven en tu captura: id, data, tipo
-                payload = {
-                    "id": f_id, 
-                    "data": datos_f, 
-                    "tipo": "flota" 
+                # 2. Preparamos los datos
+                # Asegurate que 'edit_data' tenga la info de la flota
+                datos_a_guardar = st.session_state.edit_data
+                
+                # 3. Mandamos a Supabase
+                headers_sp = {
+                    "apikey": SUPABASE_KEY, 
+                    "Authorization": f"Bearer {SUPABASE_KEY}", 
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
                 }
-                res = requests.post(f"{SUPABASE_URL}/rest/v1/cotizaciones", headers=headers_sp, json=payload)
+                
+                payload = {
+                    "id": f_id,
+                    "data": datos_a_guardar,
+                    "tipo": "flota"
+                }
+                
+                url_post = f"{SUPABASE_URL}/rest/v1/cotizaciones"
+                res = requests.post(url_post, headers=headers_sp, json=payload)
                 
                 if res.status_code in [200, 201]:
-                    link_f = f"https://dfseguros.streamlit.app/?f_id={f_id}"
-                    st.success("✅ ¡Link generado! Copialo y envialo:")
-                    st.code(link_f)
-                    st.link_button("🚀 PROBAR VISTA PREVIA", link_f, type="primary", use_container_width=True)
+                    link_final = f"https://dfseguros.streamlit.app/?f_id={f_id}"
+                    st.success("✅ ¡Flota guardada en la nube!")
+                    st.code(link_final)
+                    st.link_button("🚀 VER VISTA PREVIA", link_final, type="primary", use_container_width=True)
                 else:
-                    st.error(f"Error de base de datos: {res.text}")
+                    st.error(f"Error al guardar: {res.text}")
+                    
             except Exception as e:
                 st.error(f"Error técnico: {e}")
         
