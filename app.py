@@ -144,27 +144,29 @@ if not p:
 
 # --- 2. VISTA DEL CLIENTE ---
 if p:
-# --- 1. LOGO Y ENCABEZADO CON ASEGURADORA ---
+# --- 1. DATOS DE CONTROL Y ENCABEZADO ---
+    # Definimos es_flota para que no dé error el pie de página
+    es_flota = p.get('es_flota', True) 
+    
     col_logo, col_info = st.columns([1, 2])
     with col_logo:
         st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
     with col_info:
         st.markdown(f"## Cotización: {p.get('cliente', 'Cliente')}")
-        aseg = p.get('aseguradora', 'A definir')
-        st.markdown(f"### 🏦 Aseguradora: **{aseg}**")
+        st.markdown(f"### 🏦 Aseguradora: **{p.get('aseguradora', 'A definir')}**")
 
     # --- 2. TABLA DE VEHÍCULOS REORDENADA ---
     tabla_html = """
-    <table>
+    <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
         <thead>
-            <tr>
-                <th>MARCA</th>
-                <th>MODELO</th>
-                <th>AÑO</th>
-                <th>MATRICULA</th>
-                <th>COBERTURA</th>
-                <th>CONTADO</th>
-                <th>DEDUCIBLE</th>
+            <tr style="background-color: #f8f9fa; border-bottom: 2px solid #333;">
+                <th style="padding: 10px;">MARCA</th>
+                <th style="padding: 10px;">MODELO</th>
+                <th style="padding: 10px;">AÑO</th>
+                <th style="padding: 10px;">MATRICULA</th>
+                <th style="padding: 10px;">COBERTURA</th>
+                <th style="padding: 10px;">CONTADO</th>
+                <th style="padding: 10px;">DEDUCIBLE</th>
             </tr>
         </thead>
         <tbody>
@@ -175,21 +177,21 @@ if p:
         p_final = f"USD {cuota:,.0f}" if isinstance(cuota, (int, float)) else cuota
         
         tabla_html += f"""
-            <tr>
-                <td>{v.get('marca', '')}</td>
-                <td>{v.get('modelo', '')}</td>
-                <td>{v.get('anio', '')}</td>
-                <td>{v.get('matricula', '-')}</td>
-                <td>{v.get('cobertura', '')}</td>
-                <td>{p_final}</td>
-                <td>{v.get('deducible', 'S/D')}</td>
+            <tr style="border-bottom: 1px solid #eee; text-align: center;">
+                <td style="padding: 10px;">{v.get('marca', '')}</td>
+                <td style="padding: 10px;">{v.get('modelo', '')}</td>
+                <td style="padding: 10px;">{v.get('anio', '')}</td>
+                <td style="padding: 10px;">{v.get('matricula', '-')}</td>
+                <td style="padding: 10px;">{v.get('cobertura', '')}</td>
+                <td style="padding: 10px;">{p_final}</td>
+                <td style="padding: 10px;">{v.get('deducible', 'S/D')}</td>
             </tr>
         """
     
     tabla_html += "</tbody></table>"
     st.markdown(tabla_html, unsafe_allow_html=True)
 
-    # --- 3. COMENTARIOS EDF SEGUROS (UNIFICADOS) ---
+    # --- 3. COMENTARIOS EDF SEGUROS ---
     st.markdown('<p class="titulo-gris">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
     st.markdown('<div class="linea-gris"></div>', unsafe_allow_html=True)
     
