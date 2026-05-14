@@ -122,7 +122,8 @@ st.markdown("""
     """, unsafe_allow_html=True)
 ¿
 
-    # --- RECEPCIÓN DE PARÁMETROS (Con 4 espacios de sangría) ---
+if p: # <--- Este IF manda todo lo que sigue. Está pegado a la izquierda.
+# --- RECEPCIÓN DE PARÁMETROS (Con 4 espacios de sangría) ---
     query_params = st.query_params
     p = None
 
