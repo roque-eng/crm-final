@@ -143,6 +143,7 @@ if not p:
         p = json.loads(base64.b64decode(query_params["q"]).decode())
 
 # --- 2. VISTA DEL CLIENTE ---
+if p:
 # --- 1. LOGO Y ENCABEZADO CON ASEGURADORA ---
     col_logo, col_info = st.columns([1, 2])
     with col_logo:
@@ -195,6 +196,7 @@ if not p:
     comentarios = p.get('beneficios', '')
     if comentarios:
         st.info(comentarios)
+    
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
     
