@@ -126,7 +126,7 @@ query_params = st.query_params
 p = None
 
 # 1. Caso Link Seguro (f_id de Supabase)
-if "f_id" in query_params:
+    if "f_id" in query_params:
     f_id = query_params["f_id"]
     headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
     url_get = f"{SUPABASE_URL}/rest/v1/cotizaciones?id=eq.{f_id}&select=data"
