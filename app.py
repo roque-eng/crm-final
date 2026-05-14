@@ -145,9 +145,11 @@ if not p:
 # --- 2. VISTA DEL CLIENTE ---
 if p:
     # --- 1. ENCABEZADO ---
-    cliente = p.get('cliente') or p.get('nombre_cliente') or "CABLEX"
-    aseguradora = p.get('aseguradora') or p.get('compania') or "SBI"
-    es_flota = True  # Definimos esto para evitar el error NameError de abajo
+    # Buscamos los datos dentro de 'p' o dentro de 'p['data']'
+    info = p.get('data', p) 
+    cliente = info.get('cliente') or info.get('nombre_cliente') or "CABLEX"
+    aseguradora = info.get('aseguradora') or info.get('compania') or "SBI"
+    es_flota = True
     
     col_logo, col_info = st.columns([1, 2])
     with col_logo:
@@ -156,9 +158,8 @@ if p:
         st.markdown(f"## Asegurado: {cliente}")
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora}**")
 
-    # --- 2. TABLA DE VEHÍCULOS ---
-    # Buscamos la lista de vehículos en cualquier nombre posible
-    lista_v = p.get('vehiculos') or p.get('items') or []
+    # --- 2. TABLA DE VEHÍCULOS (RASTREO INTERNO) ---
+    lista_v = info.get('vehiculos') or info.get('items') or []
     
     if lista_v:
         tabla_html = """
@@ -177,7 +178,6 @@ if p:
             <tbody>
         """
         for v in lista_v:
-            # Función rápida para limpiar decimales y alinear
             def n_fmt(val):
                 try: return f"{int(float(val)):,}"
                 except: return str(val)
@@ -204,7 +204,7 @@ if p:
     # --- 3. COMENTARIOS ---
     st.markdown('<br><p style="color: #333; font-size: 24px; font-weight: bold;">Comentarios EDF Seguros</p>', unsafe_allow_html=True)
     st.markdown('<div style="border-bottom: 4px solid #333; margin-bottom: 15px;"></div>', unsafe_allow_html=True)
-    st.info(p.get('beneficios') or p.get('observaciones') or "Revisar condiciones de póliza.")
+    st.info(info.get('beneficios') or info.get('observaciones') or "Revisar condiciones de póliza.")
     
 # --- PIE DE PÁGINA DINÁMICO ---
     fecha_val = p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
