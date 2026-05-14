@@ -144,7 +144,7 @@ if not p:
 
 # --- 2. VISTA DEL CLIENTE ---
 if p:
-# --- 1. ENCABEZADO ---
+    # --- 1. ENCABEZADO ---
     # Buscamos cliente y aseguradora con nombres simples
     cliente = p.get('cliente') or "CABLEX"
     aseguradora = p.get('aseguradora') or "SBI"
