@@ -121,29 +121,28 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- RECEPCIÓN DE PARÁMETROS ---
+# --- 1. RECEPCIÓN DE DATOS ---
 query_params = st.query_params
 p = None
 
-# Intentamos cargar p desde la Nube (f_id)
+# Buscar en la Nube (Link Seguro)
 if "f_id" in query_params:
     f_id = query_params["f_id"]
     headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
     url_get = f"{SUPABASE_URL}/rest/v1/cotizaciones?id=eq.{f_id}&select=data"
     try:
         response = requests.get(url_get, headers=headers_sp).json()
-        if response:
-            p = response[0]["data"]
-    except:
-        pass
+        if response: p = response[0]["data"]
+    except: pass
 
-# Si no hay f_id, probamos los viejos
+# Buscar en el Link (Método viejo)
 if not p:
     if "f" in query_params:
         p = json.loads(base64.b64decode(query_params["f"]).decode())
     elif "q" in query_params:
         p = json.loads(base64.b64decode(query_params["q"]).decode())
-# --- VISTA CLIENTE (UNIFICADA) ---
+
+# --- 2. VISTA DEL CLIENTE ---
 if p:
     st.markdown("""
         <style>
@@ -153,25 +152,10 @@ if p:
             table { width: 100% !important; border-collapse: collapse; margin: 25px 0; }
             thead tr th { background-color: #f8f9fa !important; color: #333333; padding: 12px; font-size: 16px; text-align: center !important; border-bottom: 2px solid #333333; }
             tbody td { padding: 10px; font-size: 15px; text-align: center; border-bottom: 1px solid #eee; }
-        
-    # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
-    st.markdown("""
-        <style>
-            .main .block-container { max-width: 95% !important; padding-top: 2rem; }
-            .titulo-gris { color: #333333; font-size: 42px !important; font-weight: 800; margin-bottom: 5px; }
-            .linea-gris { border-bottom: 4px solid #333333; margin-bottom: 30px; }
-            table { width: 100% !important; border-collapse: collapse; margin: 25px 0; }
-            thead tr th { background-color: #f8f9fa !important; color: #333333; padding: 12px; font-size: 16px; text-align: center !important; border-bottom: 2px solid #333333; }
-            tbody td { padding: 10px; font-size: 15px; text-align: center; border-bottom: 1px solid #eee; }
-            .ben-fila { background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #333333; color: #333; }
-            .caja-gris { background-color: #ffffff; padding: 20px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #333333; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
-            .sub-tit { font-size: 22px !important; font-weight: bold; color: #333333; margin-bottom: 10px; display: block; }
-            .costo-res { color: #333333; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; background: #f0f0f0; padding: 5px 10px; border-radius: 5px; }
-            .footer-cliente { margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; color: #888; font-size: 14px; display: flex; justify-content: space-between; }
         </style>
-        <div class="titulo-gris">EDF SEGUROS - Cotización</div>
-        <div class="linea-gris"></div>
     """, unsafe_allow_html=True)
+    
+    # Aquí sigue el resto de la visualización (logo, tabla, etc.)
 
     c1, c2 = st.columns(2)
     c1.markdown(f"### 👤 Asegurado: {p.get('n', 'N/A')}")
