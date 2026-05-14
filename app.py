@@ -155,13 +155,12 @@ if p:
         st.markdown(f"## Asegurado: {cliente}")
         st.markdown(f"### 🏦 Aseguradora: **{aseguradora}**")
 
-    # --- 2. TABLA DE VEHÍCULOS (RASTREO TOTAL) ---
-    # Buscamos la lista de autos en cualquier rincón del archivo
-    vehiculos_lista = p.get('vehiculos') or p.get('items') or p.get('data', {}).get('vehiculos') or []
+    # --- 2. TABLA DE VEHÍCULOS (CON AJUSTE DE DEDUCIBLE Y ALINEACIÓN) ---
+    vehiculos_lista = p.get('vehiculos') or p.get('items') or []
     
     if vehiculos_lista:
         tabla_html = """
-        <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
+        <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
                 <tr style="background-color: #333; color: white; text-align: center;">
                     <th style="padding: 10px; border: 1px solid #ddd;">MARCA</th>
@@ -169,33 +168,34 @@ if p:
                     <th style="padding: 10px; border: 1px solid #ddd;">AÑO</th>
                     <th style="padding: 10px; border: 1px solid #ddd;">MATRICULA</th>
                     <th style="padding: 10px; border: 1px solid #ddd;">COBERTURA</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">CONTADO</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">DEDUCIBLE</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
+                    <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
                 </tr>
             </thead>
             <tbody>
         """
         for v in vehiculos_lista:
-            # Rastreamos cada campo por si cambió el nombre
-            m = v.get('marca') or v.get('MARCA') or ''
-            mo = v.get('modelo') or v.get('MODELO') or ''
-            a = v.get('anio') or v.get('año') or v.get('AÑO') or ''
-            ma = v.get('matricula') or v.get('MATRICULA') or '-'
-            cob = v.get('cobertura') or v.get('COBERTURA') or ''
+            # --- Formateo de Contado (sin decimales) ---
             pre = v.get('cuota') or v.get('precio') or v.get('CONTADO') or 0
-            ded = v.get('deducible') or v.get('DEDUCIBLE') or 'S/D'
+            p_fmt = f"USD {int(pre):,}" if isinstance(pre, (int, float)) else str(pre)
             
-            p_fmt = f"USD {pre:,.0f}" if isinstance(pre, (int, float)) else str(pre)
+            # --- Formateo de Deducible (quitamos el .0) ---
+            ded = v.get('deducible') or v.get('DEDUCIBLE') or 0
+            # Si es un número (como 150.0), lo pasamos a entero (150)
+            if isinstance(ded, (int, float)):
+                ded_fmt = f"{int(ded):,}"
+            else:
+                ded_fmt = str(ded)
             
             tabla_html += f"""
                 <tr style="text-align: center; border-bottom: 1px solid #eee;">
-                    <td style="padding: 8px; border: 1px solid #ddd;">{m}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{mo}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{a}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{ma}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{cob}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">{p_fmt}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{ded}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('marca') or v.get('MARCA', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('modelo') or v.get('MODELO', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('anio') or v.get('año') or ''}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('matricula') or '-'}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">{v.get('cobertura', '')}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{p_fmt}</td>
+                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{ded_fmt}</td>
                 </tr>
             """
         tabla_html += "</tbody></table>"
