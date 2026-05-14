@@ -125,34 +125,34 @@ st.markdown("""
 query_params = st.query_params
 p = None
 
-# 1. Caso Link Seguro (f_id de Supabase)
+    # 1. Caso Link Seguro (f_id de Supabase)
     if "f_id" in query_params:
-    f_id = query_params["f_id"]
-    headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-    url_get = f"{SUPABASE_URL}/rest/v1/cotizaciones?id=eq.{f_id}&select=data"
+        f_id = query_params["f_id"]
+        headers_sp = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+        url_get = f"{SUPABASE_URL}/rest/v1/cotizaciones?id=eq.{f_id}&select=data"
+        
+        try:
+            response = requests.get(url_get, headers=headers_sp).json()
+            if response:
+                p = response[0]["data"]
+                # Nos aseguramos que el sistema sepa que es una flota
+                if "tipo" not in p: p["tipo"] = "Flota"
+        except Exception as e:
+            st.error(f"Error al recuperar datos de la nube: {e}")
     
-    try:
-        response = requests.get(url_get, headers=headers_sp).json()
-        if response:
-            p = response[0]["data"]
-            # Nos aseguramos que el sistema sepa que es una flota
-            if "tipo" not in p: p["tipo"] = "Flota"
-    except Exception as e:
-        st.error(f"Error al recuperar datos de la nube: {e}")
-
-# 2. Caso Link Viejo (Flotas chicas)
-elif "f" in query_params:
-    try:
-        p = json.loads(base64.b64decode(query_params["f"]).decode())
-    except:
-        st.error("Error al decodificar link de flota.")
-
-# 3. Caso Link Individual (Autos)
-elif "q" in query_params:
-    try:
-        p = json.loads(base64.b64decode(query_params["q"]).decode())
-    except:
-        st.error("Error al decodificar link individual.")
+    # 2. Caso Link Viejo (Flotas chicas)
+    elif "f" in query_params:
+        try:
+            p = json.loads(base64.b64decode(query_params["f"]).decode())
+        except:
+            st.error("Error al decodificar link de flota.")
+    
+    # 3. Caso Link Individual (Autos)
+    elif "q" in query_params:
+        try:
+            p = json.loads(base64.b64decode(query_params["q"]).decode())
+        except:
+            st.error("Error al decodificar link individual.")
         
     # --- ESTILOS EXCLUSIVOS VISTA CLIENTE (GRIS OSCURO) ---
     st.markdown("""
