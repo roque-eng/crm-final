@@ -8,6 +8,14 @@ import json
 import base64
 import requests
 
+# --- INICIALIZACIÓN DE MEMORIA (HISTORIAL) ---
+if "historico" not in st.session_state:
+    st.session_state.historico = []
+
+if "edit_data" not in st.session_state:
+    st.session_state.edit_data = {}
+# ---------------------------------------------
+
 # 1. Definición Global de Usuarios
 USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
 
@@ -476,17 +484,18 @@ with tab_cot:
 
     # 5. Lógica de Guardado (Específica para Individual)
     if st.button("💾 Guardar y Generar Link Individual", use_container_width=True):
-        datos_individual = {
+        datos_i = {
             "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in,
             "tab": t_edit.to_dict(orient='records'),
             "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b,
-            "tipo": "Individual"  # <--- ESTA ES LA CLAVE
+            "tipo": "Individual"
         }
-        if "historico" not in st.session_state: st.session_state.historico = []
-        st.session_state.historico.append(datos_individual)
-        st.session_state.edit_data = datos_individual
-        st.success(f"✅ Cotización de {n_cot} guardada.")
+        # ESTA ES LA LÍNEA CLAVE:
+        st.session_state.historico.append(datos_i) 
+        
+        st.session_state.edit_data = datos_i
+        st.success(f"✅ Cotización de {n_cot} guardada en el historial.")
         st.rerun()
         
     # 6. Botón de Vista Previa (Solo para Individual)
