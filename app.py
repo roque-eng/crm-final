@@ -144,8 +144,7 @@ if not p:
 
 # --- 2. VISTA DEL CLIENTE ---
 if p:
-    # --- 1. ENCABEZADO ---
-    # Extraemos la data real (si viene de Supabase estará en p['data'])
+    # --- 1. DATOS Y ENCABEZADO ---
     d = p.get('data', p) 
     
     # Mapeo de nombres según tu CRM
@@ -169,50 +168,49 @@ if p:
         <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
                 <tr style="background-color: #f0f7ff; color: #1E3A8A; text-align: center;">
-                    <th style="padding: 10px; border: 1px solid #ddd;">MARCA</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">MODELO</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">AÑO</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">MATRICULA</th>
-                    <th style="padding: 10px; border: 1px solid #ddd;">COBERTURA</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
-                    <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">MARCA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">MODELO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">AÑO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">MATRICULA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">COBERTURA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
                 </tr>
             </thead>
             <tbody>
         """
         for v in vehiculos:
-            # Función para limpiar decimales y dar formato de miles
+            # Función para limpiar decimales y dar formato de miles con punto
             def f_num(n):
                 try: 
                     return f"{int(float(n)):,}".replace(",", ".")
                 except: 
                     return str(n)
 
-            # Extraemos datos mapeando mayúsculas y minúsculas que genera el editor
+            # Extraemos datos mapeando exactamente como los guarda tu editor de flotas
             marca = v.get('Marca') or v.get('marca') or ""
             modelo = v.get('Modelo') or v.get('modelo') or ""
             anio = v.get('Año') or v.get('anio') or ""
             mat = v.get('Matrícula') or v.get('matricula') or "-"
             cob = v.get('Cobertura') or v.get('cobertura') or ""
-            contado = f"USD {f_num(v.get('Contado') or v.get('precio') or 0)}"
+            contado = f"USD {f_num(v.get('Contado') or v.get('cuota') or v.get('precio') or 0)}"
             deduc = f_num(v.get('Deducible') or v.get('deducible') or 0)
             
             t_html += f"""
                 <tr style="text-align: center; border-bottom: 1px solid #eee;">
-                    <td style="padding: 8px; border: 1px solid #ddd;">{marca}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{modelo}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{anio}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{mat}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">{cob}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{contado}</td>
-                    <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">{deduc}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{marca}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{modelo}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{anio}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{mat}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">{cob}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold;">{contado}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{deduc}</td>
                 </tr>
             """
         t_html += "</tbody></table>"
-        # Usamos markdown con unsafe_allow_html para que se procese la tabla correctamente
         st.markdown(t_html, unsafe_allow_html=True)
     else:
-        st.error("No se encontraron vehículos. Por favor, generá un link nuevo.")
+        st.error("No se encontraron vehículos. Por favor, generá un link nuevo en la pestaña FLOTAS.")
 
     # --- 3. OBSERVACIONES UNIFICADAS ---
     st.markdown('<br><h3 style="color: #1E3A8A;">Comentarios EDF Seguros</h3>', unsafe_allow_html=True)
@@ -220,7 +218,7 @@ if p:
     obs_txt = d.get('ben') or d.get('observaciones') or "Sin observaciones adicionales."
     st.info(obs_txt)
     
-    # Detenemos para que no se vea el CRM abajo
+    # Detenemos para que no se vea el CRM debajo
     st.stop()
     
 # --- PIE DE PÁGINA DINÁMICO ---
