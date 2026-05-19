@@ -236,24 +236,76 @@ with tab_flota:
             st.rerun()
             
     else:
-        # VISTA DE PROPUESTA LIMPIA (FLOTAS)
+        # --- VISTA DE PROPUESTA LIMPIA EN HTML PURO (INDIVIDUAL) ---
         col_l, col_i = st.columns([1, 2])
-        with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
+        with col_l: 
+            st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
-            st.markdown(f"## Asegurado: {edit_f.get('n', 'Cliente Flota')}")
-            st.markdown(f"### 🏦 Aseguradora: **{edit_f.get('e', 'Compañía')}**")
+            st.markdown(f"## Asegurado: {edit_ind.get('n', 'Cliente')}")
+            st.markdown(f"### 📋 Propuesta para: **{edit_ind.get('v', 'Vehículo')}**")
+        
+        # Tabla estructurada de forma segura sin comandos de Pandas mixtos
+        t_html = """
+        <table class="tabla-edf" style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
+            <thead>
+                <tr>
+                    <th style="background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd;">ASEGURADORA</th>
+                    <th style="background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
+                    <th style="background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: right;">10 CUOTAS</th>
+                    <th style="background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+        
+        for row in edit_ind.get("tab", []):
+            aseg_v = row.get('Aseguradora', '')
+            cont_v = f"USD {f_num(row.get('Contado', 0))}"
+            cuot_v = f"USD {f_num(row.get('10 Cuotas', 0))}"
+            dedu_v = f"USD {f_num(row.get('Deducible', 0))}"
             
-        t_html = """<table class="tabla-edf"><thead><tr><th>MARCA</th><th>MODELO</th><th>AÑO</th><th>MATRICULA</th><th>COBERTURA</th><th style="text-align: right;">CONTADO</th><th style="text-align: right;">DEDUCIBLE</th></tr></thead><tbody>"""
-        for row in edit_f.get("tab", []):
-            t_html += f"""<tr><td>{row.get('Marca','')}</td><td>{row.get('Modelo','')}</td><td>{row.get('Año','')}</td><td>{row.get('Matrícula','-')}</td><td>{row.get('Cobertura','')}</td><td class="der" style="color: #1E3A8A;">USD {f_num(row.get('Contado',0))}</td><td class="der">USD {f_num(row.get('Deducible',0))}</td></tr>"""
+            t_html += f"""
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><b>{aseg_v}</b></td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #1E3A8A;">{cont_v}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{cuot_v}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{dedu_v}</td>
+                </tr>
+            """
         t_html += "</tbody></table>"
+        
+        # Forzamos a Streamlit a interpretar la tabla web
         st.markdown(t_html, unsafe_allow_html=True)
         
-        if edit_f.get("ben"):
-            st.markdown("### 📋 Comentarios EDF Seguros")
-            st.info(edit_f.get("ben"))
+        # Beneficios en Filas
+        if edit_ind.get("ben"):
+            st.write("")
+            st.markdown("### ✅ Beneficios Incluidos")
+            for b in edit_ind.get("ben", "").split('\n'):
+                if b.strip(): 
+                    st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
+                
+        # Cajones de Coberturas Complementarias
+        st.write("")
+        st.markdown("### ⚠️ Coberturas Complementarias")
+        cx1, cx2, cx3 = st.columns(3)
+        
+        def b_html(tit, ico, txt):
+            if not txt: return ""
+            out = f'<div class="caja-azul"><span style="font-weight:bold; color:#1E3A8A;">{ico} {tit}</span><br>'
+            for l in txt.split('\n'):
+                if "$" in l or "Costo" in l: 
+                    out += f'<span class="costo-res">💰 {l.replace("•","").strip()}</span>'
+                else: 
+                    out += f'<span style="display:block; margin-top:3px;">{l.strip()}</span>'
+            return out + '</div>'
+            
+        cx1.markdown(b_html("Hogar", "🏠", edit_ind.get("ch", "")), unsafe_allow_html=True)
+        cx2.markdown(b_html("Alquiler", "🚗", edit_ind.get("ca", "")), unsafe_allow_html=True)
+        cx3.markdown(b_html("Bici", "🚲", edit_ind.get("cb", "")), unsafe_allow_html=True)
+        
         st.markdown("---")
-        st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {edit_f.get('e_nombre','')} | <b>Contacto:</b> {edit_f.get('cont','')}</div><div><b>Fecha:</b> {edit_f.get('fecha','')}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {edit_ind.get('e','EDF')} | <b>Contacto:</b> {edit_ind.get('cont','')}</div><div><b>Fecha:</b> {edit_ind.get('fecha','')}</div></div>", unsafe_allow_html=True)
 
 # --- PESTAÑA HISTORIAL ---
 with tab_historial:
