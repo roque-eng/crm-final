@@ -102,59 +102,106 @@ if not p:
 # 🛡️ INTERFAZ DE VISTA DEL CLIENTE (REPARADA)
 # ==========================================
 if p:
-    d = p.get('data', p)
+    # --- 1. ENCABEZADO UNIFICADO ---
+    d = p.get('data', p) 
     
-    cliente_v = d.get('n') or d.get('cliente') or "Asegurado"
-    vehiculo_v = d.get('v') or "Vehículo"
-    asesor_v = d.get('e') or "EDF SEGUROS"
-    contacto_v = d.get('cont') or "099 635 244"
-    fecha_v = d.get('fecha', datetime.now().strftime("%d/%m/%Y"))
+    # Mapeo de nombres exactos para Individual y Flotas
+    cliente_v = d.get('n') or d.get('cliente') or d.get('nombre_cliente') or "Asegurado"
+    aseguradora_v = d.get('e') or d.get('aseguradora') or d.get('compania') or "Compañía"
+    vehiculo_v = d.get('v') or "Vehículo / Propuesta Comercial"
+    fecha_val = d.get('fecha') or p.get('fecha', datetime.now().strftime("%d/%m/%Y"))
     
     col_l, col_i = st.columns([1, 2])
     with col_l:
         st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
     with col_i:
         st.markdown(f"## Asegurado: {cliente_v}")
-        st.markdown(f"### 📋 Cotización para: **{vehiculo_v}**")
+        st.markdown(f"### 📋 {vehiculo_v} | 🏦 Aseguradora: **{aseguradora_v}**")
 
-    vehiculos_lista = d.get('tab') or []
+    # --- 2. TABLA DE VEHÍCULOS / COBERTURAS ---
+    vehiculos = d.get('tab') or d.get('vehiculos') or []
     
-    if vehiculos_lista:
+    if vehiculos:
+        # Detectamos si es el formato de Flotas o Individual para armar las columnas correctas
+        es_flota_data = "Marca" in vehiculos[0] or "marca" in vehiculos[0]
+        
         t_html = """
         <table class="tabla-edf">
             <thead>
                 <tr>
+        """
+        if es_flota_data:
+            t_html += """
+                    <th>MARCA</th>
+                    <th>MODELO</th>
+                    <th>AÑO</th>
+                    <th>MATRICULA</th>
+                    <th>COBERTURA</th>
+                    <th style="text-align: right;">CONTADO</th>
+                    <th style="text-align: right;">DEDUCIBLE</th>
+            """
+        else:
+            t_html += """
                     <th>ASEGURADORA</th>
                     <th style="text-align: right;">CONTADO</th>
                     <th style="text-align: right;">10 CUOTAS</th>
                     <th style="text-align: right;">DEDUCIBLE</th>
+            """
+            
+        t_html += """
                 </tr>
             </thead>
             <tbody>
         """
-        for v in vehiculos_lista:
-            def f_num(val):
-                try: return f"{int(float(val)):,}".replace(",", ".")
-                except: return str(val)
+        
+        for v in vehiculos:
+            def f_num(n):
+                try: 
+                    return f"{int(float(str(n).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
+                except: 
+                    return str(n)
 
-            aseg = v.get('Aseguradora') or v.get('aseguradora') or ""
-            cont = f"USD {f_num(v.get('Contado') or v.get('cuota') or 0)}"
-            cuot = f"USD {f_num(v.get('10 Cuotas') or v.get('cuota_10') or 0)}"
-            dedu = f_num(v.get('Deducible') or v.get('deducible') or 0)
-            
-            t_html += f"""
-                <tr>
-                    <td><b>{aseg}</b></td>
-                    <td class="der" style="color: #1E3A8A;">{cont}</td>
-                    <td class="der">{cuot}</td>
-                    <td class="der">{dedu}</td>
-                </tr>
-            """
+            if es_flota_data:
+                marca = v.get('Marca') or v.get('marca') or ""
+                modelo = v.get('Modelo') or v.get('modelo') or ""
+                anio = v.get('Año') or v.get('anio') or ""
+                mat = v.get('Matrícula') or v.get('matricula') or "-"
+                cob = v.get('Cobertura') or v.get('cobertura') or ""
+                contado = f"USD {f_num(v.get('Contado') or v.get('cuota') or v.get('precio') or 0)}"
+                deduc = f_num(v.get('Deducible') or v.get('deducible') or 0)
+                
+                t_html += f"""
+                    <tr>
+                        <td>{marca}</td>
+                        <td>{modelo}</td>
+                        <td>{anio}</td>
+                        <td>{mat}</td>
+                        <td>{cob}</td>
+                        <td class="der" style="color: #1E3A8A;">{contado}</td>
+                        <td class="der">{deduc}</td>
+                    </tr>
+                """
+            else:
+                aseg = v.get('Aseguradora') or v.get('aseguradora') or ""
+                cont = f"USD {f_num(v.get('Contado') or v.get('cuota') or 0)}"
+                cuot = f"USD {f_num(v.get('10 Cuotas') or v.get('cuota_10') or 0)}"
+                dedu = f_num(v.get('Deducible') or v.get('deducible') or 0)
+                
+                t_html += f"""
+                    <tr>
+                        <td><b>{aseg}</b></td>
+                        <td class="der" style="color: #1E3A8A;">{cont}</td>
+                        <td class="der">{cuot}</td>
+                        <td class="der">{dedu}</td>
+                    </tr>
+                """
+                
         t_html += "</tbody></table>"
         st.markdown(t_html, unsafe_allow_html=True)
     else:
-        st.warning("No se encontraron opciones de cobertura en esta propuesta.")
+        st.error("⚠️ No se encontraron registros de cobertura en esta propuesta.")
 
+    # --- 3. SECCIÓN DE BENEFICIOS Y COBERTURAS ADICIONALES ---
     if d.get("ben"):
         st.write("")
         st.markdown("### ✅ Beneficios Incluidos")
@@ -162,34 +209,36 @@ if p:
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    st.write("")
-    st.markdown("### ⚠️ Coberturas Complementarias")
-    col1, col2, col3 = st.columns(3)
+    if d.get("ch") or d.get("ca") or d.get("cb"):
+        st.write("")
+        st.markdown("### ⚠️ Coberturas Complementarias")
+        col1, col2, col3 = st.columns(3)
 
-    def bloque_html(titulo, icono, texto, es_hogar=False):
-        if not texto: return ""
-        html_out = f'<div class="caja-azul"><span class="sub-tit" style="font-weight:bold; color:#1E3A8A;">{icono} {titulo}</span><br>'
-        lineas = texto.split('\n')
-        for linea in lineas:
-            linea = linea.strip()
-            if not linea: continue
-            if "$" in linea or "Costo" in linea:
-                l_limpia = linea.replace("•", "").strip()
-                html_out += f'<span class="costo-res">💰 {l_limpia}</span>'
-            else:
-                html_out += f'<span style="display:block; margin-top:3px;">{linea}</span>'
-        html_out += '</div>'
-        return html_out
+        def bloque_html(titulo, icono, texto):
+            if not texto: return ""
+            html_out = f'<div class="caja-azul"><span class="sub-tit" style="font-weight:bold; color:#1E3A8A;">{icono} {titulo}</span><br>'
+            lineas = texto.split('\n')
+            for linea in lineas:
+                linea = linea.strip()
+                if not linea: continue
+                if "$" in linea or "Costo" in linea:
+                    l_limpia = linea.replace("•", "").strip()
+                    html_out += f'<span class="costo-res">💰 {l_limpia}</span>'
+                else:
+                    html_out += f'<span style="display:block; margin-top:3px;">{linea}</span>'
+            html_out += '</div>'
+            return html_out
 
-    col1.markdown(bloque_html("Hogar", "🏠", d.get("ch", ""), True), unsafe_allow_html=True)
-    col2.markdown(bloque_html("Alquiler", "🚗", d.get("ca", "")), unsafe_allow_html=True)
-    col3.markdown(bloque_html("Bici", "🚲", d.get("cb", "")), unsafe_allow_html=True)
+        col1.markdown(bloque_html("Hogar", "🏠", d.get("ch", "")), unsafe_allow_html=True)
+        col2.markdown(bloque_html("Alquiler", "🚗", d.get("ca", "")), unsafe_allow_html=True)
+        col3.markdown(bloque_html("Bici", "🚲", d.get("cb", "")), unsafe_allow_html=True)
 
+    # --- 4. PIE DE PÁGINA Y CORTE ---
     st.markdown("---")
     st.markdown(f"""
         <div style="display: flex; justify-content: space-between; color: gray; font-size: 13px;">
-            <div><b>Asesor:</b> {asesor_v} | <b>Contacto:</b> {contacto_v}</div>
-            <div><b>Fecha de Cotización:</b> {fecha_v}</div>
+            <div><b>EDF SEGUROS</b> | Contacto: 099 635 244</div>
+            <div><b>Fecha de Cotización:</b> {fecha_val}</div>
         </div>
     """, unsafe_allow_html=True)
     st.stop()
