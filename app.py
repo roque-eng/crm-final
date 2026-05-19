@@ -27,17 +27,17 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos CSS Limpios y Profesionales en Azul para la propuesta
+# Estilos CSS Limpios y Profesionales en Azul para la propuesta impresa
 st.markdown("""
     <style>
     @media print { 
-        .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header, .no-print { display: none !important; } 
+        .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header, .no-print, [data-testid="stWidgetLabel"] { display: none !important; } 
         [data-testid="stAppViewContainer"] { background-color: white !important; }
     }
     
-    .tabla-edf { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; }
+    .tabla-edf { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; background-color: white; }
     .tabla-edf th { background-color: #f0f7ff !important; color: #1E3A8A !important; padding: 12px; border: 1px solid #ddd; text-align: center; font-size: 15px; }
-    .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 14px; }
+    .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 14px; color: #333; }
     .der { text-align: right !important; font-weight: bold; }
 
     .ben-fila { 
@@ -138,7 +138,7 @@ with tab_cot:
     st.subheader("📝 Cotizador Seguros Individuales")
     edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
     
-    # Interruptor mágico para capturas de pantalla / impresión
+    # Interruptor para alternar entre edición y la vista limpia de captura
     modo_impresion_ind = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA CLIENTE", value=False, key="toggle_print_ind")
     
     if not modo_impresion_ind:
@@ -163,22 +163,22 @@ with tab_cot:
             c_a = st.text_area("Alquiler:", value=edit_ind.get("ca", "• Auto cortesía 15 días"), height=50, key="alq_v_final")
             c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", "• Hurto USD 1.000"), height=50, key="bic_v_final")
 
-        if st.button("💾 Guardar propuesta en Historial", type="primary", use_container_width=True):
+        if st.button("💾 Guardar propuesta en Historial", type="primary", use_container_width=True, key="save_ind_btn"):
             datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
             st.session_state.historico.append(datos_i)
             st.session_state.edit_data = datos_i
-            st.success("✅ ¡Guardado en Historial! Activá el interruptor de arriba para imprimir o sacar captura.")
+            st.success("✅ ¡Guardado en Historial! Activá el interruptor de arriba para ver la vista de impresión.")
             st.rerun()
             
     else:
-        # MODO VISTA LIMPIA PARA SACAR CAPTURA / IMPRIMIR INDIVIDUAL
+        # MODO VISTA LIMPIA PARA IMPRESIÓN / CAPTURA INDIVIDUAL
         col_l, col_i = st.columns([1, 2])
         with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
             st.markdown(f"## Asegurado: {edit_ind.get('n', 'Cliente')}")
             st.markdown(f"### 📋 Propuesta para: **{edit_ind.get('v', 'Vehículo')}**")
         
-        # Tabla Renderizada impecable
+        # Tabla Renderizada limpia en HTML puro
         t_html = """<table class="tabla-edf"><thead><tr><th>ASEGURADORA</th><th style="text-align: right;">CONTADO</th><th style="text-align: right;">10 CUOTAS</th><th style="text-align: right;">DEDUCIBLE</th></tr></thead><tbody>"""
         for row in edit_ind.get("tab", []):
             t_html += f"""<tr><td><b>{row.get('Aseguradora','')}</b></td><td class="der" style="color: #1E3A8A;">USD {f_num(row.get('Contado',0))}</td><td class="der">USD {f_num(row.get('10 Cuotas',0))}</td><td class="der">USD {f_num(row.get('Deducible',0))}</td></tr>"""
@@ -234,11 +234,11 @@ with tab_flota:
             nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "tipo": "Flota"}
             st.session_state.historico.append(nueva_f)
             st.session_state.edit_data = nueva_f
-            st.success("✅ ¡Flota guardada! Activá el interruptor de arriba para ver la vista limpia.")
+            st.success("✅ ¡Flota guardada! Activá el interruptor de arriba para ver la vista limpia de captura.")
             st.rerun()
             
     else:
-        # MODO VISTA LIMPIA PARA SACAR CAPTURA / IMPRIMIR FLOTA
+        # MODO VISTA LIMPIA PARA IMPRESIÓN / CAPTURA DE FLOTAS
         col_l, col_i = st.columns([1, 2])
         with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
@@ -276,7 +276,7 @@ with tab_historial:
                 if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
-    else: st.info("No hay propuestas en la memoria temporal todavía.")
+    else: st.info("No hay propuestas en la memoria todavía.")
 
 # --- PESTAÑA ANÁLISIS ---
 with tab_an:
