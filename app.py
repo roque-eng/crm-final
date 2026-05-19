@@ -105,7 +105,7 @@ if p:
     # --- 1. ENCABEZADO UNIFICADO ---
     d = p.get('data', p) 
     
-    # Mapeo de nombres para Individual y Flotas
+    # Extraemos nombres dinámicos de tu base de datos
     cliente_v = d.get('n') or d.get('cliente') or d.get('nombre_cliente') or "Asegurado"
     aseguradora_v = d.get('e') or d.get('aseguradora') or d.get('compania') or "Compañía"
     vehiculo_v = d.get('v') or "Vehículo / Propuesta Comercial"
@@ -118,11 +118,11 @@ if p:
         st.markdown(f"## Asegurado: {cliente_v}")
         st.markdown(f"### 📋 {vehiculo_v} | 🏦 Aseguradora: **{aseguradora_v}**")
 
-    # --- 2. TABLA DE VEHÍCULOS / COBERTURAS ---
+    # --- 2. TABLA DE COBERTURAS INTELIGENTE ---
     vehiculos = d.get('tab') or d.get('vehiculos') or []
     
     if vehiculos:
-        # Detectamos el formato (Flota usa clave 'Marca' o 'marca', Individual usa 'Aseguradora')
+        # Detectamos automáticamente el formato del link
         es_flota_data = any('Marca' in k or 'marca' in k for k in vehiculos[0].keys()) if isinstance(vehiculos, list) and len(vehiculos) > 0 else False
         
         t_html = """
@@ -198,12 +198,12 @@ if p:
                 """
                 
         t_html += "</tbody></table>"
-        # AQUÍ ESTÁ EL CAMBIO CLAVE: Cambiamos st.write por st.markdown puro con HTML permitido
+        # CAMBIO ESENCIAL: Forzamos la inyección del código web interpretado
         st.markdown(t_html, unsafe_allow_html=True)
     else:
         st.error("⚠️ No se encontraron registros de cobertura en esta propuesta.")
 
-    # --- 3. SECCIÓN DE BENEFICIOS Y COBERTURAS ADICIONALES ---
+    # --- 3. COMENTARIOS Y BLOQUES COMPLEMENTARIOS ---
     if d.get("ben"):
         st.write("")
         st.markdown("### ✅ Beneficios Incluidos")
@@ -235,7 +235,7 @@ if p:
         col2.markdown(bloque_html("Alquiler", "🚗", d.get("ca", "")), unsafe_allow_html=True)
         col3.markdown(bloque_html("Bici", "🚲", d.get("cb", "")), unsafe_allow_html=True)
 
-    # --- 4. PIE DE PÁGINA Y CORTE ---
+    # --- 4. FIRMA Y FRENO ABSOLUTO ---
     st.markdown("---")
     st.markdown(f"""
         <div style="display: flex; justify-content: space-between; color: gray; font-size: 13px;">
