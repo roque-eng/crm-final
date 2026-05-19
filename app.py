@@ -138,7 +138,7 @@ with tab_cot:
     st.subheader("📝 Cotizador Seguros Individuales")
     edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
     
-    # Interruptor para alternar entre edición y la vista limpia de captura
+    # El interruptor para ocultar todo el panel de control y sacar captura
     modo_impresion_ind = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA CLIENTE", value=False, key="toggle_print_ind")
     
     if not modo_impresion_ind:
@@ -167,18 +167,17 @@ with tab_cot:
             datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
             st.session_state.historico.append(datos_i)
             st.session_state.edit_data = datos_i
-            st.success("✅ ¡Guardado en Historial! Activá el interruptor de arriba para ver la vista de impresión.")
+            st.success("✅ ¡Guardado con éxito! Activá el interruptor 'Modo Impresión' de arriba para sacar la captura.")
             st.rerun()
             
     else:
-        # MODO VISTA LIMPIA PARA IMPRESIÓN / CAPTURA INDIVIDUAL
+        # VISTA DE PROPUESTA LIMPIA (INDIVIDUAL)
         col_l, col_i = st.columns([1, 2])
         with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
             st.markdown(f"## Asegurado: {edit_ind.get('n', 'Cliente')}")
             st.markdown(f"### 📋 Propuesta para: **{edit_ind.get('v', 'Vehículo')}**")
         
-        # Tabla Renderizada limpia en HTML puro
         t_html = """<table class="tabla-edf"><thead><tr><th>ASEGURADORA</th><th style="text-align: right;">CONTADO</th><th style="text-align: right;">10 CUOTAS</th><th style="text-align: right;">DEDUCIBLE</th></tr></thead><tbody>"""
         for row in edit_ind.get("tab", []):
             t_html += f"""<tr><td><b>{row.get('Aseguradora','')}</b></td><td class="der" style="color: #1E3A8A;">USD {f_num(row.get('Contado',0))}</td><td class="der">USD {f_num(row.get('10 Cuotas',0))}</td><td class="der">USD {f_num(row.get('Deducible',0))}</td></tr>"""
@@ -190,7 +189,6 @@ with tab_cot:
             for b in edit_ind.get("ben", "").split('\n'):
                 if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
                 
-        # Bloques de Coberturas Complementarias
         st.markdown("### ⚠️ Coberturas Complementarias")
         cx1, cx2, cx3 = st.columns(3)
         def b_html(tit, ico, txt):
@@ -234,11 +232,11 @@ with tab_flota:
             nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "tipo": "Flota"}
             st.session_state.historico.append(nueva_f)
             st.session_state.edit_data = nueva_f
-            st.success("✅ ¡Flota guardada! Activá el interruptor de arriba para ver la vista limpia de captura.")
+            st.success("✅ ¡Propuesta guardada! Activá el interruptor de arriba para ver la vista limpia.")
             st.rerun()
             
     else:
-        # MODO VISTA LIMPIA PARA IMPRESIÓN / CAPTURA DE FLOTAS
+        # VISTA DE PROPUESTA LIMPIA (FLOTAS)
         col_l, col_i = st.columns([1, 2])
         with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
@@ -270,13 +268,13 @@ with tab_historial:
             with col_edit:
                 if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
                     st.session_state.edit_data = reg
-                    st.success(f"Cargada propuesta de {reg.get('n')}. ¡Andá a su pestaña correspondiente!")
+                    st.success(f"Propuesta de {reg.get('n')} cargada. ¡Andá a su pestaña para activarla!")
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
-    else: st.info("No hay propuestas en la memoria todavía.")
+    else: st.info("No hay propuestas en la memoria temporal todavía.")
 
 # --- PESTAÑA ANÁLISIS ---
 with tab_an:
