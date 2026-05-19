@@ -642,7 +642,7 @@ if p:
     else:
         st.warning("No se encontraron opciones de cobertura en esta propuesta.")
 
-    # Secciones adicionales del cliente: Beneficios e Información adicional
+    # --- 3. BENEFICIOS (VISTA CLIENTE INDIVIDUAL) ---
     if d.get("ben"):
         st.write("")
         st.markdown("### ✅ Beneficios Incluidos")
@@ -650,31 +650,31 @@ if p:
             if b.strip():
                 st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
 
-    # Coberturas Complementarias en formato de bloques limpios
+    # --- 4. COBERTURAS COMPLEMENTARIAS (CAJONES AZULES) ---
     st.write("")
     st.markdown("### ⚠️ Coberturas Complementarias")
     col1, col2, col3 = st.columns(3)
 
     def bloque_html(titulo, icono, texto, es_hogar=False):
         if not texto: return ""
-        html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
+        html_out = f'<div class="caja-azul"><span class="sub-tit" style="font-weight:bold; color:#1E3A8A;">{icono} {titulo}</span><br>'
         lineas = texto.split('\n')
         for linea in lineas:
             linea = linea.strip()
             if not linea: continue
             if "$" in linea or "Costo" in linea:
                 l_limpia = linea.replace("•", "").strip()
-                html += f'<span class="costo-res">💰 {l_limpia}</span>'
+                html_out += f'<span class="costo-res">💰 {l_limpia}</span>'
             else:
-                html += f'<span>{linea}</span>'
-        html += '</div>'
-        return html
+                html_out += f'<span style="display:block; margin-top:3px;">{linea}</span>'
+        html_out += '</div>'
+        return html_out
 
     col1.markdown(bloque_html("Hogar", "🏠", d.get("ch", ""), True), unsafe_allow_html=True)
     col2.markdown(bloque_html("Alquiler", "🚗", d.get("ca", "")), unsafe_allow_html=True)
     col3.markdown(bloque_html("Bici", "🚲", d.get("cb", "")), unsafe_allow_html=True)
 
-    # Bloque de firma e información de contacto final
+    # --- 5. FIRMA Y CIERRE DE VISTA CLIENTE ---
     st.markdown("---")
     st.markdown(f"""
         <div style="display: flex; justify-content: space-between; color: gray; font-size: 13px;">
@@ -683,7 +683,24 @@ if p:
         </div>
     """, unsafe_allow_html=True)
     
-    # Detenemos la aplicación de forma absoluta para blindar la vista
+    # Este st.stop() frena la app AQUÍ si es un cliente externo con link para que no vea el CRM
     st.stop()
-        with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
-        with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
+
+# =========================================================================
+# 📊 CÓDIGO INTERNO DEL CRM - CONTENIDOS DE LAS PESTAÑAS (SÓLO PARA ASESORES)
+# =========================================================================
+
+# Esta sección se ejecuta únicamente en el panel interno del asesor
+with tab_an:
+    st.subheader("📊 Análisis de Cartera")
+    if not df_f.empty:
+        t_usd = df_f['Premio_Total_USD'].sum()
+        k1, k2 = st.columns(2)
+        k1.metric("Cartera Total (USD)", f"USD {t_usd:,.0f}")
+        k2.metric("Total de Pólizas", f"{len(df_f)}")
+        
+        c1, c2 = st.columns(2)
+        with c1: 
+            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
+        with c2: 
+            st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
