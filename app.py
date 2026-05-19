@@ -105,7 +105,7 @@ if p:
     # --- 1. ENCABEZADO UNIFICADO ---
     d = p.get('data', p) 
     
-    # Mapeo de nombres exactos para Individual y Flotas
+    # Mapeo de nombres para Individual y Flotas
     cliente_v = d.get('n') or d.get('cliente') or d.get('nombre_cliente') or "Asegurado"
     aseguradora_v = d.get('e') or d.get('aseguradora') or d.get('compania') or "Compañía"
     vehiculo_v = d.get('v') or "Vehículo / Propuesta Comercial"
@@ -122,30 +122,30 @@ if p:
     vehiculos = d.get('tab') or d.get('vehiculos') or []
     
     if vehiculos:
-        # Detectamos si es el formato de Flotas o Individual para armar las columnas correctas
-        es_flota_data = "Marca" in vehiculos[0] or "marca" in vehiculos[0]
+        # Detectamos si viene en formato Flota (con clave Marca) o Individual (con clave Aseguradora)
+        es_flota_data = any('Marca' in k or 'marca' in k for k in vehiculos[0].keys()) if isinstance(vehiculos, list) and len(vehiculos) > 0 else False
         
         t_html = """
-        <table class="tabla-edf">
+        <table class="tabla-edf" style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
-                <tr>
+                <tr style="background-color: #f0f7ff; color: #1E3A8A;">
         """
         if es_flota_data:
             t_html += """
-                    <th>MARCA</th>
-                    <th>MODELO</th>
-                    <th>AÑO</th>
-                    <th>MATRICULA</th>
-                    <th>COBERTURA</th>
-                    <th style="text-align: right;">CONTADO</th>
-                    <th style="text-align: right;">DEDUCIBLE</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">MARCA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">MODELO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">AÑO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">MATRICULA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">COBERTURA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
             """
         else:
             t_html += """
-                    <th>ASEGURADORA</th>
-                    <th style="text-align: right;">CONTADO</th>
-                    <th style="text-align: right;">10 CUOTAS</th>
-                    <th style="text-align: right;">DEDUCIBLE</th>
+                    <th style="padding: 12px; border: 1px solid #ddd;">ASEGURADORA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">10 CUOTAS</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
             """
             
         t_html += """
@@ -157,7 +157,9 @@ if p:
         for v in vehiculos:
             def f_num(n):
                 try: 
-                    return f"{int(float(str(n).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
+                    # Limpiamos símbolos previos para que la conversión matemática sea limpia y quite el .0
+                    n_clean = str(n).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip()
+                    return f"{int(float(n_clean)):,}".replace(",", ".")
                 except: 
                     return str(n)
 
@@ -171,14 +173,14 @@ if p:
                 deduc = f_num(v.get('Deducible') or v.get('deducible') or 0)
                 
                 t_html += f"""
-                    <tr>
-                        <td>{marca}</td>
-                        <td>{modelo}</td>
-                        <td>{anio}</td>
-                        <td>{mat}</td>
-                        <td>{cob}</td>
-                        <td class="der" style="color: #1E3A8A;">{contado}</td>
-                        <td class="der">{deduc}</td>
+                    <tr style="text-align: center; border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px; border: 1px solid #ddd;">{marca}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">{modelo}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">{anio}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">{mat}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">{cob}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #1E3A8A;">{contado}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{deduc}</td>
                     </tr>
                 """
             else:
@@ -188,11 +190,11 @@ if p:
                 dedu = f_num(v.get('Deducible') or v.get('deducible') or 0)
                 
                 t_html += f"""
-                    <tr>
-                        <td><b>{aseg}</b></td>
-                        <td class="der" style="color: #1E3A8A;">{cont}</td>
-                        <td class="der">{cuot}</td>
-                        <td class="der">{dedu}</td>
+                    <tr style="text-align: center; border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px; border: 1px solid #ddd;"><b>{aseg}</b></td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #1E3A8A;">{cont}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{cuot}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{dedu}</td>
                     </tr>
                 """
                 
@@ -237,27 +239,10 @@ if p:
     st.markdown("---")
     st.markdown(f"""
         <div style="display: flex; justify-content: space-between; color: gray; font-size: 13px;">
-            <div><b>EDF SEGUROS</b> | Contacto: 099 635 244</div>
+            <div><b>EDF SEGUROS</b> | Contacto: {contacto_v}</div>
             <div><b>Fecha de Cotización:</b> {fecha_val}</div>
         </div>
     """, unsafe_allow_html=True)
-    st.stop()
-
-# ==========================================
-# 🏢 LÓGICA INTERNA DEL CRM (PANEL DE ASESOR)
-# ==========================================
-# Autenticación Básica
-if 'logueado' not in st.session_state or not st.session_state['logueado']:
-    st.title("🛡️ EDF SEGUROS - CRM Interno")
-    u_sel = st.selectbox("Seleccione su Usuario:", list(USUARIOS.keys()))
-    p_in = st.text_input("Contraseña:", type="password")
-    if st.button("Ingresar", type="primary"):
-        if USUARIOS.get(u_sel) == p_in:
-            st.session_state['logueado'] = True
-            st.session_state['usuario_actual'] = u_sel
-            st.rerun()
-        else:
-            st.error("Contraseña incorrecta.")
     st.stop()
 
 conn = st.connection("gsheets", type=GSheetsConnection)
