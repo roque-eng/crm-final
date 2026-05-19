@@ -522,109 +522,133 @@ with tab_cot:
         st.link_button("🚀 VER VISTA PREVIA", link_final, type="primary", use_container_width=True)
         st.code(link_final)
 
-# --- PESTAÑA FLOTAS ---
-# --- PESTAÑA FLOTAS (CON CORRECCIÓN DE ENCABEZADOS Y VISTA PREVIA) ---
-with tab_flota:
-    st.subheader("📋 Cotizador Seguro de Flotas")
+# --- PESTAÑA FLOTAS (AHORA INDIVIDUALES) ---
+with tab_fl:
+    st.subheader("🚗 Cotizador Individual")
     
-    # 1. Recuperar datos de edición (Detectamos si es Flota)
-    edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
-    
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_flota_vfinal")
-        # Aseguradora (Compañía)
-        f_cia_elegida = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_cia_select_vfinal")
-    with col_f2:
-        # ASESOR (Nombre de la persona) - Variable independiente
-        f_asesor_nombre = st.text_input("Asesor", value=edit_f.get('e_nombre', 'EDF SEGUROS'), key="f_asesor_input_vfinal")
-        f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_cont_vfinal")
-
-    st.markdown("---")
-    
-    # 2. DEFINICIÓN DE COLUMNAS DE FLOTA (Ahora con Año)
-    cols_f = ["Marca", "Modelo", "Año", "Matrícula", "Cobertura", "Contado", "Deducible"]
-    
-    # 3. CARGA DE TABLA
-    if edit_f and "tab" in edit_f:
-        df_f_init = pd.DataFrame(edit_f["tab"])
-        # Reindexamos para que tome la nueva columna Año si no existe en el registro viejo
-        df_f_init = df_f_init.reindex(columns=cols_f).fillna("")
-    else:
-        # Fila inicial vacía con la columna Año
-        df_f_init = pd.DataFrame([{
-            "Marca": "", "Modelo": "", "Año": "", "Matrícula": "", 
-            "Cobertura": "Total", "Contado": 0, "Deducible": 0
-        }])
-
-    # 4. EL EDITOR
-    t_flota = st.data_editor(
-        df_f_init, 
-        num_rows="dynamic", 
-        use_container_width=True, 
-        column_order=cols_f, 
-        key="editor_flotas_v_final_año"
-    )
-
-    st.markdown("### 📝 Detalles de la Propuesta")
-    f_obs = st.text_area("Observaciones:", value=edit_f.get('ben', ''), height=150, key="f_obs_vfinal_fix")
-
-    # 5. BOTÓN GUARDAR (Corregido para separar Aseguradora de Asesor)
-    if st.button("🚀 GUARDAR PROPUESTA", key="btn_save_flota_vfinal", use_container_width=True):
-        nueva_f = {
-            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "n": f_asegurado, 
-            "e": f_cia_elegida,     # Guarda BSE, SURA, etc.
-            "e_nombre": f_asesor_nombre,  # Guarda tu nombre (ej: Roque)
-            "cont": f_contacto,
-            "tab": t_flota.to_dict(orient='records'), 
-            "ben": f_obs, 
-            "tipo": "Flota"
-        }
-        if "historico" not in st.session_state: st.session_state.historico = []
-        st.session_state.historico.append(nueva_f)
-        st.session_state.edit_data = nueva_f
-        st.success(f"✅ ¡Flota de {f_asegurado} guardada!")
-        st.rerun()
-
-    # 6. RECUPERACIÓN DEL BOTÓN VISTA PREVIA (Gris Oscuro)
-    # Se muestra si acabas de guardar o si cargaste una flota del historial
-    if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota":
-        st.markdown("---")
-        st.markdown("### 🔗 Link de Flota para enviar")
+    # Formulario simple e infalible
+    c1, c2 = st.columns(2)
+    with c1:
+        cliente_ind = st.text_input("Nombre del Asegurado", key="ind_cli")
+        marca_ind = st.text_input("Marca del Vehículo", key="ind_mar")
+        modelo_ind = st.text_input("Modelo", key="ind_mod")
+        anio_ind = st.text_input("Año", key="ind_ani")
+    with c2:
+        aseguradora_ind = st.text_input("Compañía Aseguradora", key="ind_ase")
+        matricula_ind = st.text_input("Matrícula (Opcional)", value="-", key="ind_mat")
+        cobertura_ind = st.text_input("Cobertura", key="ind_cob")
         
-        # Encriptamos los datos actuales
-        datos_f_json = json.dumps(st.session_state.edit_data)
-        datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
+    c3, c4 = st.columns(2)
+    with c3:
+        contado_ind = st.number_input("Costo Contado (USD)", min_value=0.0, step=100.0, key="ind_con")
+    with c4:
+        deduc_ind = st.number_input("Deducible (USD)", min_value=0.0, step=50.0, key="ind_ded")
         
-    # --- BOTÓN PARA FLOTAS GRANDES (Línea 580 aprox) ---
-    if st.button("🔗 GENERAR LINK", use_container_width=True):
-            try:
-                import uuid
-                # CAMBIO CLAVE: Usamos el código largo que Supabase espera
-                f_id = str(uuid.uuid4()) 
-                datos_f = st.session_state.edit_data
-                
-                headers_sp = {
-                    "apikey": SUPABASE_KEY, 
-                    "Authorization": f"Bearer {SUPABASE_KEY}", 
-                    "Content-Type": "application/json"
-                }
-                
-                # Mandamos el f_id largo
-                payload = {"id": f_id, "data": datos_f, "tipo": "flota"}
-                
-                res = requests.post(f"{SUPABASE_URL}/rest/v1/cotizaciones", headers=headers_sp, json=payload)
-                
-                if res.status_code in [200, 201]:
-                    link_f = f"https://dfseguros.streamlit.app/?f_id={f_id}"
-                    st.success("✅ ¡Link generado con éxito!")
-                    st.code(link_f)
-                    st.link_button("🚀 VISTA PREVIA", link_f, type="primary", use_container_width=True)
-                else:
-                    st.error(f"Error: {res.text}")
-            except Exception as e:
-                st.error(f"Error técnico: {e}")
+    obs_ind = st.text_area("Comentarios / Beneficios EDF Seguros", key="ind_obs")
+    
+    if st.button("💾 Guardar en Historial y Generar Link", type="primary", key="btn_guardar_ind"):
+        if cliente_ind and marca_ind and aseguradora_ind:
+            # Creamos el paquete estructurado para el Link Seguro
+            paquete_datos = {
+                "cliente": cliente_ind,
+                "aseguradora": aseguradora_ind,
+                "marca": marca_ind,
+                "modelo": modelo_ind,
+                "anio": anio_ind,
+                "matricula": matricula_ind,
+                "cobertura": cobertura_ind,
+                "contado": contado_ind,
+                "deducible": deduc_ind,
+                "observaciones": obs_ind,
+                "fecha": datetime.now().strftime("%d/%m/%Y")
+            }
+            
+            # 1. Guardado en la memoria (Módulo Historial)
+            nuevo_registro = {
+                "Fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "Tipo": "Individual",
+                "Nombre": cliente_ind,
+                "Premio_Total_USD": contado_ind,
+                "data": paquete_datos  # Guardamos la estructura para que se pueda editar
+            }
+            st.session_state.historico.append(nuevo_registro)
+            
+            # 2. Generación del Link Seguro (Codificado en Base64)
+            json_str = json.dumps({"data": paquete_datos})
+            b64_str = base64.b64encode(json_str.encode()).decode()
+            link_final = f"https://dfseguros.streamlit.app/?f_id={b64_str}"
+            
+            st.success("✅ ¡Cotización guardada con éxito en el Historial!")
+            st.text_input("🔗 Copiá este Link Seguro para enviar al cliente:", value=link_final)
+        else:
+            st.error("⚠️ Por favor completa al menos el Asegurado, la Marca y la Aseguradora.")
+
+# --- 2. VISTA INTERNA DEL CLIENTE (SÓLO INDIVIDUAL E INFALIBLE) ---
+if p:
+    # Abrimos el paquete de datos descifrado del link
+    d = p.get('data', p)
+    
+    # Extraemos las variables individuales limpias
+    cli = d.get('cliente', 'Asegurado')
+    ase = d.get('aseguradora', 'Compañía')
+    mar = d.get('marca', '')
+    mod = d.get('modelo', '')
+    ani = d.get('anio', '')
+    mat = d.get('matricula', '-')
+    cob = d.get('cobertura', '')
+    
+    # Formateadores numéricos para evitar los .0 molestos
+    try: con = f"USD {int(float(d.get('contado', 0))):,}".replace(",", ".")
+    except: con = f"USD {d.get('contado', '0')}"
+    
+    try: ded = f"{int(float(d.get('deducible', 0))):,}".replace(",", ".")
+    except: ded = str(d.get('deducible', '0'))
+
+    # Renderizado estético superior (Logo + Títulos integrados)
+    col_l, col_i = st.columns([1, 2])
+    with col_l:
+        st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
+    with col_i:
+        st.markdown(f"## Asegurado: {cli}")
+        st.markdown(f"### 🏦 Aseguradora: **{ase}**")
+
+    # Tabla en HTML puro con el orden estricto solicitado y números a la derecha
+    tabla_html = f"""
+    <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
+        <thead>
+            <tr style="background-color: #f0f7ff; color: #1E3A8A; text-align: center;">
+                <th style="padding: 12px; border: 1px solid #ddd;">MARCA</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">MODELO</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">AÑO</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">MATRICULA</th>
+                <th style="padding: 12px; border: 1px solid #ddd;">COBERTURA</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
+                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="text-align: center; background-color: white;">
+                <td style="padding: 12px; border: 1px solid #ddd;">{mar}</td>
+                <td style="padding: 12px; border: 1px solid #ddd;">{mod}</td>
+                <td style="padding: 12px; border: 1px solid #ddd;">{ani}</td>
+                <td style="padding: 12px; border: 1px solid #ddd;">{mat}</td>
+                <td style="padding: 12px; border: 1px solid #ddd;">{cob}</td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #1E3A8A;">{con}</td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">{ded}</td>
+            </tr>
+        </tbody>
+    </table>
+    """
+    st.markdown(tabla_html, unsafe_allow_html=True)
+
+    # Bloque de comentarios elegante
+    st.markdown("<br><h3 style='color: #1E3A8A; margin-bottom: 5px;'>Comentarios EDF Seguros</h3>", unsafe_allow_html=True)
+    st.info(d.get('observaciones') or "Revisar condiciones generales de la póliza.")
+    
+    # Pie de página con fecha de validez
+    st.markdown(f"<div style='text-align: right; color: gray; font-size: 12px; margin-top: 15px;'>Fecha de emisión: {d.get('fecha', '')}</div>", unsafe_allow_html=True)
+    
+    st.stop() # Freno absoluto para que el cliente externo NO vea la app interna abajo
         
 # --- PESTAÑA HISTORIAL (CORREGIDA) ---
 with tab_historial:
