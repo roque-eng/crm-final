@@ -522,135 +522,9 @@ with tab_cot:
         st.link_button("🚀 VER VISTA PREVIA", link_final, type="primary", use_container_width=True)
         st.code(link_final)
 
-# --- PESTAÑA FLOTAS (AHORA INDIVIDUALES) ---
-with tab_fl:
-    st.subheader("🚗 Cotizador Individual")
-    
-    # Formulario simple e infalible
-    c1, c2 = st.columns(2)
-    with c1:
-        cliente_ind = st.text_input("Nombre del Asegurado", key="ind_cli")
-        marca_ind = st.text_input("Marca del Vehículo", key="ind_mar")
-        modelo_ind = st.text_input("Modelo", key="ind_mod")
-        anio_ind = st.text_input("Año", key="ind_ani")
-    with c2:
-        aseguradora_ind = st.text_input("Compañía Aseguradora", key="ind_ase")
-        matricula_ind = st.text_input("Matrícula (Opcional)", value="-", key="ind_mat")
-        cobertura_ind = st.text_input("Cobertura", key="ind_cob")
-        
-    c3, c4 = st.columns(2)
-    with c3:
-        contado_ind = st.number_input("Costo Contado (USD)", min_value=0.0, step=100.0, key="ind_con")
-    with c4:
-        deduc_ind = st.number_input("Deducible (USD)", min_value=0.0, step=50.0, key="ind_ded")
-        
-    obs_ind = st.text_area("Comentarios / Beneficios EDF Seguros", key="ind_obs")
-    
-    if st.button("💾 Guardar en Historial y Generar Link", type="primary", key="btn_guardar_ind"):
-        if cliente_ind and marca_ind and aseguradora_ind:
-            # Creamos el paquete estructurado para el Link Seguro
-            paquete_datos = {
-                "cliente": cliente_ind,
-                "aseguradora": aseguradora_ind,
-                "marca": marca_ind,
-                "modelo": modelo_ind,
-                "anio": anio_ind,
-                "matricula": matricula_ind,
-                "cobertura": cobertura_ind,
-                "contado": contado_ind,
-                "deducible": deduc_ind,
-                "observaciones": obs_ind,
-                "fecha": datetime.now().strftime("%d/%m/%Y")
-            }
-            
-            # 1. Guardado en la memoria (Módulo Historial)
-            nuevo_registro = {
-                "Fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "Tipo": "Individual",
-                "Nombre": cliente_ind,
-                "Premio_Total_USD": contado_ind,
-                "data": paquete_datos  # Guardamos la estructura para que se pueda editar
-            }
-            st.session_state.historico.append(nuevo_registro)
-            
-            # 2. Generación del Link Seguro (Codificado en Base64)
-            json_str = json.dumps({"data": paquete_datos})
-            b64_str = base64.b64encode(json_str.encode()).decode()
-            link_final = f"https://dfseguros.streamlit.app/?f_id={b64_str}"
-            
-            st.success("✅ ¡Cotización guardada con éxito en el Historial!")
-            st.text_input("🔗 Copiá este Link Seguro para enviar al cliente:", value=link_final)
-        else:
-            st.error("⚠️ Por favor completa al menos el Asegurado, la Marca y la Aseguradora.")
-
-# --- 2. VISTA INTERNA DEL CLIENTE (SÓLO INDIVIDUAL E INFALIBLE) ---
-if p:
-    # Abrimos el paquete de datos descifrado del link
-    d = p.get('data', p)
-    
-    # Extraemos las variables individuales limpias
-    cli = d.get('cliente', 'Asegurado')
-    ase = d.get('aseguradora', 'Compañía')
-    mar = d.get('marca', '')
-    mod = d.get('modelo', '')
-    ani = d.get('anio', '')
-    mat = d.get('matricula', '-')
-    cob = d.get('cobertura', '')
-    
-    # Formateadores numéricos para evitar los .0 molestos
-    try: con = f"USD {int(float(d.get('contado', 0))):,}".replace(",", ".")
-    except: con = f"USD {d.get('contado', '0')}"
-    
-    try: ded = f"{int(float(d.get('deducible', 0))):,}".replace(",", ".")
-    except: ded = str(d.get('deducible', '0'))
-
-    # Renderizado estético superior (Logo + Títulos integrados)
-    col_l, col_i = st.columns([1, 2])
-    with col_l:
-        st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
-    with col_i:
-        st.markdown(f"## Asegurado: {cli}")
-        st.markdown(f"### 🏦 Aseguradora: **{ase}**")
-
-    # Tabla en HTML puro con el orden estricto solicitado y números a la derecha
-    tabla_html = f"""
-    <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
-        <thead>
-            <tr style="background-color: #f0f7ff; color: #1E3A8A; text-align: center;">
-                <th style="padding: 12px; border: 1px solid #ddd;">MARCA</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">MODELO</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">AÑO</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">MATRICULA</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">COBERTURA</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
-                <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr style="text-align: center; background-color: white;">
-                <td style="padding: 12px; border: 1px solid #ddd;">{mar}</td>
-                <td style="padding: 12px; border: 1px solid #ddd;">{mod}</td>
-                <td style="padding: 12px; border: 1px solid #ddd;">{ani}</td>
-                <td style="padding: 12px; border: 1px solid #ddd;">{mat}</td>
-                <td style="padding: 12px; border: 1px solid #ddd;">{cob}</td>
-                <td style="padding: 12px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #1E3A8A;">{con}</td>
-                <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">{ded}</td>
-            </tr>
-        </tbody>
-    </table>
-    """
-    st.markdown(tabla_html, unsafe_allow_html=True)
-
-    # Bloque de comentarios elegante
-    st.markdown("<br><h3 style='color: #1E3A8A; margin-bottom: 5px;'>Comentarios EDF Seguros</h3>", unsafe_allow_html=True)
-    st.info(d.get('observaciones') or "Revisar condiciones generales de la póliza.")
-    
-    # Pie de página con fecha de validez
-    st.markdown(f"<div style='text-align: right; color: gray; font-size: 12px; margin-top: 15px;'>Fecha de emisión: {d.get('fecha', '')}</div>", unsafe_allow_html=True)
-    
-    st.stop() # Freno absoluto para que el cliente externo NO vea la app interna abajo
-        
-# --- PESTAÑA HISTORIAL (CORREGIDA) ---
+# ==========================================
+# 📜 PESTAÑA HISTORIAL UNIFICADA
+# ==========================================
 with tab_historial:
     st.subheader("📜 Historial de Cotizaciones")
     if "historico" in st.session_state and st.session_state.historico:
@@ -658,23 +532,13 @@ with tab_historial:
         for i, reg in enumerate(reversed(st.session_state.historico)):
             idx_real = len(st.session_state.historico) - 1 - i
             
-            # Creamos una fila con columnas: Info, Editar y Borrar
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             
             with col_info:
-                fecha = reg.get('fecha', 'S/F')[:10]  # Tomamos solo la fecha
+                fecha = reg.get('fecha', 'S/F')[:10]
                 nombre = reg.get('n', 'Cliente')
-                
-                # --- AQUÍ ESTÁ EL CAMBIO DEL PASO 2 ---
-                tipo_raw = reg.get("tipo", "Individual") # Si no tiene tipo, asumimos Individual
-                
-                if tipo_raw == "Flota":
-                    tipo_display = "🚚 Flota"
-                else:
-                    tipo_display = "🚗 Individual"
-                
-                # Mostramos la línea del historial
-                st.write(f"**{fecha}** | {tipo_display} | **{nombre}**")
+                vehiculo = reg.get('v', 'Vehículo')
+                st.write(f"📅 **{fecha}** | 🚗 Individual | **{nombre}** ({vehiculo})")
             
             with col_edit:
                 if st.button("✏️ Editar", key=f"edit_{idx_real}"):
@@ -686,12 +550,13 @@ with tab_historial:
                 if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
-            st.markdown("---")
+        st.markdown("---")
     else:
-        st.info("No hay cotizaciones guardadas aún.")
+        st.info("No hay cotizaciones individuales guardadas aún.")
 
-
-# --- PESTAÑA ANÁLISIS ---
+# ==========================================
+# 📊 PESTAÑA ANÁLISIS DE CARTERA
+# ==========================================
 with tab_an:
     st.subheader("📊 Análisis de Cartera")
     if not df_f.empty:
@@ -700,5 +565,125 @@ with tab_an:
         k1.metric("Cartera Total (USD)", f"USD {t_usd:,.0f}")
         k2.metric("Total de Pólizas", f"{len(df_f)}")
         c1, c2 = st.columns(2)
+        with c1: 
+            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
+        with c2: 
+            st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
+
+# ==========================================
+# 🛡️ VISTA FINAL DEL CLIENTE (REPARADA)
+# ==========================================
+if p:
+    # Abrimos el paquete de datos estructurado del link (?q= o ?f=)
+    d = p.get('data', p)
+    
+    # Extraemos variables individuales limpias basándonos en tu CRM de Vehículos
+    cliente_v = d.get('n') or d.get('cliente') or "Asegurado"
+    vehiculo_v = d.get('v') or "Vehículo"
+    asesor_v = d.get('e') or "EDF SEGUROS"
+    contacto_v = d.get('cont') or "099 635 244"
+    fecha_v = d.get('fecha', datetime.now().strftime("%d/%m/%Y"))
+    
+    # Renderizado estético superior de la cabecera
+    col_l, col_i = st.columns([1, 2])
+    with col_l:
+        st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
+    with col_i:
+        st.markdown(f"## Asegurado: {cliente_v}")
+        st.markdown(f"### 📋 Cotización para: **{vehiculo_v}**")
+
+    # Reconstruimos la tabla en base a la lista guardada en 'tab'
+    vehiculos_lista = d.get('tab') or []
+    
+    if vehiculos_lista:
+        t_html = """
+        <style>
+            .tabla-edf { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; }
+            .tabla-edf th { background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: center; font-size: 14px; }
+            .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 13px; }
+            .der { text-align: right !important; font-weight: bold; }
+        </style>
+        <table class="tabla-edf">
+            <thead>
+                <tr>
+                    <th>ASEGURADORA</th>
+                    <th style="text-align: right;">CONTADO</th>
+                    <th style="text-align: right;">10 CUOTAS</th>
+                    <th style="text-align: right;">DEDUCIBLE</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
+        
+        for v in vehiculos_lista:
+            # Filtro para limpiar decimales y colocar separadores de miles con punto
+            def f_num(val):
+                try: 
+                    return f"{int(float(val)):,}".replace(",", ".")
+                except: 
+                    return str(val)
+
+            aseg = v.get('Aseguradora') or v.get('aseguradora') or ""
+            cont = f"USD {f_num(v.get('Contado') or v.get('cuota') or 0)}"
+            cuot = f"USD {f_num(v.get('10 Cuotas') or v.get('cuota_10') or 0)}"
+            dedu = f_num(v.get('Deducible') or v.get('deducible') or 0)
+            
+            t_html += f"""
+                <tr>
+                    <td><b>{aseg}</b></td>
+                    <td class="der" style="color: #1E3A8A;">{cont}</td>
+                    <td class="der">{cuot}</td>
+                    <td class="der">{dedu}</td>
+                </tr>
+            """
+        t_html += "</tbody></table>"
+        # Renderizado único HTML controlado para evitar textos sueltos
+        st.markdown(t_html, unsafe_allow_html=True)
+    else:
+        st.warning("No se encontraron opciones de cobertura en esta propuesta.")
+
+    # Secciones adicionales del cliente: Beneficios e Información adicional
+    if d.get("ben"):
+        st.write("")
+        st.markdown("### ✅ Beneficios Incluidos")
+        for b in d.get("ben", "").split('\n'):
+            if b.strip():
+                st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
+
+    # Coberturas Complementarias en formato de bloques limpios
+    st.write("")
+    st.markdown("### ⚠️ Coberturas Complementarias")
+    col1, col2, col3 = st.columns(3)
+
+    def bloque_html(titulo, icono, texto, es_hogar=False):
+        if not texto: return ""
+        html = f'<div class="caja-azul"><span class="sub-tit">{icono} {titulo}</span>'
+        lineas = texto.split('\n')
+        for linea in lineas:
+            linea = linea.strip()
+            if not linea: continue
+            if "$" in linea or "Costo" in linea:
+                l_limpia = linea.replace("•", "").strip()
+                html += f'<span class="costo-res">💰 {l_limpia}</span>'
+            else:
+                html += f'<span>{linea}</span>'
+        html += '</div>'
+        return html
+
+    col1.markdown(bloque_html("Hogar", "🏠", d.get("ch", ""), True), unsafe_allow_html=True)
+    col2.markdown(bloque_html("Alquiler", "🚗", d.get("ca", "")), unsafe_allow_html=True)
+    col3.markdown(bloque_html("Bici", "🚲", d.get("cb", "")), unsafe_allow_html=True)
+
+    # Bloque de firma e información de contacto final
+    st.markdown("---")
+    st.markdown(f"""
+        <div style="display: flex; justify-content: space-between; color: gray; font-size: 13px;">
+            <div><b>Asesor:</b> {asesor_v} | <b>Contacto:</b> {contacto_v}</div>
+            <div><b>Fecha de Cotización:</b> {fecha_v}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Detenemos la aplicación de forma absoluta para blindar la vista
+    st.stop()
         with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
         with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
