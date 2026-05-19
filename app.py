@@ -522,9 +522,111 @@ with tab_cot:
         st.link_button("🚀 VER VISTA PREVIA", link_final, type="primary", use_container_width=True)
         st.code(link_final)
 
-# ==========================================
-# 📜 PESTAÑA HISTORIAL UNIFICADA
-# ==========================================
+# --- PESTAÑA FLOTAS ---
+# --- PESTAÑA FLOTAS (CON CORRECCIÓN DE ENCABEZADOS Y VISTA PREVIA) ---
+with tab_flota:
+    st.subheader("📋 Cotizador Seguro de Flotas")
+    
+    # 1. Recuperar datos de edición (Detectamos si es Flota)
+    edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
+    
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_flota_vfinal")
+        # Aseguradora (Compañía)
+        f_cia_elegida = st.selectbox("Aseguradora", ["BSE", "SURA", "MAPFRE", "SANCOR", "SBI", "PORTO", "ALIANZ"], key="f_cia_select_vfinal")
+    with col_f2:
+        # ASESOR (Nombre de la persona) - Variable independiente
+        f_asesor_nombre = st.text_input("Asesor", value=edit_f.get('e_nombre', 'EDF SEGUROS'), key="f_asesor_input_vfinal")
+        f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_cont_vfinal")
+
+    st.markdown("---")
+    
+    # 2. DEFINICIÓN DE COLUMNAS DE FLOTA (Ahora con Año)
+    cols_f = ["Marca", "Modelo", "Año", "Matrícula", "Cobertura", "Contado", "Deducible"]
+    
+    # 3. CARGA DE TABLA
+    if edit_f and "tab" in edit_f:
+        df_f_init = pd.DataFrame(edit_f["tab"])
+        # Reindexamos para que tome la nueva columna Año si no existe en el registro viejo
+        df_f_init = df_f_init.reindex(columns=cols_f).fillna("")
+    else:
+        # Fila inicial vacía con la columna Año
+        df_f_init = pd.DataFrame([{
+            "Marca": "", "Modelo": "", "Año": "", "Matrícula": "", 
+            "Cobertura": "Total", "Contado": 0, "Deducible": 0
+        }])
+
+    # 4. EL EDITOR
+    t_flota = st.data_editor(
+        df_f_init, 
+        num_rows="dynamic", 
+        use_container_width=True, 
+        column_order=cols_f, 
+        key="editor_flotas_v_final_año"
+    )
+
+    st.markdown("### 📝 Detalles de la Propuesta")
+    f_obs = st.text_area("Observaciones:", value=edit_f.get('ben', ''), height=150, key="f_obs_vfinal_fix")
+
+    # 5. BOTÓN GUARDAR (Corregido para separar Aseguradora de Asesor)
+    if st.button("🚀 GUARDAR PROPUESTA", key="btn_save_flota_vfinal", use_container_width=True):
+        nueva_f = {
+            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "n": f_asegurado, 
+            "e": f_cia_elegida,     # Guarda BSE, SURA, etc.
+            "e_nombre": f_asesor_nombre,  # Guarda tu nombre (ej: Roque)
+            "cont": f_contacto,
+            "tab": t_flota.to_dict(orient='records'), 
+            "ben": f_obs, 
+            "tipo": "Flota"
+        }
+        if "historico" not in st.session_state: st.session_state.historico = []
+        st.session_state.historico.append(nueva_f)
+        st.session_state.edit_data = nueva_f
+        st.success(f"✅ ¡Flota de {f_asegurado} guardada!")
+        st.rerun()
+
+    # 6. RECUPERACIÓN DEL BOTÓN VISTA PREVIA (Gris Oscuro)
+    # Se muestra si acabas de guardar o si cargaste una flota del historial
+    if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota":
+        st.markdown("---")
+        st.markdown("### 🔗 Link de Flota para enviar")
+        
+        # Encriptamos los datos actuales
+        datos_f_json = json.dumps(st.session_state.edit_data)
+        datos_f_b64 = base64.b64encode(datos_f_json.encode()).decode()
+        
+    # --- BOTÓN PARA FLOTAS GRANDES (Línea 580 aprox) ---
+    if st.button("🔗 GENERAR LINK", use_container_width=True):
+            try:
+                import uuid
+                # CAMBIO CLAVE: Usamos el código largo que Supabase espera
+                f_id = str(uuid.uuid4()) 
+                datos_f = st.session_state.edit_data
+                
+                headers_sp = {
+                    "apikey": SUPABASE_KEY, 
+                    "Authorization": f"Bearer {SUPABASE_KEY}", 
+                    "Content-Type": "application/json"
+                }
+                
+                # Mandamos el f_id largo
+                payload = {"id": f_id, "data": datos_f, "tipo": "flota"}
+                
+                res = requests.post(f"{SUPABASE_URL}/rest/v1/cotizaciones", headers=headers_sp, json=payload)
+                
+                if res.status_code in [200, 201]:
+                    link_f = f"https://dfseguros.streamlit.app/?f_id={f_id}"
+                    st.success("✅ ¡Link generado con éxito!")
+                    st.code(link_f)
+                    st.link_button("🚀 VISTA PREVIA", link_f, type="primary", use_container_width=True)
+                else:
+                    st.error(f"Error: {res.text}")
+            except Exception as e:
+                st.error(f"Error técnico: {e}")
+        
+# --- PESTAÑA HISTORIAL (CORREGIDA) ---
 with tab_historial:
     st.subheader("📜 Historial de Cotizaciones")
     if "historico" in st.session_state and st.session_state.historico:
@@ -532,13 +634,23 @@ with tab_historial:
         for i, reg in enumerate(reversed(st.session_state.historico)):
             idx_real = len(st.session_state.historico) - 1 - i
             
+            # Creamos una fila con columnas: Info, Editar y Borrar
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             
             with col_info:
-                fecha = reg.get('fecha', 'S/F')[:10]
+                fecha = reg.get('fecha', 'S/F')[:10]  # Tomamos solo la fecha
                 nombre = reg.get('n', 'Cliente')
-                vehiculo = reg.get('v', 'Vehículo')
-                st.write(f"📅 **{fecha}** | 🚗 Individual | **{nombre}** ({vehiculo})")
+                
+                # --- AQUÍ ESTÁ EL CAMBIO DEL PASO 2 ---
+                tipo_raw = reg.get("tipo", "Individual") # Si no tiene tipo, asumimos Individual
+                
+                if tipo_raw == "Flota":
+                    tipo_display = "🚚 Flota"
+                else:
+                    tipo_display = "🚗 Individual"
+                
+                # Mostramos la línea del historial
+                st.write(f"**{fecha}** | {tipo_display} | **{nombre}**")
             
             with col_edit:
                 if st.button("✏️ Editar", key=f"edit_{idx_real}"):
@@ -550,13 +662,12 @@ with tab_historial:
                 if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
-        st.markdown("---")
+            st.markdown("---")
     else:
-        st.info("No hay cotizaciones individuales guardadas aún.")
+        st.info("No hay cotizaciones guardadas aún.")
 
-# ==========================================
-# 📊 PESTAÑA ANÁLISIS DE CARTERA
-# ==========================================
+
+# --- PESTAÑA ANÁLISIS ---
 with tab_an:
     st.subheader("📊 Análisis de Cartera")
     if not df_f.empty:
@@ -565,142 +676,5 @@ with tab_an:
         k1.metric("Cartera Total (USD)", f"USD {t_usd:,.0f}")
         k2.metric("Total de Pólizas", f"{len(df_f)}")
         c1, c2 = st.columns(2)
-        with c1: 
-            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
-        with c2: 
-            st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
-
-# ==========================================
-# 🛡️ VISTA FINAL DEL CLIENTE (REPARADA)
-# ==========================================
-if p:
-    # Abrimos el paquete de datos estructurado del link (?q= o ?f=)
-    d = p.get('data', p)
-    
-    # Extraemos variables individuales limpias basándonos en tu CRM de Vehículos
-    cliente_v = d.get('n') or d.get('cliente') or "Asegurado"
-    vehiculo_v = d.get('v') or "Vehículo"
-    asesor_v = d.get('e') or "EDF SEGUROS"
-    contacto_v = d.get('cont') or "099 635 244"
-    fecha_v = d.get('fecha', datetime.now().strftime("%d/%m/%Y"))
-    
-    # Renderizado estético superior de la cabecera
-    col_l, col_i = st.columns([1, 2])
-    with col_l:
-        st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
-    with col_i:
-        st.markdown(f"## Asegurado: {cliente_v}")
-        st.markdown(f"### 📋 Cotización para: **{vehiculo_v}**")
-
-    # Reconstruimos la tabla en base a la lista guardada en 'tab'
-    vehiculos_lista = d.get('tab') or []
-    
-    if vehiculos_lista:
-        t_html = """
-        <style>
-            .tabla-edf { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; }
-            .tabla-edf th { background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: center; font-size: 14px; }
-            .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 13px; }
-            .der { text-align: right !important; font-weight: bold; }
-        </style>
-        <table class="tabla-edf">
-            <thead>
-                <tr>
-                    <th>ASEGURADORA</th>
-                    <th style="text-align: right;">CONTADO</th>
-                    <th style="text-align: right;">10 CUOTAS</th>
-                    <th style="text-align: right;">DEDUCIBLE</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
-        
-        for v in vehiculos_lista:
-            # Filtro para limpiar decimales y colocar separadores de miles con punto
-            def f_num(val):
-                try: 
-                    return f"{int(float(val)):,}".replace(",", ".")
-                except: 
-                    return str(val)
-
-            aseg = v.get('Aseguradora') or v.get('aseguradora') or ""
-            cont = f"USD {f_num(v.get('Contado') or v.get('cuota') or 0)}"
-            cuot = f"USD {f_num(v.get('10 Cuotas') or v.get('cuota_10') or 0)}"
-            dedu = f_num(v.get('Deducible') or v.get('deducible') or 0)
-            
-            t_html += f"""
-                <tr>
-                    <td><b>{aseg}</b></td>
-                    <td class="der" style="color: #1E3A8A;">{cont}</td>
-                    <td class="der">{cuot}</td>
-                    <td class="der">{dedu}</td>
-                </tr>
-            """
-        t_html += "</tbody></table>"
-        # Renderizado único HTML controlado para evitar textos sueltos
-        st.markdown(t_html, unsafe_allow_html=True)
-    else:
-        st.warning("No se encontraron opciones de cobertura en esta propuesta.")
-
-    # --- 3. BENEFICIOS (VISTA CLIENTE INDIVIDUAL) ---
-    if d.get("ben"):
-        st.write("")
-        st.markdown("### ✅ Beneficios Incluidos")
-        for b in d.get("ben", "").split('\n'):
-            if b.strip():
-                st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
-
-    # --- 4. COBERTURAS COMPLEMENTARIAS (CAJONES AZULES) ---
-    st.write("")
-    st.markdown("### ⚠️ Coberturas Complementarias")
-    col1, col2, col3 = st.columns(3)
-
-    def bloque_html(titulo, icono, texto, es_hogar=False):
-        if not texto: return ""
-        html_out = f'<div class="caja-azul"><span class="sub-tit" style="font-weight:bold; color:#1E3A8A;">{icono} {titulo}</span><br>'
-        lineas = texto.split('\n')
-        for linea in lineas:
-            linea = linea.strip()
-            if not linea: continue
-            if "$" in linea or "Costo" in linea:
-                l_limpia = linea.replace("•", "").strip()
-                html_out += f'<span class="costo-res">💰 {l_limpia}</span>'
-            else:
-                html_out += f'<span style="display:block; margin-top:3px;">{linea}</span>'
-        html_out += '</div>'
-        return html_out
-
-    col1.markdown(bloque_html("Hogar", "🏠", d.get("ch", ""), True), unsafe_allow_html=True)
-    col2.markdown(bloque_html("Alquiler", "🚗", d.get("ca", "")), unsafe_allow_html=True)
-    col3.markdown(bloque_html("Bici", "🚲", d.get("cb", "")), unsafe_allow_html=True)
-
-    # --- 5. FIRMA Y CIERRE DE VISTA CLIENTE ---
-    st.markdown("---")
-    st.markdown(f"""
-        <div style="display: flex; justify-content: space-between; color: gray; font-size: 13px;">
-            <div><b>Asesor:</b> {asesor_v} | <b>Contacto:</b> {contacto_v}</div>
-            <div><b>Fecha de Cotización:</b> {fecha_v}</div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Este st.stop() frena la app AQUÍ si es un cliente externo con link para que no vea el CRM
-    st.stop()
-
-# =========================================================================
-# 📊 CÓDIGO INTERNO DEL CRM - CONTENIDOS DE LAS PESTAÑAS (SÓLO PARA ASESORES)
-# =========================================================================
-
-# Esta sección se ejecuta únicamente en el panel interno del asesor
-with tab_an:
-    st.subheader("📊 Análisis de Cartera")
-    if not df_f.empty:
-        t_usd = df_f['Premio_Total_USD'].sum()
-        k1, k2 = st.columns(2)
-        k1.metric("Cartera Total (USD)", f"USD {t_usd:,.0f}")
-        k2.metric("Total de Pólizas", f"{len(df_f)}")
-        
-        c1, c2 = st.columns(2)
-        with c1: 
-            st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
-        with c2: 
-            st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
+        with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
+        with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
