@@ -122,27 +122,27 @@ if p:
     vehiculos = d.get('tab') or d.get('vehiculos') or []
     
     if vehiculos:
-        # Detectamos si viene en formato Flota (con clave Marca) o Individual (con clave Aseguradora)
+        # Detectamos el formato (Flota usa clave 'Marca' o 'marca', Individual usa 'Aseguradora')
         es_flota_data = any('Marca' in k or 'marca' in k for k in vehiculos[0].keys()) if isinstance(vehiculos, list) and len(vehiculos) > 0 else False
         
         t_html = """
-        <table class="tabla-edf" style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
+        <table style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
             <thead>
                 <tr style="background-color: #f0f7ff; color: #1E3A8A;">
         """
         if es_flota_data:
             t_html += """
-                    <th style="padding: 12px; border: 1px solid #ddd;">MARCA</th>
-                    <th style="padding: 12px; border: 1px solid #ddd;">MODELO</th>
-                    <th style="padding: 12px; border: 1px solid #ddd;">AÑO</th>
-                    <th style="padding: 12px; border: 1px solid #ddd;">MATRICULA</th>
-                    <th style="padding: 12px; border: 1px solid #ddd;">COBERTURA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">MARCA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">MODELO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">AÑO</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">MATRICULA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">COBERTURA</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
             """
         else:
             t_html += """
-                    <th style="padding: 12px; border: 1px solid #ddd;">ASEGURADORA</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">ASEGURADORA</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">10 CUOTAS</th>
                     <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
@@ -157,7 +157,6 @@ if p:
         for v in vehiculos:
             def f_num(n):
                 try: 
-                    # Limpiamos símbolos previos para que la conversión matemática sea limpia y quite el .0
                     n_clean = str(n).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip()
                     return f"{int(float(n_clean)):,}".replace(",", ".")
                 except: 
@@ -173,12 +172,12 @@ if p:
                 deduc = f_num(v.get('Deducible') or v.get('deducible') or 0)
                 
                 t_html += f"""
-                    <tr style="text-align: center; border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px; border: 1px solid #ddd;">{marca}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">{modelo}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">{anio}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">{mat}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">{cob}</td>
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{marca}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{modelo}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{anio}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{mat}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">{cob}</td>
                         <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #1E3A8A;">{contado}</td>
                         <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{deduc}</td>
                     </tr>
@@ -190,8 +189,8 @@ if p:
                 dedu = f_num(v.get('Deducible') or v.get('deducible') or 0)
                 
                 t_html += f"""
-                    <tr style="text-align: center; border-bottom: 1px solid #eee;">
-                        <td style="padding: 10px; border: 1px solid #ddd;"><b>{aseg}</b></td>
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><b>{aseg}</b></td>
                         <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #1E3A8A;">{cont}</td>
                         <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{cuot}</td>
                         <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">{dedu}</td>
@@ -199,6 +198,7 @@ if p:
                 """
                 
         t_html += "</tbody></table>"
+        # AQUÍ ESTÁ EL CAMBIO CLAVE: Cambiamos st.write por st.markdown puro con HTML permitido
         st.markdown(t_html, unsafe_allow_html=True)
     else:
         st.error("⚠️ No se encontraron registros de cobertura en esta propuesta.")
