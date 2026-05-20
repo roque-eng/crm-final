@@ -235,61 +235,20 @@ with tab_cot:
             st.rerun()
             
     else:
-        # --- VISTA PREVIA LIMPIA BASE (PASO ESTÉTICO SEGURO) ---
-        col_l, col_i = st.columns([1, 2])
-        with col_l: 
-            st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
-        with col_i:
-            # Texto a la izquierda y más chico para el cliente
-            st.markdown(f"#### Asegurado: {edit_ind.get('n', 'Cliente')}")
-            st.markdown(f"**Vehículo:** {edit_ind.get('v', 'Vehículo')}")
+        # --- VISTA PREVIA LIMPIA BASE (CORRECCIÓN DE ICONO Y ALINEACIÓN) ---
         
-        # Convertimos los datos guardados en un DataFrame limpio para no usar HTML manual
+        # Eliminamos st.columns y st.image para quitar la camarita rota.
+        # Al meter el texto en un bloque HTML limpio, forzamos la alineación estricta a la izquierda.
+        st.markdown(f"""
+        <div style="font-family: sans-serif; text-align: left !important; padding-left: 5px; margin-bottom: 15px;">
+            <h2 style="margin: 0 0 6px 0; font-size: 20px; color: #111; text-align: left !important;">Asegurado: {edit_ind.get('n', 'Cliente')}</h2>
+            <p style="margin: 0; font-size: 15px; color: #555; text-align: left !important;"><b>Vehículo:</b> {edit_ind.get('v', 'Vehículo')}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Convertimos los datos guardados en un DataFrame limpio
         df_propuesta = pd.DataFrame(edit_ind.get("tab", []))
         
-        if not df_propuesta.empty:
-            # Aseguramos que los números sean leídos como enteros matemáticos limpios
-            for col in ["Contado", "10 Cuotas", "Deducible"]:
-                if col in df_propuesta.columns:
-                    df_propuesta[col] = pd.to_numeric(df_propuesta[col], errors='coerce').fillna(0).astype(int)
-            
-            # Dibujamos la tabla usando el componente oficial: Alinea textos a la izq y números formateados a la der
-            st.dataframe(
-                df_propuesta,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Aseguradora": st.column_config.TextColumn("ASEGURADORA"),
-                    "Contado": st.column_config.NumberColumn("CONTADO", format="%d"),
-                    "10 Cuotas": st.column_config.NumberColumn("10 CUOTAS", format="%d"),
-                    "Deducible": st.column_config.NumberColumn("DEDUCIBLE", format="%d")
-                }
-            )
-        else:
-            st.warning("No hay datos de cobertura para mostrar.")
-        
-        if edit_ind.get("ben"):
-            st.write("")
-            st.markdown("### ✅ Beneficios Incluidos")
-            for b in edit_ind.get("ben", "").split('\n'):
-                if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
-                
-        st.write("")
-        st.markdown("### ⚠️ Coberturas Complementarias")
-        cx1, cx2, cx3 = st.columns(3)
-        def b_html(tit, ico, txt):
-            if not txt: return ""
-            out = f'<div class="caja-azul"><span style="font-weight:bold; color:#1E3A8A;">{ico} {tit}</span><br>'
-            for l in txt.split('\n'):
-                out += f'<span style="display:block; margin-top:3px;">{l.strip()}</span>'
-            return out + '</div>'
-        cx1.markdown(b_html("Hogar", "🏠", edit_ind.get("ch", "")), unsafe_allow_html=True)
-        cx2.markdown(b_html("Alquiler / Auto Sust.", "🚗", edit_ind.get("ca", "")), unsafe_allow_html=True)
-        cx3.markdown(b_html("Bici", "🚲", edit_ind.get("cb", "")), unsafe_allow_html=True)
-        
-        st.markdown("---")
-        st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {edit_ind.get('e','EDF')} | <b>Contacto:</b> {edit_ind.get('cont','')}</div><div><b>Fecha:</b> {edit_ind.get('fecha','')}</div></div>", unsafe_allow_html=True)
-
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
     st.subheader("🚛 Cotizador Seguro de Flotas")
