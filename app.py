@@ -329,26 +329,21 @@ with tab_ven:
 # --- PLANTILLAS EXCLUSIVAS PARA VEHÍCULOS ---
 txt_ben_veh = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
 txt_hog_veh = "• Incendio Edificio e Incendio Contenido 40.000\n• Hurto Contenido 10.000\n• Costo ANUAL: 95 IVA INC"
-txt_alq_veh = "• Auto sustituto por 10 días o 250 en efectivo si no se utiliza."
-txt_bic_veh = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: 1.500"
+txt_alq_veh = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo: UYU 3.000 (IVA incluido) por vehículo."
+txt_bic_veh = "• Cobertura por Hurto y/o Rapiña de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Daños a Terceros que puedas provocar hasta USD 10.000\n• Costo ANUAL: 120 IVA INC"
 
 # --- PLANTILLAS EXCLUSIVAS PARA FLOTAS ---
-txt_obs_flota = """**Observaciones:**
-• **Vigencia:** Anual con refacturación mensual.
-• **Forma de Pago:** Débito bancario o tarjeta de crédito en 10 cuotas sin recargo.
+txt_obs_flota = """
+• **Vigencia:** 
+• **Forma de Pago:** redes de cobranza o tarjeta de crédito en 10 cuotas sin recargo.
 • **Condiciones Especiales de Contratación:**
-  - Auxilio mecánico ilimitado para toda la flota (Uruguay y países limítrofes).
-  - Cobertura de cristales, cerraduras y espejos sin límite de eventos y sin deducible.
-  - Auto sustituto por hasta 15 días en caso de siniestro total o parcial.
-
-**Beneficios Adicionales Incluidos:**
-• **RC del Conductor:** Cubre la responsabilidad civil de tus choferes autorizados.
-• **Accidentes Personales:** Cobertura especial para directores y ocupantes clave de la empresa.
-• **Bici Eléctrica o Moto (Movilidad):** Cobertura de movilidad alternativa para traslados cortos de los colaboradores."""
+  - Auxilio mecánico ilimitado para toda la flota (Uruguay y países limítrofes) menos camiones y motos (camiones: todos los que digan "camión" en la libreta de propiedad).
+  - Cobertura de cristales, cerraduras: SANCOR USD 300, BSE Y SBI USD 200, SURA USD 100, demás compañías aplican deducible y después pagan.
+  - Cobertura de Granizo: SANCOR lo cubre, demás compañías cobran deducible y después pagan.
 
 txt_acc_flota = "• Seguro de Vida a causa de Accidentes (para los choferes): USD 25.000 de cobertura.\n• Costo Anual USD 50 (IVA incluido) por chofer."
-txt_alq_flota = "• Si desea Auto de Alquiler nos dice en que vehículos agregar.\n• Costo: UYU 3.000 (IVA incluido) por vehículo."
-txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo Anual: UYU 5.000"
+txt_alq_flota = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo: UYU 3.000 (IVA incluido) por vehículo."
+txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo Anual: UYU 6.000"
 
 
 # ==========================================
