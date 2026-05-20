@@ -25,6 +25,7 @@ if 'usuario_actual' not in st.session_state:
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5 
 
+# TÍTULO DE ACCESO SOLICITADO: "EDF SEGUROS"
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
 # Estilos CSS Limpios y Profesionales en Azul para la propuesta impresa
@@ -59,7 +60,7 @@ st.markdown("""
 
 # Autenticación Básica del Asesor
 if 'logueado' not in st.session_state or not st.session_state['logueado']:
-    st.title("🛡️ EDF SEGUROS - CRM Interno")
+    st.title("🛡️ EDF SEGUROS")
     u_sel = st.selectbox("Seleccione su Usuario:", list(USUARIOS.keys()))
     p_in = st.text_input("Contraseña:", type="password")
     if st.button("Ingresar", type="primary"):
@@ -113,7 +114,20 @@ with tab_car:
     df_disp_c = df_c.copy()
     if 'Fin de Vigencia' in df_disp_c.columns:
         df_disp_c['Fin de Vigencia'] = pd.to_datetime(df_disp_c['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
-    st.dataframe(df_disp_c, use_container_width=True, hide_index=True)
+        
+    # Agregamos la columna interactiva con el ícono de PDF apuntando al link de Drive
+    st.data_editor(
+        df_disp_c,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Link Póliza Digital": st.column_config.LinkColumn(
+                "📄 Póliza",
+                help="Abrir documento en Google Drive",
+                display_text="📎 Ver PDF"
+            )
+        }
+    )
 
 # --- PESTAÑA VENCIMIENTOS ---
 with tab_ven:
@@ -127,8 +141,19 @@ with tab_ven:
         df_venc_disp = df_venc_f.copy()
         df_venc_disp['Fin de Vigencia'] = pd.to_datetime(df_venc_disp['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         st.dataframe(df_venc_disp, use_container_width=True, hide_index=True)
+        
+        # Botón para Exportar a Excel reincorporado
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_venc_f.to_excel(writer, index=False, sheet_name='Vencimientos')
+        st.download_button(
+            label="📥 Exportar a Excel",
+            data=output.getvalue(),
+            file_name=f"Vencimientos_{f_ini}_al_{f_fin}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
-# --- FUNCIÓN PARA LIMPIAR NÚMEROS ---
+# --- FUNCIÓN COMODÍN PARA LIMPIAR NÚMEROS ---
 def f_num(val):
     try: return f"{int(float(str(val).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
     except: return str(val)
@@ -138,7 +163,8 @@ with tab_cot:
     st.subheader("📝 Cotizador Seguros Individuales")
     edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
     
-    modo_impresion_ind = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA CLIENTE", value=False, key="toggle_print_ind")
+    # Se unificó el término y se asocia correctamente al estado interno
+    modo_impresion_ind = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_ind")
     
     if not modo_impresion_ind:
         with st.container(border=True):
@@ -155,21 +181,29 @@ with tab_cot:
         
         t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo")
         
+        # Textos pre-escritos originales reincorporados
+        txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
+        txt_hogar_def = "• Incendio Edificio e Incendio Contenido USD 40.000\n• Hurto Contenido USD 10.000\n• Costo ANUAL: USD 95 IVA INC"
+        txt_alquiler_def = "• Auto sustituto por 10 días o USD 250 en efectivo si no se utiliza."
+        txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: USD 1.500"
+
         col_a, col_b = st.columns(2)
-        with col_a: b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", "• Auxilio mecánico 24hs\n• Cristales sin límite"), height=150, key="ben_v_final")
+        with col_a: b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_beneficios_def), height=150, key="ben_v_final")
         with col_b:
-            c_h = st.text_area("Hogar:", value=edit_ind.get("ch", "• Incendio Contenido: USD 50.000\nCosto Anual: USD 120"), height=60, key="hog_v_final")
-            c_a = st.text_area("Alquiler:", value=edit_ind.get("ca", "• Auto cortesía 15 días"), height=50, key="alq_v_final")
-            c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", "• Hurto USD 1.000"), height=50, key="bic_v_final")
+            st.markdown("**Coberturas Complementarias**")
+            c_h = st.text_area("Hogar:", value=edit_ind.get("ch", txt_hogar_def), height=80, key="hog_v_final")
+            c_a = st.text_area("Auto Sustituto / Alquiler:", value=edit_ind.get("ca", txt_alquiler_def), height=50, key="alq_v_final")
+            c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", txt_bici_def), height=50, key="bic_v_final")
 
         if st.button("💾 Guardar propuesta en Historial", type="primary", use_container_width=True, key="save_ind_btn"):
             datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
             st.session_state.historico.append(datos_i)
             st.session_state.edit_data = datos_i
-            st.success("✅ ¡Guardado con éxito! Prendé el interruptor 'Modo Impresión' arriba para sacar la captura.")
+            st.success("✅ ¡Guardado con éxito! Activá el interruptor 'Modo Impresión / Vista Previa' de arriba para visualizar.")
             st.rerun()
             
     else:
+        # VISTA DE PROPUESTA LIMPIA INTERNA (INDIVIDUAL)
         col_l, col_i = st.columns([1, 2])
         with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
@@ -183,21 +217,23 @@ with tab_cot:
         st.markdown(t_html, unsafe_allow_html=True)
         
         if edit_ind.get("ben"):
+            st.write("")
             st.markdown("### ✅ Beneficios Incluidos")
             for b in edit_ind.get("ben", "").split('\n'):
                 if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
                 
+        st.write("")
         st.markdown("### ⚠️ Coberturas Complementarias")
         cx1, cx2, cx3 = st.columns(3)
         def b_html(tit, ico, txt):
             if not txt: return ""
             out = f'<div class="caja-azul"><span style="font-weight:bold; color:#1E3A8A;">{ico} {tit}</span><br>'
             for l in txt.split('\n'):
-                if "$" in l or "Costo" in l: out += f'<span class="costo-res">💰 {l.replace("•","").strip()}</span>'
+                if "$" in l or "Costo" in l or "COSTO" in l: out += f'<span class="costo-res">💰 {l.replace("•","").strip()}</span>'
                 else: out += f'<span style="display:block; margin-top:3px;">{l.strip()}</span>'
             return out + '</div>'
         cx1.markdown(b_html("Hogar", "🏠", edit_ind.get("ch", "")), unsafe_allow_html=True)
-        cx2.markdown(b_html("Alquiler", "🚗", edit_ind.get("ca", "")), unsafe_allow_html=True)
+        cx2.markdown(b_html("Alquiler / Auto Sust.", "🚗", edit_ind.get("ca", "")), unsafe_allow_html=True)
         cx3.markdown(b_html("Bici", "🚲", edit_ind.get("cb", "")), unsafe_allow_html=True)
         
         st.markdown("---")
@@ -208,7 +244,7 @@ with tab_flota:
     st.subheader("🚛 Cotizador Seguro de Flotas")
     edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
     
-    modo_impresion_fl = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA CLIENTE", value=False, key="toggle_print_flota")
+    modo_impresion_fl = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_flota")
     
     if not modo_impresion_fl:
         col_f1, col_f2 = st.columns(2)
@@ -230,10 +266,11 @@ with tab_flota:
             nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "tipo": "Flota"}
             st.session_state.historico.append(nueva_f)
             st.session_state.edit_data = nueva_f
-            st.success("✅ ¡Propuesta de Flota guardada! Activá el interruptor de arriba.")
+            st.success("✅ ¡Propuesta guardada! Activá el interruptor de arriba para cambiar a la vista limpia.")
             st.rerun()
             
     else:
+        # VISTA DE PROPUESTA LIMPIA INTERNA (FLOTAS)
         col_l, col_i = st.columns([1, 2])
         with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
@@ -247,6 +284,7 @@ with tab_flota:
         st.markdown(t_html, unsafe_allow_html=True)
         
         if edit_f.get("ben"):
+            st.write("")
             st.markdown("### 📋 Comentarios EDF Seguros")
             st.info(edit_f.get("ben"))
         st.markdown("---")
@@ -265,7 +303,7 @@ with tab_historial:
             with col_edit:
                 if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
                     st.session_state.edit_data = reg
-                    st.success(f"Propuesta de {reg.get('n')} cargada. ¡Andá a su pestaña para activarla!")
+                    st.success(f"Propuesta de {reg.get('n')} cargada.")
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_{idx_real}"):
