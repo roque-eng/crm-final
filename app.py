@@ -330,44 +330,43 @@ with tab_ven:
 txt_ben_veh = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
 txt_hog_veh = "• Incendio Edificio e Incendio Contenido 40.000\n• Hurto Contenido 10.000\n• Costo ANUAL: 95 IVA INC"
 txt_alq_veh = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo: UYU 3.000 (IVA incluido) por vehículo."
-txt_bic_veh = "• Cobertura por Hurto y/o Rapiña de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Daños a Terceros que puedas provocar hasta USD 10.000\n• Costo ANUAL: 120 IVA INC"
+txt_bic_veh = "• Cobertura por Hurto y/o Rapiña de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Daños a Terceros que puedas provocar hasta USD 10.000.\n• Costo ANUAL: 120 IVA INC"
 
 # --- PLANTILLAS EXCLUSIVAS PARA FLOTAS ---
-txt_obs_flota = """
-• **Vigencia:** 
+txt_obs_flota = """**Observaciones:**
+• **Vigencia:**
 • **Forma de Pago:** redes de cobranza o tarjeta de crédito en 10 cuotas sin recargo.
 • **Condiciones Especiales de Contratación:**
   - Auxilio mecánico ilimitado para toda la flota (Uruguay y países limítrofes) menos camiones y motos (camiones: todos los que digan "camión" en la libreta de propiedad).
-  - Cobertura de cristales, cerraduras: SANCOR USD 300, BSE Y SBI USD 200, SURA USD 100, demás compañías aplican deducible y después pagan.
-  - Cobertura de Granizo: SANCOR lo cubre, demás compañías cobran deducible y después pagan.
+  - Cobertura de cristales, cerraduras: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100, demás compañías aplican deducible y después pagan.
+  - Cobertura de Granizo: SANCOR lo cubre, demás compañías cobran deducible y después pagan."""
 
 txt_acc_flota = "• Seguro de Vida a causa de Accidentes (para los choferes): USD 25.000 de cobertura.\n• Costo Anual USD 50 (IVA incluido) por chofer."
 txt_alq_flota = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo: UYU 3.000 (IVA incluido) por vehículo."
-txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo Anual: UYU 6.000"
-
+txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo Anual: UYU 5.000"
 
 # ==========================================
 # 🎨 ESTILOS CSS (BOTONES ROJOS DE ALTA VISIBILIDAD)
 # ==========================================
 st.markdown("""
-    <style>
-    /* Forzamos el color rojo en los botones principales de generación de link */
-    div.stButton > button {
-        background-color: #ff4b4b !important;
-        color: white !important;
-        border: 2px solid #ff4b4b !important;
-        font-weight: bold !important;
-        border-radius: 8px !important;
-        padding: 10px 24px !important;
-        transition: all 0.3s ease !important;
-    }
-    div.stButton > button:hover {
-        background-color: #ff3333 !important;
-        border-color: #ff3333 !important;
-        color: white !important;
-        transform: scale(1.01);
-    }
-    </style>
+<style>
+/* Forzamos el color rojo en los botones principales de generación de link */
+div.stButton > button {
+    background-color: #ff4b4b !important;
+    color: white !important;
+    border: 2px solid #ff4b4b !important;
+    font-weight: bold !important;
+    border-radius: 8px !important;
+    padding: 10px 24px !important;
+    transition: all 0.3s ease !important;
+}
+div.stButton > button:hover {
+    background-color: #ff3333 !important;
+    border-color: #ff3333 !important;
+    color: white !important;
+    transform: scale(1.01);
+}
+</style>
 """, unsafe_allow_html=True)
 
 
