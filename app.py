@@ -167,15 +167,23 @@ if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f
 tab_car, tab_ven, tab_cot, tab_flota, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR INDIVIDUAL", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"])
 
 # --- PESTAÑA CARTERA ---
+# --- PESTAÑA CARTERA ---
 with tab_car:
     busq = st.text_input("🔍 Buscar cliente o matrícula en cartera...")
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     
     if not df_c.empty:
-        # Reordenamos: Asegurado en 2do lugar y 'Fin de Vigencia' clavado entre Ramo y Premio USD
-        columnas_resumen = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu, 'Premio_Total_USD']
-        cols_validas = [c for c in columnas_resumen if c in df_c.columns]
-        df_resumen = df_c[cols_validas].copy()
+        # Forzamos los nombres reales de tu planilla: Póliza, Asegurado en 2do lugar, y Vencimiento en el medio
+        df_resumen = pd.DataFrame()
+        df_resumen["📄 Póliza"] = df_c[c_adjunto]
+        df_resumen["Asegurado"] = df_c[c_asegurado]
+        df_resumen["Documento"] = df_c[c_documento]
+        df_resumen["Aseguradora"] = df_c[c_aseguradora]
+        df_resumen["Ramo"] = df_c[c_ramo]
+        df_resumen["Vencimiento"] = df_c['Fin de Vigencia']
+        df_resumen["Premio USD"] = df_c[c_p_usd]
+        df_resumen["Premio UYU"] = df_c[c_p_uyu]
+        df_resumen["Premio Total (USD)"] = df_c['Premio_Total_USD']
         
         st.markdown("##### 📋 Resumen de Contratos Activos")
         st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
@@ -184,11 +192,11 @@ with tab_car:
             df_resumen, use_container_width=True, hide_index=False,
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
-                c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-                c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
-                c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
+                "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
+                "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
+                "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                "Premio Total (USD)": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
             }
         )
         
@@ -230,10 +238,17 @@ with tab_ven:
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
         
         if not df_venc_f.empty:
-            # Reordenamos idéntico: Asegurado arriba en 2do lugar y Vencimiento entre Ramo y Premio USD
-            columnas_resumen_v = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu, 'Premio_Total_USD']
-            cols_validas_v = [c for c in columnas_resumen_v if c in df_venc_f.columns]
-            df_venc_resumen = df_venc_f[cols_validas_v].copy()
+            # Forzamos la misma estructura exacta con Asegurado en 2do lugar
+            df_venc_resumen = pd.DataFrame()
+            df_venc_resumen["📄 Póliza"] = df_venc_f[c_adjunto]
+            df_venc_resumen["Asegurado"] = df_venc_f[c_asegurado]
+            df_venc_resumen["Documento"] = df_venc_f[c_documento]
+            df_venc_resumen["Aseguradora"] = df_venc_f[c_aseguradora]
+            df_venc_resumen["Ramo"] = df_venc_f[c_ramo]
+            df_venc_resumen["Vencimiento"] = df_venc_f['Fin de Vigencia']
+            df_venc_resumen["Premio USD"] = df_venc_f[c_p_usd]
+            df_venc_resumen["Premio UYU"] = df_venc_f[c_p_uyu]
+            df_venc_resumen["Premio Total (USD)"] = df_venc_f['Premio_Total_USD']
             
             st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
             
@@ -241,11 +256,11 @@ with tab_ven:
                 df_venc_resumen, use_container_width=True, hide_index=False,
                 on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
                 column_config={
-                    c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                    "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
-                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                    "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
+                    "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                    "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
+                    "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
+                    "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                    "Premio Total (USD)": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
                 }
             )
             
