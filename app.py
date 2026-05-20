@@ -27,9 +27,7 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# --- CONTROL VISUAL DEL MODO IMPRESIÓN EXTERNO ---
-# Si el usuario activa CUALQUIERA de los dos modos de impresión, inyectamos CSS dinámico 
-# para ocultar absolutamente toda la interfaz estructural de Streamlit (pestañas, líneas, botones).
+# --- CONTROL VISUAL DEL MODO IMPRESIÓN ---
 modo_print_activo = st.session_state.get("toggle_print_ind", False) or st.session_state.get("toggle_print_flota", False)
 
 if modo_print_activo:
@@ -39,13 +37,10 @@ if modo_print_activo:
         [data-testid="stTabs"] nav { display: none !important; }
         div[data-testid="stTabs"] { border: none !important; }
         
-        /* Oculta los interruptores de activación para que no salgan en la captura */
-        .stToggle, div[data-testid="stCheckbox"] { display: none !important; }
-        
         /* Oculta la barra superior gris de Streamlit y el menú de opciones */
         header, footer, [data-testid="stHeader"] { display: none !important; }
         
-        /* Elimina márgenes extra de la app para que quede limpio de borde a borde */
+        /* Elimina márgenes de la app para vista limpia de borde a borde */
         [data-testid="stAppViewContainer"] { background-color: white !important; padding-top: 0px !important; }
         .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
         </style>
@@ -77,9 +72,9 @@ st.markdown("""
         background: #f0f7ff !important; padding: 5px 10px; border-radius: 5px;
     }
     
-    /* Estilos de texto reducidos y alineados a la izquierda para la cabecera del cliente */
+    /* Estilos de texto reducidos y alineados a la izquierda para el cliente */
     .txt-cliente-chico { font-family: sans-serif; text-align: left !important; color: #333; line-height: 1.4; }
-    .txt-cliente-chico h3 { font-size: 18px !important; margin: 0 0 5px 0 !important; font-weight: bold; color: #111; }
+    .txt-cliente-chico h3 { font-size: 16px !important; margin: 0 0 5px 0 !important; font-weight: bold; color: #111; }
     .txt-cliente-chico p { font-size: 14px !important; margin: 0 !important; color: #555; }
     </style>
     """, unsafe_allow_html=True)
@@ -142,30 +137,32 @@ with tab_car:
     if 'Fin de Vigencia' in df_disp_c.columns:
         df_disp_c['Fin de Vigencia'] = pd.to_datetime(df_disp_c['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         
-    # --- ORDEN DE COLUMNAS SOLICITADO ---
-    cols_actuales = list(df_disp_c.columns)
+    # --- ORDENACIÓN DE COLUMNAS SIMÉTRICA (CARTERA) ---
+    cols_actuales_c = list(df_disp_c.columns)
     col_primera = "Adjunto (póliza)"
-    col_ultima = "Marca temporal"
+    col_final_1 = "Mail"
+    col_final_2 = "Celular"
+    col_final_3 = "Marca temporal"
     
-    # Reestructuramos el orden asegurándonos de que existan en tu Google Sheet
-    if col_primera in cols_actuales: cols_actuales.remove(col_primera)
-    if col_ultima in cols_actuales: cols_actuales.remove(col_ultima)
+    # Removemos las columnas que van fijas en los extremos
+    if col_primera in cols_actuales_c: cols_actuales_c.remove(col_primera)
+    if col_final_1 in cols_actuales_c: cols_actuales_c.remove(col_final_1)
+    if col_final_2 in cols_actuales_c: cols_actuales_c.remove(col_final_2)
+    if col_final_3 in cols_actuales_c: cols_actuales_c.remove(col_final_3)
     
-    # Armamos la lista: Primero la Póliza, en el medio todo lo demás, al final la Marca Temporal
-    orden_final_cols = [col_primera] + cols_actuales + [col_ultima]
-    
-    # Filtramos las que realmente existan por seguridad ante variaciones de la hoja
-    orden_final_cols = [c for c in orden_final_cols if c in df_disp_c.columns]
-
+    # Estructuramos el bloque final exacto solicitado
+    orden_final_cartera = [col_primera] + cols_actuales_c + [col_final_1, col_final_2, col_final_3]
+    orden_final_cartera = [c for c in orden_final_cartera if c in df_disp_c.columns]
+        
     st.data_editor(
         df_disp_c,
         use_container_width=True,
         hide_index=True,
-        column_order=orden_final_cols,
+        column_order=orden_final_cartera,
         column_config={
             "Adjunto (póliza)": st.column_config.LinkColumn(
                 "📄 Póliza",
-                help="Abrir documento original en Google Drive",
+                help="Abrir documento en Google Drive",
                 display_text="📎 Ver PDF"
             )
         }
@@ -181,17 +178,29 @@ with tab_ven:
         f_fin = c2.date_input("Hasta:", date.today() + timedelta(days=90))
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
         df_venc_disp = df_venc_f.copy()
-        df_venc_disp['Fin de Vigencia'] = pd.to_datetime(df_venc_disp['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         
-        # También agregamos el ícono del PDF interactivo en la lista de vencimientos
+        if 'Fin de Vigencia' in df_venc_disp.columns:
+            df_venc_disp['Fin de Vigencia'] = pd.to_datetime(df_venc_disp['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
+        
+        # --- ORDENACIÓN DE COLUMNAS IDENTICA (VENCIMIENTOS) ---
+        cols_actuales_v = list(df_venc_disp.columns)
+        if col_primera in cols_actuales_v: cols_actuales_v.remove(col_primera)
+        if col_final_1 in cols_actuales_v: cols_actuales_v.remove(col_final_1)
+        if col_final_2 in cols_actuales_v: cols_actuales_v.remove(col_final_2)
+        if col_final_3 in cols_actuales_v: cols_actuales_v.remove(col_final_3)
+        
+        orden_final_vencimientos = [col_primera] + cols_actuales_v + [col_final_1, col_final_2, col_final_3]
+        orden_final_vencimientos = [c for c in orden_final_vencimientos if c in df_venc_disp.columns]
+        
         st.data_editor(
             df_venc_disp,
             use_container_width=True,
             hide_index=True,
+            column_order=orden_final_vencimientos,
             column_config={
                 "Adjunto (póliza)": st.column_config.LinkColumn(
                     "📄 Póliza",
-                    help="Abrir documento original en Google Drive",
+                    help="Abrir documento en Google Drive",
                     display_text="📎 Ver PDF"
                 )
             }
@@ -206,7 +215,7 @@ with tab_ven:
             file_name=f"Vencimientos_{f_ini}_al_{f_fin}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
+        
 # --- FUNCIÓN COMODÍN PARA LIMPIAR NÚMEROS ---
 def f_num(val):
     try: return f"{int(float(str(val).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
@@ -214,9 +223,7 @@ def f_num(val):
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL ---
 with tab_cot:
-    # Este botón se mantendrá visible para desactivarlo cuando termines tu captura
     modo_impresion_ind = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_ind")
-    
     edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
     
     if not modo_impresion_ind:
@@ -236,9 +243,9 @@ with tab_cot:
         t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo")
         
         txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
-        txt_hogar_def = "• Incendio Edificio e Incendio Contenido $ 40.000\n• Hurto Contenido $ 10.000\n• Costo ANUAL: $ 95 IVA INC"
-        txt_alquiler_def = "• Auto sustituto por 10 días o $ 250 en efectivo si no se utiliza."
-        txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: $ 1.500"
+        txt_hogar_def = "• Incendio Edificio e Incendio Contenido 40.000\n• Hurto Contenido 10.000\n• Costo ANUAL: 95 IVA INC"
+        txt_alquiler_def = "• Auto sustituto por 10 días o 250 en efectivo si no se utiliza."
+        txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: 1.500"
 
         col_a, col_b = st.columns(2)
         with col_a: b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_beneficios_def), height=150, key="ben_v_final")
@@ -252,16 +259,15 @@ with tab_cot:
             datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
             st.session_state.historico.append(datos_i)
             st.session_state.edit_data = datos_i
-            st.success("✅ ¡Guardado con éxito! Activá el interruptor 'Modo Impresión / Vista Previa' de arriba para visualizar.")
+            st.success("✅ ¡Guardado con éxito! Activá el interruptor 'Modo Impresión / Vista Previa' de arriba.")
             st.rerun()
             
     else:
-        # VISTA DE PROPUESTA LIMPIA MEJORADA (INDIVIDUAL)
+        # VISTA DE PROPUESTA LIMPIA
         col_l, col_i = st.columns([1, 2])
         with col_l: 
             st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=160)
         with col_i:
-            # Cuadro alineado a la izquierda con tipografía más chica solicitado
             st.markdown(f"""
             <div class="txt-cliente-chico">
                 <h3>Asegurado: {edit_ind.get('n', 'Cliente')}</h3>
@@ -269,7 +275,7 @@ with tab_cot:
             </div>
             """, unsafe_allow_html=True)
         
-        # Tabla configurada con precios alineados a la derecha con el signo "$" y aseguradoras a la izquierda
+        # Tabla sin símbolos monetarios (solo números limpios)
         t_html = """
         <table class="tabla-edf">
             <thead>
@@ -286,9 +292,9 @@ with tab_cot:
             t_html += f"""
                 <tr>
                     <td class="izq-negrita">{row.get('Aseguradora','')}</td>
-                    <td class="der" style="color: #1E3A8A;">$ {f_num(row.get('Contado',0))}</td>
-                    <td class="der">$ {f_num(row.get('10 Cuotas',0))}</td>
-                    <td class="der">$ {f_num(row.get('Deducible',0))}</td>
+                    <td class="der" style="color: #1E3A8A;">{f_num(row.get('Contado',0))}</td>
+                    <td class="der">{f_num(row.get('10 Cuotas',0))}</td>
+                    <td class="der">{f_num(row.get('Deducible',0))}</td>
                 </tr>
             """
         t_html += "</tbody></table>"
@@ -307,8 +313,7 @@ with tab_cot:
             if not txt: return ""
             out = f'<div class="caja-azul"><span style="font-weight:bold; color:#1E3A8A;">{ico} {tit}</span><br>'
             for l in txt.split('\n'):
-                if "$" in l or "Costo" in l or "COSTO" in l: out += f'<span class="costo-res">💰 {l.replace("•","").strip()}</span>'
-                else: out += f'<span style="display:block; margin-top:3px;">{l.strip()}</span>'
+                out += f'<span style="display:block; margin-top:3px;">{l.strip()}</span>'
             return out + '</div>'
         cx1.markdown(b_html("Hogar", "🏠", edit_ind.get("ch", "")), unsafe_allow_html=True)
         cx2.markdown(b_html("Alquiler / Auto Sust.", "🚗", edit_ind.get("ca", "")), unsafe_allow_html=True)
@@ -320,7 +325,6 @@ with tab_cot:
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
     modo_impresion_fl = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_flota")
-    
     edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
     
     if not modo_impresion_fl:
@@ -344,11 +348,10 @@ with tab_flota:
             nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "tipo": "Flota"}
             st.session_state.historico.append(nueva_f)
             st.session_state.edit_data = nueva_f
-            st.success("✅ ¡Propuesta guardada! Activá el interruptor de arriba para cambiar a la vista limpia.")
+            st.success("✅ ¡Propuesta guardada! Activá el 'Modo Impresión' arriba.")
             st.rerun()
             
     else:
-        # VISTA DE PROPUESTA LIMPIA INTERNA (FLOTAS)
         col_l, col_i = st.columns([1, 2])
         with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=160)
         with col_i:
@@ -382,8 +385,8 @@ with tab_flota:
                     <td style="text-align: center !important;">{row.get('Año','')}</td>
                     <td style="text-align: center !important;">{row.get('Matrícula','-')}</td>
                     <td style="text-align: left !important;">{row.get('Cobertura','')}</td>
-                    <td class="der" style="color: #1E3A8A;">$ {f_num(row.get('Contado',0))}</td>
-                    <td class="der">$ {f_num(row.get('Deducible',0))}</td>
+                    <td class="der" style="color: #1E3A8A;">{f_num(row.get('Contado',0))}</td>
+                    <td class="der">{f_num(row.get('Deducible',0))}</td>
                 </tr>
             """
         t_html += "</tbody></table>"
@@ -409,7 +412,7 @@ with tab_historial:
             with col_edit:
                 if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
                     st.session_state.edit_data = reg
-                    st.success(f"Propuesta de {reg.get('n')} cargada. ¡Andá a su pestaña para activarla!")
+                    st.success(f"Propuesta de {reg.get('n')} cargada.")
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_{idx_real}"):
