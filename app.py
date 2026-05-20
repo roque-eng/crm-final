@@ -326,7 +326,7 @@ with tab_ven:
 txt_beneficios_def = "• Auxilio mecánico: ilimitado\n• Cobertura Mercosur\n• Cristales: USD 100 SURA, USD 200 SBI y BSE, USD 300 SANCOR\n• Granizo: cubre sin deducible solo SANCOR"
 txt_hogar_def = "• Incendio Edificio USD:100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n Costo Anual (IVA Inc): USD 120 Apto y USD 180 Casas"
 txt_alquiler_def = "• Auto sustituto por 15 días en caso de que tu vehículo entre al taller a reparar por haber sufrido un siniestro.\n• Costo Anual (IVA Inc): UYU 3.000"
-txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: 1.500"
+txt_bici_def = "• Cobertura por Hurto y/o rapiña de la bicicleta dentro y fuera del hogar: hasta USD 1.000 y daños a terceros: hasta USD 10.000\n• Costo Anual (IVA Inc): USD 120"
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL ---
 with tab_cot:
