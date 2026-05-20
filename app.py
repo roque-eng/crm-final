@@ -138,17 +138,34 @@ with tab_car:
     busq = st.text_input("🔍 Buscar cliente o matrícula en cartera...")
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     df_disp_c = df_c.copy()
+    
     if 'Fin de Vigencia' in df_disp_c.columns:
         df_disp_c['Fin de Vigencia'] = pd.to_datetime(df_disp_c['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         
+    # --- ORDEN DE COLUMNAS SOLICITADO ---
+    cols_actuales = list(df_disp_c.columns)
+    col_primera = "Adjunto (póliza)"
+    col_ultima = "Marca temporal"
+    
+    # Reestructuramos el orden asegurándonos de que existan en tu Google Sheet
+    if col_primera in cols_actuales: cols_actuales.remove(col_primera)
+    if col_ultima in cols_actuales: cols_actuales.remove(col_ultima)
+    
+    # Armamos la lista: Primero la Póliza, en el medio todo lo demás, al final la Marca Temporal
+    orden_final_cols = [col_primera] + cols_actuales + [col_ultima]
+    
+    # Filtramos las que realmente existan por seguridad ante variaciones de la hoja
+    orden_final_cols = [c for c in orden_final_cols if c in df_disp_c.columns]
+
     st.data_editor(
         df_disp_c,
         use_container_width=True,
         hide_index=True,
+        column_order=orden_final_cols,
         column_config={
-            "Link Póliza Digital": st.column_config.LinkColumn(
+            "Adjunto (póliza)": st.column_config.LinkColumn(
                 "📄 Póliza",
-                help="Abrir documento en Google Drive",
+                help="Abrir documento original en Google Drive",
                 display_text="📎 Ver PDF"
             )
         }
@@ -165,7 +182,20 @@ with tab_ven:
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
         df_venc_disp = df_venc_f.copy()
         df_venc_disp['Fin de Vigencia'] = pd.to_datetime(df_venc_disp['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
-        st.dataframe(df_venc_disp, use_container_width=True, hide_index=True)
+        
+        # También agregamos el ícono del PDF interactivo en la lista de vencimientos
+        st.data_editor(
+            df_venc_disp,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Adjunto (póliza)": st.column_config.LinkColumn(
+                    "📄 Póliza",
+                    help="Abrir documento original en Google Drive",
+                    display_text="📎 Ver PDF"
+                )
+            }
+        )
         
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
