@@ -164,7 +164,7 @@ if f_ra != "Todos": df_f = df_f[df_f[c_ramo] == f_ra]
 if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
 
-tab_car, tab_ven, tab_cot, tab_flota, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR INDIVIDUAL", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"])
+tab_car, tab_ven, tab_cot, tab_flota, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHÍCULOS", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"])
 
 # --- PESTAÑA CARTERA ---
 with tab_car:
@@ -369,8 +369,12 @@ with tab_cot:
         
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
+        
         st.success("✅ ¡Propuesta guardada con éxito en el Historial!")
-        st.text_input("🔗 Copiá este Link y enviáselo al cliente por WhatsApp:", value=link_cliente)
+        
+        # Mostramos el link y abajo activamos la función de copiado automático
+        st.text_input("🔗 Link generado para el cliente:", value=link_cliente, read_only=True)
+        st.copy_to_clipboard(link_cliente, before_text="📋 Copiar Link de Vehículo", after_text="✨ ¡Link Copiado al Portapapeles!")
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
@@ -412,8 +416,12 @@ with tab_flota:
         
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
         link_flota = f"https://dfseguros.streamlit.app/?q={datos_b64}"
+        
         st.success("✅ ¡Propuesta de Flota guardada con éxito!")
-        st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota)
+        
+        # Mostramos el link de flotas y abajo su respectivo botón de copiado rápido
+        st.text_input("🔗 Link de Flota generado:", value=link_flota, read_only=True)
+        st.copy_to_clipboard(link_flota, before_text="📋 Copiar Link de Flota", after_text="✨ ¡Link de Flota Copiado!")
 
 # --- PESTAÑA HISTORIAL ---
 with tab_historial:
