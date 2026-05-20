@@ -346,7 +346,7 @@ txt_alq_flota = "• Auto sustituto por hasta 15 días en caso de que tu vehícu
 txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo Anual: UYU 5.000"
 
 # ==========================================
-# 🎨 ESTILOS CSS (BOTONES ROJOS DE ALTA VISIBILIDAD)
+# 🎨 ESTILOS CSS (BOTONES ROJOS AL PRINCIPIO)
 # ==========================================
 st.markdown("""
 <style>
