@@ -184,9 +184,9 @@ with tab_car:
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
                 c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
+                c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                 c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="$ %,d")
+                "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
             }
         )
         
@@ -239,9 +239,9 @@ with tab_ven:
                 on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
                 column_config={
                     c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
+                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                     c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                    "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="$ %,d")
+                    "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
                 }
             )
             
