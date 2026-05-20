@@ -25,36 +25,62 @@ if 'usuario_actual' not in st.session_state:
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5 
 
-# TÍTULO DE ACCESO SOLICITADO: "EDF SEGUROS"
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos CSS Limpios y Profesionales en Azul para la propuesta impresa
+# --- CONTROL VISUAL DEL MODO IMPRESIÓN EXTERNO ---
+# Si el usuario activa CUALQUIERA de los dos modos de impresión, inyectamos CSS dinámico 
+# para ocultar absolutamente toda la interfaz estructural de Streamlit (pestañas, líneas, botones).
+modo_print_activo = st.session_state.get("toggle_print_ind", False) or st.session_state.get("toggle_print_flota", False)
+
+if modo_print_activo:
+    st.markdown("""
+        <style>
+        /* Oculta las pestañas superiores (Tabs) por completo */
+        [data-testid="stTabs"] nav { display: none !important; }
+        div[data-testid="stTabs"] { border: none !important; }
+        
+        /* Oculta los interruptores de activación para que no salgan en la captura */
+        .stToggle, div[data-testid="stCheckbox"] { display: none !important; }
+        
+        /* Oculta la barra superior gris de Streamlit y el menú de opciones */
+        header, footer, [data-testid="stHeader"] { display: none !important; }
+        
+        /* Elimina márgenes extra de la app para que quede limpio de borde a borde */
+        [data-testid="stAppViewContainer"] { background-color: white !important; padding-top: 0px !important; }
+        .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
+# Estilos de diseño corporativo de las tablas y bloques de beneficios
 st.markdown("""
     <style>
-    @media print { 
-        .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header, .no-print, [data-testid="stWidgetLabel"] { display: none !important; } 
-        [data-testid="stAppViewContainer"] { background-color: white !important; }
-    }
-    
-    .tabla-edf { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; background-color: white; }
-    .tabla-edf th { background-color: #f0f7ff !important; color: #1E3A8A !important; padding: 12px; border: 1px solid #ddd; text-align: center; font-size: 15px; }
-    .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 14px; color: #333; }
+    .tabla-edf { width:100%; border-collapse: collapse; margin-top: 15px; font-family: sans-serif; background-color: white; }
+    .tabla-edf th { background-color: #f0f7ff !important; color: #1E3A8A !important; padding: 12px; border: 1px solid #ddd; text-align: right; font-size: 14px; }
+    /* La primera columna (Aseguradora/Marca) siempre alineada a la izquierda */
+    .tabla-edf th:first-child, .tabla-edf td:first-child { text-align: left !important; }
+    .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: right; font-size: 14px; color: #333; }
+    .izq-negrita { text-align: left !important; font-weight: bold; }
     .der { text-align: right !important; font-weight: bold; }
 
     .ben-fila { 
-        background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; 
-        border-left: 6px solid #1E3A8A !important; width: 100%; font-size: 15px; color: #333;
+        background-color: #f8f9fa; padding: 10px 18px; border-radius: 8px; margin-bottom: 8px; 
+        border-left: 5px solid #1E3A8A !important; width: 100%; font-size: 14px; color: #333;
     }
     
     .caja-azul { 
-        background-color: #ffffff; padding: 20px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; 
-        border-top: 5px solid #1E3A8A !important; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+        background-color: #ffffff; padding: 18px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; 
+        border-top: 5px solid #1E3A8A !important; box-shadow: 2px 2px 8px rgba(0,0,0,0.03);
     }
     
     .costo-res { 
-        color: #1E3A8A !important; font-weight: bold; display: block; margin-top: 10px; font-size: 18px; 
+        color: #1E3A8A !important; font-weight: bold; display: block; margin-top: 8px; font-size: 16px; 
         background: #f0f7ff !important; padding: 5px 10px; border-radius: 5px;
     }
+    
+    /* Estilos de texto reducidos y alineados a la izquierda para la cabecera del cliente */
+    .txt-cliente-chico { font-family: sans-serif; text-align: left !important; color: #333; line-height: 1.4; }
+    .txt-cliente-chico h3 { font-size: 18px !important; margin: 0 0 5px 0 !important; font-weight: bold; color: #111; }
+    .txt-cliente-chico p { font-size: 14px !important; margin: 0 !important; color: #555; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -115,7 +141,6 @@ with tab_car:
     if 'Fin de Vigencia' in df_disp_c.columns:
         df_disp_c['Fin de Vigencia'] = pd.to_datetime(df_disp_c['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         
-    # Agregamos la columna interactiva con el ícono de PDF apuntando al link de Drive
     st.data_editor(
         df_disp_c,
         use_container_width=True,
@@ -142,7 +167,6 @@ with tab_ven:
         df_venc_disp['Fin de Vigencia'] = pd.to_datetime(df_venc_disp['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         st.dataframe(df_venc_disp, use_container_width=True, hide_index=True)
         
-        # Botón para Exportar a Excel reincorporado
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df_venc_f.to_excel(writer, index=False, sheet_name='Vencimientos')
@@ -160,13 +184,13 @@ def f_num(val):
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL ---
 with tab_cot:
-    st.subheader("📝 Cotizador Seguros Individuales")
-    edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
-    
-    # Se unificó el término y se asocia correctamente al estado interno
+    # Este botón se mantendrá visible para desactivarlo cuando termines tu captura
     modo_impresion_ind = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_ind")
     
+    edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
+    
     if not modo_impresion_ind:
+        st.subheader("📝 Cotizador Seguros Individuales")
         with st.container(border=True):
             c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
             doc_in = c_doc.text_input("CI/RUT", value=edit_ind.get("doc", ""), key="ci_v_final")
@@ -181,11 +205,10 @@ with tab_cot:
         
         t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo")
         
-        # Textos pre-escritos originales reincorporados
         txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
-        txt_hogar_def = "• Incendio Edificio e Incendio Contenido USD 40.000\n• Hurto Contenido USD 10.000\n• Costo ANUAL: USD 95 IVA INC"
-        txt_alquiler_def = "• Auto sustituto por 10 días o USD 250 en efectivo si no se utiliza."
-        txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: USD 1.500"
+        txt_hogar_def = "• Incendio Edificio e Incendio Contenido $ 40.000\n• Hurto Contenido $ 10.000\n• Costo ANUAL: $ 95 IVA INC"
+        txt_alquiler_def = "• Auto sustituto por 10 días o $ 250 en efectivo si no se utiliza."
+        txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: $ 1.500"
 
         col_a, col_b = st.columns(2)
         with col_a: b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_beneficios_def), height=150, key="ben_v_final")
@@ -203,16 +226,41 @@ with tab_cot:
             st.rerun()
             
     else:
-        # VISTA DE PROPUESTA LIMPIA INTERNA (INDIVIDUAL)
+        # VISTA DE PROPUESTA LIMPIA MEJORADA (INDIVIDUAL)
         col_l, col_i = st.columns([1, 2])
-        with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
+        with col_l: 
+            st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=160)
         with col_i:
-            st.markdown(f"## Asegurado: {edit_ind.get('n', 'Cliente')}")
-            st.markdown(f"### 📋 Propuesta para: **{edit_ind.get('v', 'Vehículo')}**")
+            # Cuadro alineado a la izquierda con tipografía más chica solicitado
+            st.markdown(f"""
+            <div class="txt-cliente-chico">
+                <h3>Asegurado: {edit_ind.get('n', 'Cliente')}</h3>
+                <p><b>Vehículo:</b> {edit_ind.get('v', 'Vehículo')}</p>
+            </div>
+            """, unsafe_allow_html=True)
         
-        t_html = """<table class="tabla-edf"><thead><tr><th>ASEGURADORA</th><th style="text-align: right;">CONTADO</th><th style="text-align: right;">10 CUOTAS</th><th style="text-align: right;">DEDUCIBLE</th></tr></thead><tbody>"""
+        # Tabla configurada con precios alineados a la derecha con el signo "$" y aseguradoras a la izquierda
+        t_html = """
+        <table class="tabla-edf">
+            <thead>
+                <tr>
+                    <th style="text-align: left !important;">ASEGURADORA</th>
+                    <th>CONTADO</th>
+                    <th>10 CUOTAS</th>
+                    <th>DEDUCIBLE</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
         for row in edit_ind.get("tab", []):
-            t_html += f"""<tr><td><b>{row.get('Aseguradora','')}</b></td><td class="der" style="color: #1E3A8A;">USD {f_num(row.get('Contado',0))}</td><td class="der">USD {f_num(row.get('10 Cuotas',0))}</td><td class="der">USD {f_num(row.get('Deducible',0))}</td></tr>"""
+            t_html += f"""
+                <tr>
+                    <td class="izq-negrita">{row.get('Aseguradora','')}</td>
+                    <td class="der" style="color: #1E3A8A;">$ {f_num(row.get('Contado',0))}</td>
+                    <td class="der">$ {f_num(row.get('10 Cuotas',0))}</td>
+                    <td class="der">$ {f_num(row.get('Deducible',0))}</td>
+                </tr>
+            """
         t_html += "</tbody></table>"
         st.markdown(t_html, unsafe_allow_html=True)
         
@@ -241,12 +289,12 @@ with tab_cot:
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
-    st.subheader("🚛 Cotizador Seguro de Flotas")
-    edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
-    
     modo_impresion_fl = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_flota")
     
+    edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
+    
     if not modo_impresion_fl:
+        st.subheader("🚛 Cotizador Seguro de Flotas")
         col_f1, col_f2 = st.columns(2)
         with col_f1:
             f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_fl")
@@ -272,14 +320,42 @@ with tab_flota:
     else:
         # VISTA DE PROPUESTA LIMPIA INTERNA (FLOTAS)
         col_l, col_i = st.columns([1, 2])
-        with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
+        with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=160)
         with col_i:
-            st.markdown(f"## Asegurado: {edit_f.get('n', 'Cliente Flota')}")
-            st.markdown(f"### 🏦 Aseguradora: **{edit_f.get('e', 'Compañía')}**")
+            st.markdown(f"""
+            <div class="txt-cliente-chico">
+                <h3>Asegurado: {edit_f.get('n', 'Cliente Flota')}</h3>
+                <p><b>Aseguradora:</b> {edit_f.get('e', 'Compañía')}</p>
+            </div>
+            """, unsafe_allow_html=True)
             
-        t_html = """<table class="tabla-edf"><thead><tr><th>MARCA</th><th>MODELO</th><th>AÑO</th><th>MATRICULA</th><th>COBERTURA</th><th style="text-align: right;">CONTADO</th><th style="text-align: right;">DEDUCIBLE</th></tr></thead><tbody>"""
+        t_html = """
+        <table class="tabla-edf">
+            <thead>
+                <tr>
+                    <th style="text-align: left !important;">MARCA</th>
+                    <th style="text-align: left !important;">MODELO</th>
+                    <th style="text-align: center !important;">AÑO</th>
+                    <th style="text-align: center !important;">MATRÍCULA</th>
+                    <th style="text-align: left !important;">COBERTURA</th>
+                    <th>CONTADO</th>
+                    <th>DEDUCIBLE</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
         for row in edit_f.get("tab", []):
-            t_html += f"""<tr><td>{row.get('Marca','')}</td><td>{row.get('Modelo','')}</td><td>{row.get('Año','')}</td><td>{row.get('Matrícula','-')}</td><td>{row.get('Cobertura','')}</td><td class="der" style="color: #1E3A8A;">USD {f_num(row.get('Contado',0))}</td><td class="der">USD {f_num(row.get('Deducible',0))}</td></tr>"""
+            t_html += f"""
+                <tr>
+                    <td style="text-align: left !important; font-weight: bold;">{row.get('Marca','')}</td>
+                    <td style="text-align: left !important;">{row.get('Modelo','')}</td>
+                    <td style="text-align: center !important;">{row.get('Año','')}</td>
+                    <td style="text-align: center !important;">{row.get('Matrícula','-')}</td>
+                    <td style="text-align: left !important;">{row.get('Cobertura','')}</td>
+                    <td class="der" style="color: #1E3A8A;">$ {f_num(row.get('Contado',0))}</td>
+                    <td class="der">$ {f_num(row.get('Deducible',0))}</td>
+                </tr>
+            """
         t_html += "</tbody></table>"
         st.markdown(t_html, unsafe_allow_html=True)
         
@@ -303,7 +379,7 @@ with tab_historial:
             with col_edit:
                 if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
                     st.session_state.edit_data = reg
-                    st.success(f"Propuesta de {reg.get('n')} cargada.")
+                    st.success(f"Propuesta de {reg.get('n')} cargada. ¡Andá a su pestaña para activarla!")
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_{idx_real}"):
