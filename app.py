@@ -172,7 +172,8 @@ with tab_car:
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     
     if not df_c.empty:
-        columnas_resumen = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, c_p_usd, c_p_uyu, 'Premio_Total_USD']
+        # Reordenamos: Asegurado en 2do lugar y 'Fin de Vigencia' clavado entre Ramo y Premio USD
+        columnas_resumen = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu, 'Premio_Total_USD']
         cols_validas = [c for c in columnas_resumen if c in df_c.columns]
         df_resumen = df_c[cols_validas].copy()
         
@@ -184,6 +185,7 @@ with tab_car:
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
                 c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
                 c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                 c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
                 "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
@@ -228,7 +230,8 @@ with tab_ven:
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
         
         if not df_venc_f.empty:
-            columnas_resumen_v = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, c_p_usd, c_p_uyu, 'Premio_Total_USD']
+            # Reordenamos idéntico: Asegurado arriba en 2do lugar y Vencimiento entre Ramo y Premio USD
+            columnas_resumen_v = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu, 'Premio_Total_USD']
             cols_validas_v = [c for c in columnas_resumen_v if c in df_venc_f.columns]
             df_venc_resumen = df_venc_f[cols_validas_v].copy()
             
@@ -239,6 +242,7 @@ with tab_ven:
                 on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
                 column_config={
                     c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                    "Fin de Vigencia": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
                     c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                     c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
                     "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
