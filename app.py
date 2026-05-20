@@ -322,11 +322,44 @@ with tab_ven:
         else:
             st.info("No hay vencimientos en el rango seleccionado.")
 
-# --- TEXTOS COMPLEMENTARIOS BASE COMPARTIDOS ---
-txt_beneficios_def = "• Auxilio mecánico: ilimitado\n• Cobertura Mercosur\n• Cristales: USD 100 SURA, USD 200 SBI y BSE, USD 300 SANCOR\n• Granizo: cubre sin deducible solo SANCOR"
-txt_hogar_def = "• Incendio Edificio USD:100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n Costo Anual (IVA Inc): USD 120 Apto y USD 180 Casas"
-txt_alquiler_def = "• Auto sustituto por 15 días en caso de que tu vehículo entre al taller a reparar por haber sufrido un siniestro.\n• Costo Anual (IVA Inc): UYU 3.000"
-txt_bici_def = "• Cobertura por Hurto y/o rapiña de la bicicleta dentro y fuera del hogar: hasta USD 1.000 y daños a terceros: hasta USD 10.000\n• Costo Anual (IVA Inc): USD 120"
+# --- TEXTOS VEHÍCULOS (INDIVIDUAL) ---
+txt_ben_veh = "• Auxilio mecánico ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite\n• Gestión de siniestros profesional"
+txt_hog_veh = "• Incendio Edificio: 150.000\n• Incendio Contenido: 30.000\n• Hurto Contenido: 10.000\n• Costo ANUAL: 110 USD"
+txt_alq_veh = "• Auto sustituto por 10 días o 250 USD en efectivo si no se utiliza."
+txt_bic_veh = "• Cobertura por Hurto e Incendio de la bicicleta: 1.500 USD"
+
+# --- TEXTOS FLOTAS (CORPORATIVO) ---
+txt_obs_flota = """**Observaciones:**
+• **Vigencia:** Anual con refacturación mensual.
+• **Forma de Pago:** Débito o Tarjeta en 10 cuotas sin recargo.
+• **Condiciones Especiales:**
+  - Auxilio ilimitado (Uruguay y Limítrofes).
+  - Cristales, cerraduras y espejos sin deducible.
+  - Auto sustituto por 15 días."""
+
+txt_acc_flota = "• Seguro de Vida o Accidentes Personales (Choferes): 25.000 USD cobertura.\n• Costo Anual: 50 USD por chofer."
+txt_alq_flota = "• Auto sustituto por 15 días en caso de siniestro.\n• Costo Anual: 3.000 UYU."
+txt_bic_flota = "• Cobertura Hurto e Incendio Bici o Moto: 1.500 USD.\n• Prima Anual: 60 USD."
+
+### 2. Botón Rojo de Generar Link
+Para que los botones sean **rojos**, pega este estilo CSS al principio de tu código (donde están los `<style>`):
+
+```python
+st.markdown("""
+    <style>
+    /* Estilo para los botones de Generar Link */
+    div.stButton > button:first-child {
+        background-color: #ff4b4b !important;
+        color: white !important;
+        border: none !important;
+        font-weight: bold !important;
+    }
+    div.stButton > button:hover {
+        background-color: #ff3333 !important;
+        color: white !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL ---
 with tab_cot:
