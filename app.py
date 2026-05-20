@@ -8,14 +8,20 @@ import json
 import base64
 
 # ==========================================
-# ⚙️ DETECCIÓN DEL LINK EXTERNO (CLIENTE)
+# ⚙️ CONFIGURACIÓN GLOBAL Y ENLACES
 # ==========================================
-query_params = st.query_params
+URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
+TC_USD = 40.5
 
 # FUNCIÓN COMODÍN PARA LIMPIAR Y FORMATEAR NÚMEROS EN LA VISTA
 def f_num(val):
     try: return f"{int(float(str(val).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
     except: return str(val)
+
+# ==========================================
+# ⚙️ DETECCIÓN DEL LINK EXTERNO (CLIENTE)
+# ==========================================
+query_params = st.query_params
 
 # Si en la URL viene el parámetro "?q=", significa que entró un CLIENTE desde el link externo
 if "q" in query_params:
@@ -129,7 +135,7 @@ if 'logueado' not in st.session_state or not st.session_state['logueado']:
 conn = st.connection("gsheets", type=GSheetsConnection)
 df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
 df_raw.columns = df_raw.columns.str.strip()
-df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / 40.5)).round(0)
+df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / TC_USD)).round(0)
 df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
 
 with st.sidebar:
