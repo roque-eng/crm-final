@@ -13,7 +13,7 @@ import base64
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5
 
-# FUNCIÓN COMODÍN PARA LIMPIAR Y FORMATEAR NÚMEROS EN LA VISTA
+# FUNCIÓN COMODÍN PARA LIMPIAR NÚMEROS EN LA BASE DE DATOS
 def f_num(val):
     try: return f"{int(float(str(val).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
     except: return str(val)
@@ -26,28 +26,21 @@ query_params = st.query_params
 # Si en la URL viene el parámetro "?q=", significa que entró un CLIENTE desde el link externo
 if "q" in query_params:
     try:
-        # Decodificamos de forma segura los datos que viajan en el link
         datos_b64 = query_params["q"]
         datos_json = base64.b64decode(datos_b64).decode()
         propuesta_cliente = json.loads(datos_json)
         
         st.set_page_config(page_title="EDF SEGUROS - Propuesta", layout="wide", page_icon="🛡️")
         
-        # Estilos visuales para la propuesta del cliente externos
         st.markdown("""
             <style>
             .tabla-edf { width:100%; border-collapse: collapse; margin-top: 15px; font-family: sans-serif; background-color: white; }
-            .tabla-edf th { background-color: #f0f7ff !important; color: #1E3A8A !important; padding: 12px; border: 1px solid #ddd; text-align: right; font-size: 14px; }
-            .tabla-edf th:first-child, .tabla-edf td:first-child { text-align: left !important; }
-            .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: right; font-size: 14px; color: #333; }
             .izq-negrita { text-align: left !important; font-weight: bold; }
-            .der { text-align: right !important; font-weight: bold; }
             .ben-fila { background-color: #f8f9fa; padding: 10px 18px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid #1E3A8A !important; font-size: 14px; color: #333; }
             .caja-azul { background-color: #ffffff; padding: 18px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #1E3A8A !important; }
             </style>
         """, unsafe_allow_html=True)
 
-        # Encabezado alineado a la izquierda sin la camarita rota
         st.markdown(f"""
         <div style="font-family: sans-serif; text-align: left !important; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
             <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111; text-align: left !important;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
@@ -55,20 +48,20 @@ if "q" in query_params:
         </div>
         """, unsafe_allow_html=True)
         
-        # Dibujamos la tabla usando el componente nativo seguro
         df_cli = pd.DataFrame(propuesta_cliente.get("tab", []))
         if not df_cli.empty:
             for col in ["Contado", "10 Cuotas", "Deducible"]:
                 if col in df_cli.columns:
                     df_cli[col] = pd.to_numeric(df_cli[col], errors='coerce').fillna(0).astype(int)
             
+            # FORMATO SEGURO CLIENTE: Agregamos el prefijo "$ " y el separador de miles con coma/punto nativo sin decimales
             st.dataframe(
                 df_cli, use_container_width=True, hide_index=True,
                 column_config={
                     "Aseguradora": st.column_config.TextColumn("ASEGURADORA"),
-                    "Contado": st.column_config.NumberColumn("CONTADO", format="%d"),
-                    "10 Cuotas": st.column_config.NumberColumn("10 CUOTAS", format="%d"),
-                    "Deducible": st.column_config.NumberColumn("DEDUCIBLE", format="%d")
+                    "Contado": st.column_config.NumberColumn("CONTADO", format="$ %,d"),
+                    "10 Cuotas": st.column_config.NumberColumn("10 CUOTAS", format="$ %,d"),
+                    "Deducible": st.column_config.NumberColumn("DEDUCIBLE", format="$ %,d")
                 }
             )
             
@@ -94,10 +87,9 @@ if "q" in query_params:
         st.markdown("---")
         st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont', '')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
         
-        # Freno absoluto para el cliente
         st.stop()
     except Exception as e:
-        st.error("Error al cargar la propuesta externa. Contacte a su asesor.")
+        st.error("Error al cargar la propuesta externa.")
         st.stop()
 
 
@@ -209,10 +201,19 @@ with tab_cot:
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v_final")
         cont_cot = c_con.text_input("Contacto Asesor", value=edit_ind.get("cont", "099 635 244"), key="cont_v_final")
 
+    # FORMATO SEGURO ASESOR: Configuramos el editor interno con el prefijo "$ " y separador de miles nativo
     cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
     if edit_ind and "tab" in edit_ind: df_p_init = pd.DataFrame(edit_ind["tab"])
     else: df_p_init = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
-    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo")
+    
+    t_edit = st.data_editor(
+        df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo",
+        column_config={
+            "Contado": st.column_config.NumberColumn("Contado", format="$ %,d"),
+            "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %,d"),
+            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %,d")
+        }
+    )
     
     txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
     txt_hogar_def = "• Incendio Edificio e Incendio Contenido 40.000\n• Hurto Contenido 10.000\n• Costo ANUAL: 95 IVA INC"
@@ -232,7 +233,6 @@ with tab_cot:
         st.session_state.historico.append(datos_i)
         st.session_state.edit_data = datos_i
         
-        # Generamos el enlace encriptado seguro apuntando a tu subdominio real 'dfseguros'
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         
@@ -255,7 +255,15 @@ with tab_flota:
     cols_f = ["Marca", "Modelo", "Año", "Matrícula", "Cobertura", "Contado", "Deducible"]
     if edit_f and "tab" in edit_f: df_f_init = pd.DataFrame(edit_f["tab"])
     else: df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Año": "", "Matrícula": "", "Cobertura": "Todo Riesgo", "Contado": 0, "Deducible": 0}])
-    t_flota = st.data_editor(df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas")
+    
+    # FORMATO SEGURO FLOTAS: También le aplicamos el formateo de dinero a las columnas de dinero de flotas
+    t_flota = st.data_editor(
+        df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas",
+        column_config={
+            "Contado": st.column_config.NumberColumn("Contado", format="$ %,d"),
+            "Deducible": st.column_config.NumberColumn("Deducible", format="$ %,d")
+        }
+    )
     f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', ''), height=100, key="f_obs_fl")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
