@@ -323,9 +323,9 @@ with tab_ven:
             st.info("No hay vencimientos en el rango seleccionado.")
 
 # --- TEXTOS COMPLEMENTARIOS BASE COMPARTIDOS ---
-txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
-txt_hogar_def = "• Incendio Edificio e Incendio Contenido 40.000\n• Hurto Contenido 10.000\n• Costo ANUAL: 95 IVA INC"
-txt_alquiler_def = "• Auto sustituto por 10 días o 250 en efectivo si no se utiliza."
+txt_beneficios_def = "• Auxilio mecánico: ilimitado\n• Cobertura Mercosur\n• Cristales: USD 100 SURA, USD 200 SBI y BSE, USD 300 SANCOR\n• Granizo: cubre sin deducible solo SANCOR"
+txt_hogar_def = "• Incendio Edificio USD:100.000\n• Incendio Contenido: USD 50.000\n• Hurto Contenido: USD 5.000\n Costo Anual (IVA Inc): USD 120 Apto y USD 180 Casas"
+txt_alquiler_def = "• Auto sustituto por 15 días en caso de que tu vehículo entre al taller a reparar por haber sufrido un siniestro.\n• Costo Anual (IVA Inc): UYU 3.000"
 txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: 1.500"
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL ---
@@ -405,9 +405,9 @@ with tab_flota:
     with col_f_a: f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', '• Cotización sujeta a inspección comercial.\n• Flota corporativa protegida.'), height=150, key="f_obs_fl")
     with col_f_b:
         st.markdown("**Coberturas Complementarias para la Flota**")
-        f_ch = st.text_area("Hogar (Especial Directores):", value=edit_f.get("ch", txt_hogar_def), height=80, key="flota_hog_v_final")
+        f_ch = st.text_area("Accidentes Personales):", value=edit_f.get("ch", txt_hogar_def), height=80, key="flota_hog_v_final")
         f_ca = st.text_area("Auto Sustituto / Alquiler:", value=edit_f.get("ca", txt_alquiler_def), height=50, key="flota_alq_v_final")
-        f_cb = st.text_area("Bici Eléctrica (Movilidad):", value=edit_f.get("cb", txt_bici_def), height=50, key="flota_bic_v_final")
+        f_cb = st.text_area("Bici Eléctrica o Moto (Movilidad):", value=edit_f.get("cb", txt_bici_def), height=50, key="flota_bic_v_final")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
         nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
