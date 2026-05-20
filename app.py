@@ -175,12 +175,12 @@ with tab_car:
         # 1. Copia limpia de los datos
         df_resumen = df_c.copy()
         
-        # 2. CAZADOR INFALIBLE: Buscamos cualquier columna que hable de "Client" y la forzamos a llamarse "Asegurado"
-        col_cliente_real = next((col for col in df_resumen.columns if "client" in str(col).lower()), None)
+        # 2. DETECTOR EXACTO: Buscamos la columna por su nombre real o variantes comunes
+        col_cliente_real = next((col for col in df_resumen.columns if "asegurado" in str(col).lower() or "client" in str(col).lower()), None)
         if col_cliente_real:
             df_resumen = df_resumen.rename(columns={col_cliente_real: "Asegurado"})
         
-        # 3. Renombramos el resto de las columnas usando diccionarios seguros
+        # 3. Renombramos el resto de las columnas críticas
         df_resumen = df_resumen.rename(columns={
             c_adjunto: "📄 Póliza",
             c_documento: "Documento",
@@ -254,8 +254,8 @@ with tab_ven:
         if not df_venc_f.empty:
             df_venc_resumen = df_venc_f.copy()
             
-            # CAZADOR INFALIBLE para Vencimientos
-            col_cliente_real_v = next((col for col in df_venc_resumen.columns if "client" in str(col).lower()), None)
+            # DETECTOR EXACTO para Vencimientos
+            col_cliente_real_v = next((col for col in df_venc_resumen.columns if "asegurado" in str(col).lower() or "client" in str(col).lower()), None)
             if col_cliente_real_v:
                 df_venc_resumen = df_venc_resumen.rename(columns={col_cliente_real_v: "Asegurado"})
             
