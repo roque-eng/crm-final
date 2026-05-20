@@ -13,7 +13,7 @@ import base64
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5
 
-# FUNCIÓN COMODÍN PARA LIMPIAR NÚMEROS EN LA BASE DE DATOS
+# FUNCIÓN COMODÍN PARA LIMPIAR Y FORMATEAR NÚMEROS EN LA VISTA
 def f_num(val):
     try: return f"{int(float(str(val).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
     except: return str(val)
@@ -41,7 +41,6 @@ if "q" in query_params:
             </style>
         """, unsafe_allow_html=True)
 
-        # Encabezado unificado
         st.markdown(f"""
         <div style="font-family: sans-serif; text-align: left !important; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
             <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111; text-align: left !important;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
@@ -51,13 +50,11 @@ if "q" in query_params:
         
         df_cli = pd.DataFrame(propuesta_cliente.get("tab", []))
         if not df_cli.empty:
-            # Columnas numéricas a formatear según el tipo de cotización
             cols_num = ["Contado", "Deducible"] if propuesta_cliente.get("tipo") == "Flota" else ["Contado", "10 Cuotas", "Deducible"]
             for col in cols_num:
                 if col in df_cli.columns:
                     df_cli[col] = pd.to_numeric(df_cli[col], errors='coerce').fillna(0).astype(int)
             
-            # Configurador dinámico de columnas nativo
             conf_columnas = {
                 "Aseguradora": st.column_config.TextColumn("ASEGURADORA"),
                 "Marca": st.column_config.TextColumn("MARCA"),
@@ -79,7 +76,6 @@ if "q" in query_params:
             for b in propuesta_cliente.get("ben", "").split('\n'):
                 if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
                 
-        # Renderizado unificado de Coberturas Complementarias para AMBOS links
         st.write("")
         st.markdown("### ⚠️ Coberturas Complementarias")
         cx1, cx2, cx3 = st.columns(3)
@@ -135,15 +131,26 @@ if 'logueado' not in st.session_state or not st.session_state['logueado']:
 conn = st.connection("gsheets", type=GSheetsConnection)
 df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
 df_raw.columns = df_raw.columns.str.strip()
-df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get('Premio USD (IVA inc)', 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get('Premio UYU (IVA inc)', 0), errors='coerce').fillna(0) / TC_USD)).round(0)
-df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw['Fin de Vigencia'], dayfirst=True, errors='coerce').dt.date
+
+# Mapeo dinámico e inteligente de columnas para evitar KeyErrors si cambian las mayúsculas en Sheets
+col_map = {c.lower(): c for c in df_raw.columns}
+c_asegurado = col_map.get("asegurado", col_map.get("cliente", "Asegurado"))
+c_documento = col_map.get("documento", col_map.get("ci", col_map.get("rut", "Documento")))
+c_aseguradora = col_map.get("aseguradora", col_map.get("compañia", "Aseguradora"))
+c_ramo = col_map.get("ramo", "Ramo")
+c_p_usd = col_map.get("premio usd (iva inc)", "Premio USD (IVA inc)")
+c_p_uyu = col_map.get("premio uyu (iva inc)", "Premio UYU (IVA inc)")
+c_adjunto = col_map.get("adjunto (póliza)", col_map.get("adjunto (poliza)", "Adjunto (póliza)"))
+
+df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get(c_p_usd, 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get(c_p_uyu, 0), errors='coerce').fillna(0) / TC_USD)).round(0)
+df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw.get('Fin de Vigencia', date.today()), dayfirst=True, errors='coerce').dt.date
 
 with st.sidebar:
     st.title(f"👤 {USUARIOS.get(st.session_state.usuario_actual, 'Asesor')}")
     def get_list(col): return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
     f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
-    f_as = st.selectbox("Aseguradora", get_list('Aseguradora'))
-    f_ra = st.selectbox("Ramo", get_list('Ramo'))
+    f_as = st.selectbox("Aseguradora", get_list(c_aseguradora))
+    f_ra = st.selectbox("Ramo", get_list(c_ramo))
     f_co = st.selectbox("Corredor", get_list('Corredor'))
     f_ag = st.selectbox("Agente", get_list('Agente'))
     if st.button("Cerrar Sesión"):
@@ -151,11 +158,11 @@ with st.sidebar:
         st.rerun()
 
 df_f = df_raw.copy()
-if f_ej != "Todos": df_f = df_f[df_f['Ejecutivo'] == f_ej]
-if f_as != "Todos": df_f = df_f[df_f['Aseguradora'] == f_as]
-if f_ra != "Todos": df_f = df_f[df_f['Ramo'] == f_ra]
-if f_co != "Todos": df_f = df_f[df_f['Corredor'] == f_co]
-if f_ag != "Todos": df_f = df_f[df_f['Agente'] == f_ag]
+if f_ej != "Todos" and 'Ejecutivo' in df_f.columns: df_f = df_f[df_f['Ejecutivo'] == f_ej]
+if f_as != "Todos": df_f = df_f[df_f[c_aseguradora] == f_as]
+if f_ra != "Todos": df_f = df_f[df_f[c_ramo] == f_ra]
+if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
+if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
 
 tab_car, tab_ven, tab_cot, tab_flota, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 COTIZADOR INDIVIDUAL", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANÁLISIS"])
 
@@ -165,55 +172,47 @@ with tab_car:
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     
     if not df_c.empty:
-        # Definimos y ordenamos estrictamente las columnas principales
-        columnas_principales = [
-            "Adjunto (póliza)", "Asegurado", "Documento", "Aseguradora", 
-            "Ramo", "Premio USD (IVA inc)", "Premio UYU (IVA inc)", "Premio_Total_USD"
-        ]
-        
-        # Filtramos solo las que existan para evitar errores si cambia el Sheets
-        cols_validas = [c for c in columnas_principales if c in df_c.columns]
+        # Forzamos exactamente el orden de las 8 columnas solicitadas de forma segura
+        columnas_resumen = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, c_p_usd, c_p_uyu, 'Premio_Total_USD']
+        cols_validas = [c for c in columnas_resumen if c in df_c.columns]
         df_resumen = df_c[cols_validas].copy()
         
-        # Mostramos la tabla limpia y ejecutiva
-        st.markdown("##### 📋 Resumen de Contratos")
+        st.markdown("##### 📋 Resumen de Contratos Activos")
         st.data_editor(
             df_resumen, use_container_width=True, hide_index=True,
             column_config={
-                "Adjunto (póliza)": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                "Premio USD (IVA inc)": st.column_config.NumberColumn("Premio USD", format="$ %,d"),
-                "Premio UYU (IVA inc)": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
+                c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
                 "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="$ %,d")
             }
         )
         
-        # Bloque de despliegue de información restante
         st.write("")
-        cliente_sel = st.selectbox("🔎 Seleccionar asegurado para ver detalles completos:", ["-- Seleccionar --"] + df_c["Asegurado"].dropna().unique().tolist(), key="sel_cliente_cartera")
+        cliente_sel = st.selectbox("🔎 Seleccionar asegurado para ver detalles completos:", ["-- Seleccionar --"] + df_c[c_asegurado].dropna().unique().tolist(), key="sel_cliente_cartera")
         
         if cliente_sel != "-- Seleccionar --":
-            fila_completa = df_c[df_c["Asegurado"] == cliente_sel].iloc[0]
+            fila_completa = df_c[df_c[c_asegurado] == cliente_sel].iloc[0]
             with st.container(border=True):
                 st.markdown(f"### 🛡️ Información del Seguro: {cliente_sel}")
                 cx1, cx2, cx3 = st.columns(3)
                 with cx1:
-                    st.markdown(f"**👤 Datos del Cliente:**")
-                    st.write(f"• **Documento:** {fila_completa.get('Documento', 'N/D')}")
-                    st.write(f"• **Celular:** {fila_completa.get('Celular', 'N/D')}")
-                    st.write(f"• **Mail:** {fila_completa.get('Mail', 'N/D')}")
+                    st.markdown("**👤 Datos del Cliente:**")
+                    st.write(f"• **Documento:** {fila_completa.get(c_documento, 'N/D')}")
+                    st.write(f"• **Celular:** {fila_completa.get('Celular', col_map.get('celular', 'N/D'))}")
+                    st.write(f"• **Mail:** {fila_completa.get('Mail', col_map.get('mail', 'N/D'))}")
                 with cx2:
-                    st.markdown(f"**🚗 Detalles del Bien:**")
-                    st.write(f"• **Ramo:** {fila_completa.get('Ramo', 'N/D')}")
-                    st.write(f"• **Matrícula:** {fila_completa.get('Matricula', 'N/D')}")
-                    st.write(f"• **Marca/Modelo:** {fila_completa.get('Marca/Modelo', 'N/D')}")
+                    st.markdown("**🚗 Detalles del Bien:**")
+                    st.write(f"• **Ramo:** {fila_completa.get(c_ramo, 'N/D')}")
+                    st.write(f"• **Matrícula:** {fila_completa.get('Matricula', col_map.get('matrícula', 'N/D'))}")
+                    st.write(f"• **Marca/Modelo:** {fila_completa.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
                 with cx3:
-                    st.markdown(f"**📅 Gestión e Intermediación:**")
+                    st.markdown("**📅 Gestión e Intermediación:**")
                     st.write(f"• **Fin de Vigencia:** {fila_completa.get('Fin de Vigencia', 'N/D')}")
                     st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
                     st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
-    else:
-        st.info("No se encontraron registros en la cartera.")
-        
+    else: st.info("No se encontraron registros en la cartera.")
+
 # --- PESTAÑA VENCIMIENTOS ---
 with tab_ven:
     st.subheader("🔄 Control de Vencimientos")
@@ -224,55 +223,48 @@ with tab_ven:
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
         
         if not df_venc_f.empty:
-            # Filtramos estrictamente las mismas 8 columnas
-            columnas_principales_v = [
-                "Adjunto (póliza)", "Asegurado", "Documento", "Aseguradora", 
-                "Ramo", "Premio USD (IVA inc)", "Premio UYU (IVA inc)", "Premio_Total_USD"
-            ]
-            cols_validas_v = [c for c in columnas_principales_v if c in df_venc_f.columns]
+            columnas_resumen_v = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, c_p_usd, c_p_uyu, 'Premio_Total_USD']
+            cols_validas_v = [c for c in columnas_resumen_v if c in df_venc_f.columns]
             df_venc_resumen = df_venc_f[cols_validas_v].copy()
             
             st.data_editor(
                 df_venc_resumen, use_container_width=True, hide_index=True,
                 column_config={
-                    "Adjunto (póliza)": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                    "Premio USD (IVA inc)": st.column_config.NumberColumn("Premio USD", format="$ %,d"),
-                    "Premio UYU (IVA inc)": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                    c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
+                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
                     "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="$ %,d")
                 }
             )
             
-            # Botón de exportación compacto
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False, sheet_name='Vencimientos')
             st.download_button(label="📥 Exportar Vencimientos Completos a Excel", data=output.getvalue(), file_name=f"Vencimientos.xlsx")
             
-            # Bloque de despliegue de información restante para Vencimientos
             st.write("")
-            cliente_v_sel = st.selectbox("🔎 Seleccionar asegurado por vencer para ver detalles:", ["-- Seleccionar --"] + df_venc_f["Asegurado"].dropna().unique().tolist(), key="sel_cliente_vencimientos")
+            cliente_v_sel = st.selectbox("🔎 Seleccionar asegurado por vencer para ver detalles:", ["-- Seleccionar --"] + df_venc_f[c_asegurado].dropna().unique().tolist(), key="sel_cliente_vencimientos")
             
             if cliente_v_sel != "-- Seleccionar --":
-                fila_completa_v = df_venc_f[df_venc_f["Asegurado"] == cliente_v_sel].iloc[0]
+                fila_completa_v = df_venc_f[df_venc_f[c_asegurado] == cliente_v_sel].iloc[0]
                 with st.container(border=True):
                     st.markdown(f"### 🛡️ Información del Seguro (Vencimiento): {cliente_v_sel}")
                     cv1, cv2, cv3 = st.columns(3)
                     with cv1:
-                        st.markdown(f"**👤 Datos del Cliente:**")
-                        st.write(f"• **Documento:** {fila_completa_v.get('Documento', 'N/D')}")
-                        st.write(f"• **Celular:** {fila_completa_v.get('Celular', 'N/D')}")
-                        st.write(f"• **Mail:** {fila_completa_v.get('Mail', 'N/D')}")
+                        st.markdown("**👤 Datos del Cliente:**")
+                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
+                        st.write(f"• **Celular:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
+                        st.write(f"• **Mail:** {fila_completa_v.get('Mail', col_map.get('mail', 'N/D'))}")
                     with cv2:
-                        st.markdown(f"**🚗 Detalles del Bien:**")
-                        st.write(f"• **Ramo:** {fila_completa_v.get('Ramo', 'N/D')}")
-                        st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', 'N/D')}")
-                        st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', 'N/D')}")
+                        st.markdown("**🚗 Detalles del Bien:**")
+                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+                        st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', col_map.get('matrícula', 'N/D'))}")
+                        st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
                     with cv3:
-                        st.markdown(f"**📅 Gestión de Vigencia:**")
+                        st.markdown("**📅 Gestión de Vigencia:**")
                         st.write(f"• **Fin de Vigencia:** {fila_completa_v.get('Fin de Vigencia', 'N/D')}")
                         st.write(f"• **Ejecutivo:** {fila_completa_v.get('Ejecutivo', 'N/D')}")
                         st.write(f"• **Corredor/Agente:** {fila_completa_v.get('Corredor', 'N/D')} / {fila_completa_v.get('Agente', 'N/D')}")
-        else:
-            st.info("No hay vencimientos en el rango seleccionado.")
+        else: st.info("No hay vencimientos en el rango seleccionado.")
 
 # --- TEXTOS COMPLEMENTARIOS BASE COMPARTIDOS ---
 txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
@@ -349,25 +341,21 @@ with tab_flota:
         }
     )
     
-    # NUEVA UNIFICACIÓN SOLICITADA PARA FLOTAS: Espejo perfecto con el cotizador individual
-    col_fa, col_fb = st.columns(2)
-    with col_fa: 
-        f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', '• Cotización sujeta a inspección comercial.\n• Flota corporativa protegida.'), height=150, key="f_obs_fl")
-    with col_fb:
+    col_f_a, col_f_b = st.columns(2)
+    with col_f_a: f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', '• Cotización sujeta a inspección comercial.\n• Flota corporativa protegida.'), height=150, key="f_obs_fl")
+    with col_f_b:
         st.markdown("**Coberturas Complementarias para la Flota**")
         f_ch = st.text_area("Hogar (Especial Directores):", value=edit_f.get("ch", txt_hogar_def), height=80, key="f_hog_fl")
         f_ca = st.text_area("Auto Sustituto / Alquiler:", value=edit_f.get("ca", txt_alquiler_def), height=50, key="f_alq_fl")
         f_cb = st.text_area("Bici Eléctrica (Movilidad):", value=edit_f.get("cb", txt_bici_def), height=50, key="f_bic_fl")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
-        # Mapeamos la estructura completa incluyendo las nuevas llaves ch, ca, cb
         nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
         st.session_state.historico.append(nueva_f)
         st.session_state.edit_data = nueva_f
         
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
         link_flota = f"https://dfseguros.streamlit.app/?q={datos_b64}"
-        
         st.success("✅ ¡Propuesta de Flota guardada con éxito!")
         st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota)
 
@@ -401,5 +389,5 @@ with tab_an:
         k1.metric("Cartera Total (USD)", f"USD {t_usd:,.0f}")
         k2.metric("Total de Pólizas", f"{len(df_f)}")
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(px.pie(df_f, names='Aseguradora', values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
-        with c2: st.plotly_chart(px.pie(df_f, names='Ramo', values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
+        with c1: st.plotly_chart(px.pie(df_f, names=c_aseguradora, values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
+        with c2: st.plotly_chart(px.pie(df_f, names=c_ramo, values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
