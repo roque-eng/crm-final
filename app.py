@@ -386,8 +386,10 @@ with tab_cot:
         cont_cot = c_con.text_input("Contacto Asesor", value=edit_ind.get("cont", "099 635 244"), key="cont_v_final")
 
     cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
-    if edit_ind and "tab" in edit_ind: df_p_init = pd.DataFrame(edit_ind["tab"])
-    else: df_p_init = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+    if edit_ind and "tab" in edit_ind: 
+        df_p_init = pd.DataFrame(edit_ind["tab"])
+    else: 
+        df_p_init = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
     
     t_edit = st.data_editor(
         df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo",
@@ -435,8 +437,10 @@ with tab_flota:
         f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_co_fl")
 
     cols_f = ["Marca", "Modelo", "Año", "Matrícula", "Cobertura", "Contado", "Deducible"]
-    if edit_f and "tab" in edit_f: df_f_init = pd.DataFrame(edit_f["tab"])
-    else: df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Año": "", "Matrícula": "", "Cobertura": "Todo Riesgo", "Contado": 0, "Deducible": 0}])
+    if edit_f and "tab" in edit_f: 
+        df_f_init = pd.DataFrame(edit_f["tab"])
+    else: 
+        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Año": "", "Matrícula": "", "Cobertura": "Todo Riesgo", "Contado": 0, "Deducible": 0}])
     
     t_flota = st.data_editor(
         df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas",
