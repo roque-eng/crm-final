@@ -189,7 +189,9 @@ with tab_car:
         )
         
         st.write("")
-        cliente_sel = st.selectbox("🔎 Seleccionar asegurado para ver detalles completos:", ["-- Seleccionar --"] + df_c[c_asegurado].dropna().unique().tolist(), key="sel_cliente_cartera")
+        columnas_filtro = [c for c in df_c.columns if "asegurado" in c.lower() or "cliente" in c.lower()]
+        col_nombre = columnas_filtro[0] if columnas_filtro else df_c.columns[1]
+        cliente_sel = st.selectbox("🔎 Seleccionar asegurado para ver detalles completos:", ["-- Seleccionar --"] + df_c[col_nombre].dropna().unique().tolist(), key="sel_cliente_cartera")
         
         if cliente_sel != "-- Seleccionar --":
             fila_completa = df_c[df_c[c_asegurado] == cliente_sel].iloc[0]
@@ -242,7 +244,9 @@ with tab_ven:
             st.download_button(label="📥 Exportar Vencimientos Completos a Excel", data=output.getvalue(), file_name=f"Vencimientos.xlsx")
             
             st.write("")
-            cliente_v_sel = st.selectbox("🔎 Seleccionar asegurado por vencer para ver detalles:", ["-- Seleccionar --"] + df_venc_f[c_asegurado].dropna().unique().tolist(), key="sel_cliente_vencimientos")
+            columnas_filtro_v = [c for c in df_venc_f.columns if "asegurado" in c.lower() or "cliente" in c.lower()]
+            col_nombre_v = columnas_filtro_v[0] if columnas_filtro_v else df_venc_f.columns[1]
+            cliente_v_sel = st.selectbox("🔎 Seleccionar asegurado por vencer para ver detalles:", ["-- Seleccionar --"] + df_venc_f[col_nombre_v].dropna().unique().tolist(), key="sel_cliente_vencimientos")
             
             if cliente_v_sel != "-- Seleccionar --":
                 fila_completa_v = df_venc_f[df_venc_f[c_asegurado] == cliente_v_sel].iloc[0]
