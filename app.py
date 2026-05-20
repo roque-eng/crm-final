@@ -322,46 +322,63 @@ with tab_ven:
         else:
             st.info("No hay vencimientos en el rango seleccionado.")
 
-# --- TEXTOS VEHÍCULOS (INDIVIDUAL) ---
-txt_ben_veh = "• Auxilio mecánico ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite\n• Gestión de siniestros profesional"
-txt_hog_veh = "• Incendio Edificio: 150.000\n• Incendio Contenido: 30.000\n• Hurto Contenido: 10.000\n• Costo ANUAL: 110 USD"
-txt_alq_veh = "• Auto sustituto por 10 días o 250 USD en efectivo si no se utiliza."
-txt_bic_veh = "• Cobertura por Hurto e Incendio de la bicicleta: 1.500 USD"
+# ==========================================
+# 📋 PLANTILLAS DE TEXTOS PRECARGADOS (SEPARADOS)
+# ==========================================
 
-# --- TEXTOS FLOTAS (CORPORATIVO) ---
+# --- PLANTILLAS EXCLUSIVAS PARA VEHÍCULOS ---
+txt_ben_veh = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
+txt_hog_veh = "• Incendio Edificio e Incendio Contenido 40.000\n• Hurto Contenido 10.000\n• Costo ANUAL: 95 IVA INC"
+txt_alq_veh = "• Auto sustituto por 10 días o 250 en efectivo si no se utiliza."
+txt_bic_veh = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: 1.500"
+
+# --- PLANTILLAS EXCLUSIVAS PARA FLOTAS ---
 txt_obs_flota = """**Observaciones:**
 • **Vigencia:** Anual con refacturación mensual.
-• **Forma de Pago:** Débito o Tarjeta en 10 cuotas sin recargo.
-• **Condiciones Especiales:**
-  - Auxilio ilimitado (Uruguay y Limítrofes).
-  - Cristales, cerraduras y espejos sin deducible.
-  - Auto sustituto por 15 días."""
+• **Forma de Pago:** Débito bancario o tarjeta de crédito en 10 cuotas sin recargo.
+• **Condiciones Especiales de Contratación:**
+  - Auxilio mecánico ilimitado para toda la flota (Uruguay y países limítrofes).
+  - Cobertura de cristales, cerraduras y espejos sin límite de eventos y sin deducible.
+  - Auto sustituto por hasta 15 días en caso de siniestro total o parcial.
 
-txt_acc_flota = "• Seguro de Vida o Accidentes Personales (Choferes): 25.000 USD cobertura.\n• Costo Anual: 50 USD por chofer."
-txt_alq_flota = "• Auto sustituto por 15 días en caso de siniestro.\n• Costo Anual: 3.000 UYU."
-txt_bic_flota = "• Cobertura Hurto e Incendio Bici o Moto: 1.500 USD.\n• Prima Anual: 60 USD."
+**Beneficios Adicionales Incluidos:**
+• **RC del Conductor:** Cubre la responsabilidad civil de tus choferes autorizados.
+• **Accidentes Personales:** Cobertura especial para directores y ocupantes clave de la empresa.
+• **Bici Eléctrica o Moto (Movilidad):** Cobertura de movilidad alternativa para traslados cortos de los colaboradores."""
 
-### 2. Botón Rojo de Generar Link
-Para que los botones sean **rojos**, pega este estilo CSS al principio de tu código (donde están los `<style>`):
+txt_acc_flota = "• Seguro de Vida a causa de Accidentes (para los choferes): USD 25.000 de cobertura.\n• Costo Anual USD 50 (IVA incluido) por chofer."
+txt_alq_flota = "• Si desea Auto de Alquiler nos dice en que vehículos agregar.\n• Costo: UYU 3.000 (IVA incluido) por vehículo."
+txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo Anual: UYU 5.000"
 
-```python
+
+# ==========================================
+# 🎨 ESTILOS CSS (BOTONES ROJOS DE ALTA VISIBILIDAD)
+# ==========================================
 st.markdown("""
     <style>
-    /* Estilo para los botones de Generar Link */
-    div.stButton > button:first-child {
+    /* Forzamos el color rojo en los botones principales de generación de link */
+    div.stButton > button {
         background-color: #ff4b4b !important;
         color: white !important;
-        border: none !important;
+        border: 2px solid #ff4b4b !important;
         font-weight: bold !important;
+        border-radius: 8px !important;
+        padding: 10px 24px !important;
+        transition: all 0.3s ease !important;
     }
     div.stButton > button:hover {
         background-color: #ff3333 !important;
+        border-color: #ff3333 !important;
         color: white !important;
+        transform: scale(1.01);
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- PESTAÑA COTIZADOR INDIVIDUAL ---
+
+# ==========================================
+# 📝 PESTAÑA VEHÍCULOS (INDIVIDUAL)
+# ==========================================
 with tab_cot:
     st.subheader("📝 Cotizador Seguros Individuales")
     edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
@@ -388,12 +405,13 @@ with tab_cot:
     )
     
     col_a, col_b = st.columns(2)
-    with col_a: b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_beneficios_def), height=150, key="ben_v_final")
+    with col_a: 
+        b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_ben_veh), height=150, key="ben_v_final")
     with col_b:
         st.markdown("**Coberturas Complementarias**")
-        c_h = st.text_area("Hogar:", value=edit_ind.get("ch", txt_hogar_def), height=80, key="ind_hog_v_final")
-        c_a = st.text_area("Auto Sustituto / Alquiler:", value=edit_ind.get("ca", txt_alquiler_def), height=50, key="ind_alq_v_final")
-        c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", txt_bici_def), height=50, key="ind_bic_v_final")
+        c_h = st.text_area("Hogar:", value=edit_ind.get("ch", txt_hog_veh), height=80, key="ind_hog_v_final")
+        c_a = st.text_area("Auto Sustituto / Alquiler:", value=edit_ind.get("ca", txt_alq_veh), height=50, key="ind_alq_v_final")
+        c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", txt_bic_veh), height=50, key="ind_bic_v_final")
 
     if st.button("💾 Guardar propuesta y Generar Link", type="primary", use_container_width=True, key="save_ind_btn"):
         datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
@@ -402,14 +420,14 @@ with tab_cot:
         
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
-        
         st.success("✅ ¡Propuesta guardada con éxito en el Historial!")
-        
-        # Mostramos el link y abajo activamos la función de copiado automático
-        st.text_input("🔗 Link generado para el cliente:", value=link_cliente, read_only=True)
-        st.copy_to_clipboard(link_cliente, before_text="📋 Copiar Link de Vehículo", after_text="✨ ¡Link Copiado al Portapapeles!")
+        st.text_input("🔗 Copiá este Link y enviáselo al cliente por WhatsApp:", value=link_cliente, read_only=True)
+        st.copy_to_clipboard(link_cliente, before_text="📋 Copiar Link de Vehículo", after_text="✨ ¡Link de Vehículo Copiado!")
 
-# --- PESTAÑA FLOTAS ---
+
+# ==========================================
+# 🚛 PESTAÑA FLOTAS (CORPORATIVO)
+# ==========================================
 with tab_flota:
     st.subheader("🚛 Cotizador Seguro de Flotas")
     edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
@@ -435,12 +453,13 @@ with tab_flota:
     )
     
     col_f_a, col_f_b = st.columns(2)
-    with col_f_a: f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', '• Cotización sujeta a inspección comercial.\n• Flota corporativa protegida.'), height=150, key="f_obs_fl")
+    with col_f_a: 
+        f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', txt_obs_flota), height=320, key="f_obs_fl")
     with col_f_b:
         st.markdown("**Coberturas Complementarias para la Flota**")
-        f_ch = st.text_area("Accidentes Personales):", value=edit_f.get("ch", txt_hogar_def), height=80, key="flota_hog_v_final")
-        f_ca = st.text_area("Auto Sustituto / Alquiler:", value=edit_f.get("ca", txt_alquiler_def), height=50, key="flota_alq_v_final")
-        f_cb = st.text_area("Bici Eléctrica o Moto (Movilidad):", value=edit_f.get("cb", txt_bici_def), height=50, key="flota_bic_v_final")
+        f_ch = st.text_area("Accidentes Personales:", value=edit_f.get("ch", txt_acc_flota), height=80, key="flota_hog_v_final")
+        f_ca = st.text_area("Auto Sustituto / Alquiler:", value=edit_f.get("ca", txt_alq_flota), height=50, key="flota_alq_v_final")
+        f_cb = st.text_area("Bici Eléctrica o Moto (Movilidad):", value=edit_f.get("cb", txt_bic_flota), height=50, key="flota_bic_v_final")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
         nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
@@ -449,14 +468,14 @@ with tab_flota:
         
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
         link_flota = f"https://dfseguros.streamlit.app/?q={datos_b64}"
-        
         st.success("✅ ¡Propuesta de Flota guardada con éxito!")
-        
-        # Mostramos el link de flotas y abajo su respectivo botón de copiado rápido
-        st.text_input("🔗 Link de Flota generado:", value=link_flota, read_only=True)
+        st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota, read_only=True)
         st.copy_to_clipboard(link_flota, before_text="📋 Copiar Link de Flota", after_text="✨ ¡Link de Flota Copiado!")
 
-# --- PESTAÑA HISTORIAL ---
+
+# ==========================================
+# 📜 PESTAÑA HISTORIAL
+# ==========================================
 with tab_historial:
     st.subheader("📜 Historial de Propuestas Guardadas")
     if st.session_state.historico:
@@ -475,9 +494,13 @@ with tab_historial:
                 if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
-    else: st.info("No hay propuestas en el historial temporal todavía.")
+    else: 
+        st.info("No hay propuestas en el historial temporal todavía.")
 
-# --- PESTAÑA ANÁLISIS ---
+
+# ==========================================
+# 📊 PESTAÑA ANÁLISIS
+# ==========================================
 with tab_an:
     st.subheader("📊 Análisis de Cartera")
     if not df_f.empty:
@@ -486,5 +509,7 @@ with tab_an:
         k1.metric("Cartera Total (USD)", f"USD {t_usd:,.0f}")
         k2.metric("Total de Pólizas", f"{len(df_f)}")
         c1, c2 = st.columns(2)
-        with c1: st.plotly_chart(px.pie(df_f, names=c_aseguradora, values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
-        with c2: st.plotly_chart(px.pie(df_f, names=c_ramo, values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
+        with c1: 
+            st.plotly_chart(px.pie(df_f, names=c_aseguradora, values='Premio_Total_USD', title="Compañía", hole=0.4), use_container_width=True)
+        with c2: 
+            st.plotly_chart(px.pie(df_f, names=c_ramo, values='Premio_Total_USD', title="Ramo", hole=0.4), use_container_width=True)
