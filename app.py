@@ -346,7 +346,7 @@ txt_alq_flota = "• Auto sustituto por hasta 15 días en caso de que tu vehícu
 txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo Anual: UYU 5.000"
 
 # ==========================================
-# 🎨 ESTILOS CSS (BOTONES ROJOS AL PRINCIPIO)
+# 🎨 ESTILOS CSS (BOTONES ROJOS DE ALTA VISIBILIDAD)
 # ==========================================
 st.markdown("""
 <style>
@@ -417,7 +417,8 @@ with tab_cot:
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         st.success("✅ ¡Propuesta guardada con éxito en el Historial!")
-        st.text_input("🔗 Copiá este Link y enviáselo al cliente por WhatsApp:", value=link_cliente, read_only=True)
+        # REMOVEMOS EL PARAMETRO read_only PARA EVITAR EL TYPEERROR
+        st.text_input("🔗 Copiá este Link y enviáselo al cliente por WhatsApp:", value=link_cliente)
         st.copy_to_clipboard(link_cliente, before_text="📋 Copiar Link de Vehículo", after_text="✨ ¡Link de Vehículo Copiado!")
 
 
@@ -467,7 +468,8 @@ with tab_flota:
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
         link_flota = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         st.success("✅ ¡Propuesta de Flota guardada con éxito!")
-        st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota, read_only=True)
+        # REMOVEMOS EL PARAMETRO read_only PARA EVITAR EL TYPEERROR
+        st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota)
         st.copy_to_clipboard(link_flota, before_text="📋 Copiar Link de Flota", after_text="✨ ¡Link de Flota Copiado!")
 
 
