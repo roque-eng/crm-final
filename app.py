@@ -333,10 +333,11 @@ txt_alq_veh = "• Auto sustituto por hasta 15 días en caso de que tu vehículo
 txt_bic_veh = "• Cobertura por Hurto y/o Rapiña de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Daños a Terceros que puedas provocar hasta USD 10.000.\n• Costo ANUAL: 120 IVA INC"
 
 # --- PLANTILLAS EXCLUSIVAS PARA FLOTAS ---
-txt_obs_flota = """**Observaciones:**
-• **Vigencia:**
-• **Forma de Pago:** redes de cobranza o tarjeta de crédito en 10 cuotas sin recargo.
-• **Condiciones Especiales de Contratación:**
+txt_obs_flota = """
+• Observaciones:
+• Vigencia:
+• Forma de Pago: redes de cobranza o tarjeta de crédito en 10 cuotas sin recargo.
+• Beneficios por aseguradora:
   - Auxilio mecánico ilimitado para toda la flota (Uruguay y países limítrofes) menos camiones y motos (camiones: todos los que digan "camión" en la libreta de propiedad).
   - Cobertura de cristales, cerraduras: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100, demás compañías aplican deducible y después pagan.
   - Cobertura de Granizo: SANCOR lo cubre, demás compañías cobran deducible y después pagan."""
