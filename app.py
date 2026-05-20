@@ -172,13 +172,17 @@ with tab_car:
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     
     if not df_c.empty:
-        # 1. Copia limpia para proteger los índices interactivos del clic
+        # 1. Copia limpia de los datos
         df_resumen = df_c.copy()
         
-        # 2. Renombramos usando el mapeo nativo directo de tus variables de Sheets
+        # 2. CAZADOR INFALIBLE: Buscamos cualquier columna que hable de "Client" y la forzamos a llamarse "Asegurado"
+        col_cliente_real = next((col for col in df_resumen.columns if "client" in str(col).lower()), None)
+        if col_cliente_real:
+            df_resumen = df_resumen.rename(columns={col_cliente_real: "Asegurado"})
+        
+        # 3. Renombramos el resto de las columnas usando diccionarios seguros
         df_resumen = df_resumen.rename(columns={
             c_adjunto: "📄 Póliza",
-            c_asegurado: "Asegurado",  # <--- Acá la magia: toma la columna de tu Sheet ('Cliente') y la bautiza 'Asegurado'
             c_documento: "Documento",
             c_aseguradora: "Aseguradora",
             c_ramo: "Ramo",
@@ -188,7 +192,7 @@ with tab_car:
             'Premio_Total_USD': "Premio Total (USD)"
         })
         
-        # 3. Forzamos el orden visual con los nuevos nombres fijos
+        # 4. Forzamos el orden visual estricto en la pantalla
         columnas_visibles = ["📄 Póliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
         cols_validas = [c for c in columnas_visibles if c in df_resumen.columns]
         df_resumen = df_resumen[cols_validas]
@@ -196,7 +200,7 @@ with tab_car:
         st.markdown("##### 📋 Resumen de Contratos Activos")
         st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
         
-        # 4. Grilla interactiva
+        # 5. Renderizado de la tabla
         tabla_cartera_interactiva = st.dataframe(
             df_resumen, use_container_width=True, hide_index=False,
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
@@ -250,10 +254,13 @@ with tab_ven:
         if not df_venc_f.empty:
             df_venc_resumen = df_venc_f.copy()
             
-            # Renombramos usando las variables originales del mapeo dinámico
+            # CAZADOR INFALIBLE para Vencimientos
+            col_cliente_real_v = next((col for col in df_venc_resumen.columns if "client" in str(col).lower()), None)
+            if col_cliente_real_v:
+                df_venc_resumen = df_venc_resumen.rename(columns={col_cliente_real_v: "Asegurado"})
+            
             df_venc_resumen = df_venc_resumen.rename(columns={
                 c_adjunto: "📄 Póliza",
-                c_asegurado: "Asegurado",
                 c_documento: "Documento",
                 c_aseguradora: "Aseguradora",
                 c_ramo: "Ramo",
