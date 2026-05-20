@@ -57,21 +57,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Autenticación Básica del Asesor
-if 'logueado' not in st.session_state or not st.session_state['logueado']:
-    st.title("🛡️ EDF SEGUROS - CRM Interno")
-    u_sel = st.selectbox("Seleccione su Usuario:", list(USUARIOS.keys()))
-    p_in = st.text_input("Contraseña:", type="password")
-    if st.button("Ingresar", type="primary"):
-        if USUARIOS.get(u_sel) == p_in:
-            st.session_state['logueado'] = True
-            st.session_state['usuario_actual'] = u_sel
-            st.rerun()
-        else:
-            st.error("Contraseña incorrecta.")
-    st.stop()
+p = None
 
-# Lectura de Planilla Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
 df_raw.columns = df_raw.columns.str.strip()
@@ -133,54 +120,35 @@ def f_num(val):
     try: return f"{int(float(str(val).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
     except: return str(val)
 
-# --- PESTAÑA COTIZADOR INDIVIDUAL ---
-with tab_cot:
-    st.subheader("📝 Cotizador Seguros Individuales")
-    edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
-    
-    # El interruptor para ocultar todo el panel de control y sacar captura
-    modo_impresion_ind = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA CLIENTE", value=False, key="toggle_print_ind")
-    
-    if not modo_impresion_ind:
-        with st.container(border=True):
-            c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
-            doc_in = c_doc.text_input("CI/RUT", value=edit_ind.get("doc", ""), key="ci_v_final")
-            n_cot = c_nom.text_input("Nombre", value=edit_ind.get('n', ''), key="nom_v_final")
-            v_cot = c_veh.text_input("Vehículo", value=edit_ind.get("v", ""), key="veh_v_final")
-            e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v_final")
-            cont_cot = c_con.text_input("Contacto Asesor", value=edit_ind.get("cont", "099 635 244"), key="cont_v_final")
-
-        cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
-        if edit_ind and "tab" in edit_ind: df_p_init = pd.DataFrame(edit_ind["tab"])
-        else: df_p_init = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
-        
-        t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo")
-        
-        col_a, col_b = st.columns(2)
-        with col_a: b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", "• Auxilio mecánico 24hs\n• Cristales sin límite"), height=150, key="ben_v_final")
-        with col_b:
-            c_h = st.text_area("Hogar:", value=edit_ind.get("ch", "• Incendio Contenido: USD 50.000\nCosto Anual: USD 120"), height=60, key="hog_v_final")
-            c_a = st.text_area("Alquiler:", value=edit_ind.get("ca", "• Auto cortesía 15 días"), height=50, key="alq_v_final")
-            c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", "• Hurto USD 1.000"), height=50, key="bic_v_final")
-
-        if st.button("💾 Guardar propuesta en Historial", type="primary", use_container_width=True, key="save_ind_btn"):
-            datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
-            st.session_state.historico.append(datos_i)
-            st.session_state.edit_data = datos_i
-            st.success("✅ ¡Guardado con éxito! Activá el interruptor 'Modo Impresión' de arriba para sacar la captura.")
-            st.rerun()
-            
-    else:
-        # VISTA DE PROPUESTA LIMPIA (INDIVIDUAL)
+# --- VISTA DE PROPUESTA LIMPIA EN HTML PURO (INDIVIDUAL) ---
         col_l, col_i = st.columns([1, 2])
-        with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
+        with col_l: 
+            st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
             st.markdown(f"## Asegurado: {edit_ind.get('n', 'Cliente')}")
             st.markdown(f"### 📋 Propuesta para: **{edit_ind.get('v', 'Vehículo')}**")
         
-        t_html = """<table class="tabla-edf"><thead><tr><th>ASEGURADORA</th><th style="text-align: right;">CONTADO</th><th style="text-align: right;">10 CUOTAS</th><th style="text-align: right;">DEDUCIBLE</th></tr></thead><tbody>"""
+        t_html = """
+        <table class="tabla-edf" style="width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
+            <thead>
+                <tr>
+                    <th style="background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd;">ASEGURADORA</th>
+                    <th style="background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: right;">CONTADO</th>
+                    <th style="background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: right;">10 CUOTAS</th>
+                    <th style="background-color: #f0f7ff; color: #1E3A8A; padding: 12px; border: 1px solid #ddd; text-align: right;">DEDUCIBLE</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
         for row in edit_ind.get("tab", []):
-            t_html += f"""<tr><td><b>{row.get('Aseguradora','')}</b></td><td class="der" style="color: #1E3A8A;">USD {f_num(row.get('Contado',0))}</td><td class="der">USD {f_num(row.get('10 Cuotas',0))}</td><td class="der">USD {f_num(row.get('Deducible',0))}</td></tr>"""
+            t_html += f"""
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;"><b>{row.get('Aseguradora','')}</b></td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #1E3A8A;">USD {f_num(row.get('Contado',0))}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">USD {f_num(row.get('10 Cuotas',0))}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">USD {f_num(row.get('Deducible',0))}</td>
+                </tr>
+            """
         t_html += "</tbody></table>"
         st.markdown(t_html, unsafe_allow_html=True)
         
