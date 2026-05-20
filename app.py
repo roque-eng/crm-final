@@ -234,7 +234,6 @@ with tab_ven:
             
             st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
             
-            # SE AISLÓ LA CONF CON EL IDENTIFICADOR "grid_venc_unico" PARA MATAR EL BUG
             tabla_venc_interactiva = st.dataframe(
                 df_venc_resumen, use_container_width=True, hide_index=False,
                 on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
@@ -264,7 +263,7 @@ with tab_ven:
                     with cv1:
                         st.markdown("**👤 Datos del Cliente:**")
                         st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
-                        st.write(f"• **Celular:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
+                        st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
                         st.write(f"• **Mail:** {fila_completa_v.get('Mail', col_map.get('mail', 'N/D'))}")
                     with cv2:
                         st.markdown("**🚗 Detalles del Bien:**")
@@ -278,61 +277,6 @@ with tab_ven:
                         st.write(f"• **Corredor/Agente:** {fila_completa_v.get('Corredor', 'N/D')} / {fila_completa_v.get('Agente', 'N/D')}")
         else:
             st.info("No hay vencimientos en el rango seleccionado.")
-
-# --- PESTAÑA VENCIMIENTOS ---
-with tab_ven:
-    st.subheader("🔄 Control de Vencimientos")
-    if not df_f.empty:
-        df_v = df_f.dropna(subset=['Fin de Vigencia'])
-        c1, c2 = st.columns(2)
-        f_ini, f_fin = c1.date_input("Desde:", date.today().replace(day=1)), c2.date_input("Hasta:", date.today() + timedelta(days=90))
-        df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
-        
-        if not df_venc_f.empty:
-            columnas_resumen_v = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, c_p_usd, c_p_uyu, 'Premio_Total_USD']
-            cols_validas_v = [c for c in columnas_resumen_v if c in df_venc_f.columns]
-            df_venc_resumen = df_venc_f[cols_validas_v].copy()
-            
-            st.data_editor(
-                df_venc_resumen, use_container_width=True, hide_index=True,
-                column_config={
-                    c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
-                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                    "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="$ %,d")
-                }
-            )
-            
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False, sheet_name='Vencimientos')
-            st.download_button(label="📥 Exportar Vencimientos Completos a Excel", data=output.getvalue(), file_name=f"Vencimientos.xlsx")
-            
-            st.write("")
-            columnas_filtro_v = [c for c in df_venc_f.columns if "asegurado" in c.lower() or "cliente" in c.lower()]
-            col_nombre_v = columnas_filtro_v[0] if columnas_filtro_v else df_venc_f.columns[1]
-            cliente_v_sel = st.selectbox("🔎 Seleccionar asegurado por vencer para ver detalles:", ["-- Seleccionar --"] + df_venc_f[col_nombre_v].dropna().unique().tolist(), key="sel_cliente_vencimientos")
-            
-            if cliente_v_sel != "-- Seleccionar --":
-                fila_completa_v = df_venc_f[df_venc_f[c_asegurado] == cliente_v_sel].iloc[0]
-                with st.container(border=True):
-                    st.markdown(f"### 🛡️ Información del Seguro (Vencimiento): {cliente_v_sel}")
-                    cv1, cv2, cv3 = st.columns(3)
-                    with cv1:
-                        st.markdown("**👤 Datos del Cliente:**")
-                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
-                        st.write(f"• **Celular:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
-                        st.write(f"• **Mail:** {fila_completa_v.get('Mail', col_map.get('mail', 'N/D'))}")
-                    with cv2:
-                        st.markdown("**🚗 Detalles del Bien:**")
-                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
-                        st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', col_map.get('matrícula', 'N/D'))}")
-                        st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
-                    with cv3:
-                        st.markdown("**📅 Gestión de Vigencia:**")
-                        st.write(f"• **Fin de Vigencia:** {fila_completa_v.get('Fin de Vigencia', 'N/D')}")
-                        st.write(f"• **Ejecutivo:** {fila_completa_v.get('Ejecutivo', 'N/D')}")
-                        st.write(f"• **Corredor/Agente:** {fila_completa_v.get('Corredor', 'N/D')} / {fila_completa_v.get('Agente', 'N/D')}")
-        else: st.info("No hay vencimientos en el rango seleccionado.")
 
 # --- TEXTOS COMPLEMENTARIOS BASE COMPARTIDOS ---
 txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
@@ -370,9 +314,9 @@ with tab_cot:
     with col_a: b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_beneficios_def), height=150, key="ben_v_final")
     with col_b:
         st.markdown("**Coberturas Complementarias**")
-        c_h = st.text_area("Hogar:", value=edit_ind.get("ch", txt_hogar_def), height=80, key="hog_v_final")
-        c_a = st.text_area("Auto Sustituto / Alquiler:", value=edit_ind.get("ca", txt_alquiler_def), height=50, key="alq_v_final")
-        c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", txt_bici_def), height=50, key="bic_v_final")
+        c_h = st.text_area("Hogar:", value=edit_ind.get("ch", txt_hogar_def), height=80, key="ind_hog_v_final")
+        c_a = st.text_area("Auto Sustituto / Alquiler:", value=edit_ind.get("ca", txt_alquiler_def), height=50, key="ind_alq_v_final")
+        c_b = st.text_area("Bici Eléctrica:", value=edit_ind.get("cb", txt_bici_def), height=50, key="ind_bic_v_final")
 
     if st.button("💾 Guardar propuesta y Generar Link", type="primary", use_container_width=True, key="save_ind_btn"):
         datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
@@ -413,9 +357,9 @@ with tab_flota:
     with col_f_a: f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', '• Cotización sujeta a inspección comercial.\n• Flota corporativa protegida.'), height=150, key="f_obs_fl")
     with col_f_b:
         st.markdown("**Coberturas Complementarias para la Flota**")
-        f_ch = st.text_area("Hogar (Especial Directores):", value=edit_f.get("ch", txt_hogar_def), height=80, key="f_hog_fl")
-        f_ca = st.text_area("Auto Sustituto / Alquiler:", value=edit_f.get("ca", txt_alquiler_def), height=50, key="f_alq_fl")
-        f_cb = st.text_area("Bici Eléctrica (Movilidad):", value=edit_f.get("cb", txt_bici_def), height=50, key="f_bic_fl")
+        f_ch = st.text_area("Hogar (Especial Directores):", value=edit_f.get("ch", txt_hogar_def), height=80, key="flota_hog_v_final")
+        f_ca = st.text_area("Auto Sustituto / Alquiler:", value=edit_f.get("ca", txt_alquiler_def), height=50, key="flota_alq_v_final")
+        f_cb = st.text_area("Bici Eléctrica (Movilidad):", value=edit_f.get("cb", txt_bici_def), height=50, key="flota_bic_v_final")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
         nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
