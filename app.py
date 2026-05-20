@@ -327,8 +327,8 @@ with tab_ven:
 # ==========================================
 
 # --- PLANTILLAS EXCLUSIVAS PARA VEHÍCULOS ---
-txt_ben_veh = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
-txt_hog_veh = "• Incendio Edificio USD 100.000, Incendio Contenido 50.000\n• Hurto Contenido 5.000\n• Costo ANUAL Casas: 180 IVA INC\n• Costo ANUAL Aptos: 120 IVA INC"
+txt_ben_veh = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales: USD 300 SANCOR, USD 200 BSE O SBI, USD 100 SURA, demás cobran deducible\n• Granizo: SANCOR incluido sin deducible, demás aplican deducible."
+txt_hog_veh = "• Incendio Edificio USD 100.000\n• Incendio Contenido 50.000\n• Hurto Contenido 5.000\n• Costo ANUAL Casas: 180 IVA INC\n• Costo ANUAL Aptos: 120 IVA INC"
 txt_alq_veh = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo: UYU 3.000 (IVA incluido) por vehículo."
 txt_bic_veh = "• Cobertura por Hurto y/o Rapiña de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Daños a Terceros que puedas provocar hasta USD 10.000.\n• Costo ANUAL: 120 IVA INC"
 
