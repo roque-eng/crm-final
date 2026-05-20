@@ -41,36 +41,45 @@ if "q" in query_params:
             </style>
         """, unsafe_allow_html=True)
 
+        # Encabezado unificado
         st.markdown(f"""
         <div style="font-family: sans-serif; text-align: left !important; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
             <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111; text-align: left !important;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
-            <p style="margin: 0; font-size: 16px; color: #555; text-align: left !important;"><b>Vehículo:</b> {propuesta_cliente.get('v', 'Vehículo')}</p>
+            <p style="margin: 0; font-size: 16px; color: #555; text-align: left !important;"><b>{"Aseguradora" if propuesta_cliente.get("tipo") == "Flota" else "Vehículo"}:</b> {propuesta_cliente.get('v' if propuesta_cliente.get('tipo') != 'Flota' else 'e', 'Detalle')}</p>
         </div>
         """, unsafe_allow_html=True)
         
         df_cli = pd.DataFrame(propuesta_cliente.get("tab", []))
         if not df_cli.empty:
-            for col in ["Contado", "10 Cuotas", "Deducible"]:
+            # Columnas numéricas a formatear según el tipo de cotización
+            cols_num = ["Contado", "Deducible"] if propuesta_cliente.get("tipo") == "Flota" else ["Contado", "10 Cuotas", "Deducible"]
+            for col in cols_num:
                 if col in df_cli.columns:
                     df_cli[col] = pd.to_numeric(df_cli[col], errors='coerce').fillna(0).astype(int)
             
-            # FORMATO SEGURO CLIENTE: Agregamos el prefijo "$ " y el separador de miles con coma/punto nativo sin decimales
-            st.dataframe(
-                df_cli, use_container_width=True, hide_index=True,
-                column_config={
-                    "Aseguradora": st.column_config.TextColumn("ASEGURADORA"),
-                    "Contado": st.column_config.NumberColumn("CONTADO", format="$ %,d"),
-                    "10 Cuotas": st.column_config.NumberColumn("10 CUOTAS", format="$ %,d"),
-                    "Deducible": st.column_config.NumberColumn("DEDUCIBLE", format="$ %,d")
-                }
-            )
+            # Configurador dinámico de columnas nativo
+            conf_columnas = {
+                "Aseguradora": st.column_config.TextColumn("ASEGURADORA"),
+                "Marca": st.column_config.TextColumn("MARCA"),
+                "Modelo": st.column_config.TextColumn("MODELO"),
+                "Año": st.column_config.TextColumn("AÑO"),
+                "Matrícula": st.column_config.TextColumn("MATRÍCULA"),
+                "Cobertura": st.column_config.TextColumn("COBERTURA"),
+                "Contado": st.column_config.NumberColumn("CONTADO", format="$ %,d"),
+                "Deducible": st.column_config.NumberColumn("DEDUCIBLE", format="$ %,d")
+            }
+            if propuesta_cliente.get("tipo") != "Flota":
+                conf_columnas["10 Cuotas"] = st.column_config.NumberColumn("10 CUOTAS", format="$ %,d")
+
+            st.dataframe(df_cli, use_container_width=True, hide_index=True, column_config=conf_columnas)
             
         if propuesta_cliente.get("ben"):
             st.write("")
-            st.markdown("### ✅ Beneficios Incluidos")
+            st.markdown(f"### {'✅ Beneficios Incluidos' if propuesta_cliente.get('tipo') != 'Flota' else '📋 Observaciones y Comentarios'}")
             for b in propuesta_cliente.get("ben", "").split('\n'):
                 if b.strip(): st.markdown(f'<div class="ben-fila">{b.strip()}</div>', unsafe_allow_html=True)
                 
+        # Renderizado unificado de Coberturas Complementarias para AMBOS links
         st.write("")
         st.markdown("### ⚠️ Coberturas Complementarias")
         cx1, cx2, cx3 = st.columns(3)
@@ -85,7 +94,7 @@ if "q" in query_params:
         cx3.markdown(b_html_cli("Bici", "🚲", propuesta_cliente.get("cb", "")), unsafe_allow_html=True)
         
         st.markdown("---")
-        st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont', '')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e_nombre' if propuesta_cliente.get('tipo') == 'Flota' else 'e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont', '')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
         
         st.stop()
     except Exception as e:
@@ -188,6 +197,12 @@ with tab_ven:
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False, sheet_name='Vencimientos')
         st.download_button(label="📥 Exportar a Excel", data=output.getvalue(), file_name=f"Vencimientos.xlsx")
 
+# --- TEXTOS COMPLEMENTARIOS BASE COMPARTIDOS ---
+txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
+txt_hogar_def = "• Incendio Edificio e Incendio Contenido 40.000\n• Hurto Contenido 10.000\n• Costo ANUAL: 95 IVA INC"
+txt_alquiler_def = "• Auto sustituto por 10 días o 250 en efectivo si no se utiliza."
+txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: 1.500"
+
 # --- PESTAÑA COTIZADOR INDIVIDUAL ---
 with tab_cot:
     st.subheader("📝 Cotizador Seguros Individuales")
@@ -201,7 +216,6 @@ with tab_cot:
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v_final")
         cont_cot = c_con.text_input("Contacto Asesor", value=edit_ind.get("cont", "099 635 244"), key="cont_v_final")
 
-    # FORMATO SEGURO ASESOR: Configuramos el editor interno con el prefijo "$ " y separador de miles nativo
     cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
     if edit_ind and "tab" in edit_ind: df_p_init = pd.DataFrame(edit_ind["tab"])
     else: df_p_init = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
@@ -215,11 +229,6 @@ with tab_cot:
         }
     )
     
-    txt_beneficios_def = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales, cerraduras y espejos sin límite de eventos ni deducible\n• Gestión de siniestros"
-    txt_hogar_def = "• Incendio Edificio e Incendio Contenido 40.000\n• Hurto Contenido 10.000\n• Costo ANUAL: 95 IVA INC"
-    txt_alquiler_def = "• Auto sustituto por 10 días o 250 en efectivo si no se utiliza."
-    txt_bici_def = "• Cobertura por Hurto e Incendio de la bicicleta dentro y fuera del hogar: 1.500"
-
     col_a, col_b = st.columns(2)
     with col_a: b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_beneficios_def), height=150, key="ben_v_final")
     with col_b:
@@ -235,7 +244,6 @@ with tab_cot:
         
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
-        
         st.success("✅ ¡Propuesta guardada con éxito en el Historial!")
         st.text_input("🔗 Copiá este Link y enviáselo al cliente por WhatsApp:", value=link_cliente)
 
@@ -256,7 +264,6 @@ with tab_flota:
     if edit_f and "tab" in edit_f: df_f_init = pd.DataFrame(edit_f["tab"])
     else: df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Año": "", "Matrícula": "", "Cobertura": "Todo Riesgo", "Contado": 0, "Deducible": 0}])
     
-    # FORMATO SEGURO FLOTAS: También le aplicamos el formateo de dinero a las columnas de dinero de flotas
     t_flota = st.data_editor(
         df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas",
         column_config={
@@ -264,10 +271,20 @@ with tab_flota:
             "Deducible": st.column_config.NumberColumn("Deducible", format="$ %,d")
         }
     )
-    f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', ''), height=100, key="f_obs_fl")
+    
+    # NUEVA UNIFICACIÓN SOLICITADA PARA FLOTAS: Espejo perfecto con el cotizador individual
+    col_fa, col_fb = st.columns(2)
+    with col_fa: 
+        f_obs = st.text_area("Observaciones / Comentarios:", value=edit_f.get('ben', '• Cotización sujeta a inspección comercial.\n• Flota corporativa protegida.'), height=150, key="f_obs_fl")
+    with col_fb:
+        st.markdown("**Coberturas Complementarias para la Flota**")
+        f_ch = st.text_area("Hogar (Especial Directores):", value=edit_f.get("ch", txt_hogar_def), height=80, key="f_hog_fl")
+        f_ca = st.text_area("Auto Sustituto / Alquiler:", value=edit_f.get("ca", txt_alquiler_def), height=50, key="f_alq_fl")
+        f_cb = st.text_area("Bici Eléctrica (Movilidad):", value=edit_f.get("cb", txt_bici_def), height=50, key="f_bic_fl")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
-        nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "tipo": "Flota"}
+        # Mapeamos la estructura completa incluyendo las nuevas llaves ch, ca, cb
+        nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
         st.session_state.historico.append(nueva_f)
         st.session_state.edit_data = nueva_f
         
