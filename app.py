@@ -172,7 +172,6 @@ with tab_car:
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     
     if not df_c.empty:
-        # Forzamos estrictamente el orden de las 8 columnas que me pediste
         columnas_resumen = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, c_p_usd, c_p_uyu, 'Premio_Total_USD']
         cols_validas = [c for c in columnas_resumen if c in df_c.columns]
         df_resumen = df_c[cols_validas].copy()
@@ -180,10 +179,9 @@ with tab_car:
         st.markdown("##### 📋 Resumen de Contratos Activos")
         st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
         
-        # ACTIVAMOS LA CAPTURA DE FILAS POR SELECCIÓN DIRECTA (ON_SELECT)
         tabla_cartera_interactiva = st.dataframe(
             df_resumen, use_container_width=True, hide_index=False,
-            on_select="rerun", selection_mode="single-row",
+            on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
                 c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
                 c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
@@ -192,7 +190,6 @@ with tab_car:
             }
         )
         
-        # Si el usuario hace clic en una fila, capturamos el índice y traemos la info abajo
         filas_seleccionadas = tabla_cartera_interactiva.get("selection", {}).get("rows", [])
         
         if filas_seleccionadas:
@@ -237,10 +234,10 @@ with tab_ven:
             
             st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
             
-            # FILTROS DE SELECCIÓN DIRECTA (VENCIMIENTOS)
+            # SE AISLÓ LA CONF CON EL IDENTIFICADOR "grid_venc_unico" PARA MATAR EL BUG
             tabla_venc_interactiva = st.dataframe(
                 df_venc_resumen, use_container_width=True, hide_index=False,
-                on_select="rerun", selection_mode="single-row",
+                on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
                 column_config={
                     c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
                     c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
@@ -251,6 +248,7 @@ with tab_ven:
             
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False, sheet_name='Vencimientos')
+            st.markdown("")
             st.download_button(label="📥 Exportar Vencimientos Completos a Excel", data=output.getvalue(), file_name=f"Vencimientos.xlsx")
             
             filas_seleccionadas_v = tabla_venc_interactiva.get("selection", {}).get("rows", [])
