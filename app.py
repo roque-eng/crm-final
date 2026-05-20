@@ -27,55 +27,30 @@ TC_USD = 40.5
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# --- CONTROL VISUAL DEL MODO IMPRESIÓN ---
-modo_print_activo = st.session_state.get("toggle_print_ind", False) or st.session_state.get("toggle_print_flota", False)
-
-if modo_print_activo:
-    st.markdown("""
-        <style>
-        /* Oculta las pestañas superiores (Tabs) por completo */
-        [data-testid="stTabs"] nav { display: none !important; }
-        div[data-testid="stTabs"] { border: none !important; }
-        
-        /* Oculta la barra superior gris de Streamlit y el menú de opciones */
-        header, footer, [data-testid="stHeader"] { display: none !important; }
-        
-        /* Elimina márgenes de la app para vista limpia de borde a borde */
-        [data-testid="stAppViewContainer"] { background-color: white !important; padding-top: 0px !important; }
-        .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
-        </style>
-    """, unsafe_allow_html=True)
-
-# Estilos de diseño corporativo de las tablas y bloques de beneficios
+# Estilos CSS Base (Los originales que no rompían la tabla)
 st.markdown("""
     <style>
-    .tabla-edf { width:100%; border-collapse: collapse; margin-top: 15px; font-family: sans-serif; background-color: white; }
-    .tabla-edf th { background-color: #f0f7ff !important; color: #1E3A8A !important; padding: 12px; border: 1px solid #ddd; text-align: right; font-size: 14px; }
-    /* La primera columna (Aseguradora/Marca) siempre alineada a la izquierda */
-    .tabla-edf th:first-child, .tabla-edf td:first-child { text-align: left !important; }
-    .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: right; font-size: 14px; color: #333; }
-    .izq-negrita { text-align: left !important; font-weight: bold; }
+    @media print { 
+        .stButton, [data-testid="stSidebar"], .stDownloadButton, footer, header { display: none !important; } 
+    }
+    .tabla-edf { width:100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif; }
+    .tabla-edf th { background-color: #f0f7ff !important; color: #1E3A8A !important; padding: 12px; border: 1px solid #ddd; text-align: center; font-size: 15px; }
+    .tabla-edf td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 14px; }
     .der { text-align: right !important; font-weight: bold; }
+    .izq-negrita { text-align: left !important; font-weight: bold; }
 
     .ben-fila { 
-        background-color: #f8f9fa; padding: 10px 18px; border-radius: 8px; margin-bottom: 8px; 
-        border-left: 5px solid #1E3A8A !important; width: 100%; font-size: 14px; color: #333;
+        background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 10px; 
+        border-left: 6px solid #1E3A8A !important; width: 100%; font-size: 16px; color: #333;
     }
-    
     .caja-azul { 
-        background-color: #ffffff; padding: 18px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; 
-        border-top: 5px solid #1E3A8A !important; box-shadow: 2px 2px 8px rgba(0,0,0,0.03);
+        background-color: #ffffff; padding: 20px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; 
+        border-top: 5px solid #1E3A8A !important; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
     }
-    
     .costo-res { 
-        color: #1E3A8A !important; font-weight: bold; display: block; margin-top: 8px; font-size: 16px; 
+        color: #1E3A8A !important; font-weight: bold; display: block; margin-top: 10px; font-size: 19px; 
         background: #f0f7ff !important; padding: 5px 10px; border-radius: 5px;
     }
-    
-    /* Estilos de texto reducidos y alineados a la izquierda para el cliente */
-    .txt-cliente-chico { font-family: sans-serif; text-align: left !important; color: #333; line-height: 1.4; }
-    .txt-cliente-chico h3 { font-size: 16px !important; margin: 0 0 5px 0 !important; font-weight: bold; color: #111; }
-    .txt-cliente-chico p { font-size: 14px !important; margin: 0 !important; color: #555; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -133,24 +108,21 @@ with tab_car:
     busq = st.text_input("🔍 Buscar cliente o matrícula en cartera...")
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     df_disp_c = df_c.copy()
-    
     if 'Fin de Vigencia' in df_disp_c.columns:
         df_disp_c['Fin de Vigencia'] = pd.to_datetime(df_disp_c['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         
-    # --- ORDENACIÓN DE COLUMNAS SIMÉTRICA (CARTERA) ---
+    # Orden estructurado de columnas solicitado
     cols_actuales_c = list(df_disp_c.columns)
     col_primera = "Adjunto (póliza)"
     col_final_1 = "Mail"
     col_final_2 = "Celular"
     col_final_3 = "Marca temporal"
     
-    # Removemos las columnas que van fijas en los extremos
     if col_primera in cols_actuales_c: cols_actuales_c.remove(col_primera)
     if col_final_1 in cols_actuales_c: cols_actuales_c.remove(col_final_1)
     if col_final_2 in cols_actuales_c: cols_actuales_c.remove(col_final_2)
     if col_final_3 in cols_actuales_c: cols_actuales_c.remove(col_final_3)
     
-    # Estructuramos el bloque final exacto solicitado
     orden_final_cartera = [col_primera] + cols_actuales_c + [col_final_1, col_final_2, col_final_3]
     orden_final_cartera = [c for c in orden_final_cartera if c in df_disp_c.columns]
         
@@ -182,7 +154,6 @@ with tab_ven:
         if 'Fin de Vigencia' in df_venc_disp.columns:
             df_venc_disp['Fin de Vigencia'] = pd.to_datetime(df_venc_disp['Fin de Vigencia']).dt.strftime('%d/%m/%Y')
         
-        # --- ORDENACIÓN DE COLUMNAS IDENTICA (VENCIMIENTOS) ---
         cols_actuales_v = list(df_venc_disp.columns)
         if col_primera in cols_actuales_v: cols_actuales_v.remove(col_primera)
         if col_final_1 in cols_actuales_v: cols_actuales_v.remove(col_final_1)
@@ -215,7 +186,7 @@ with tab_ven:
             file_name=f"Vencimientos_{f_ini}_al_{f_fin}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        
+
 # --- FUNCIÓN COMODÍN PARA LIMPIAR NÚMEROS ---
 def f_num(val):
     try: return f"{int(float(str(val).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
@@ -223,11 +194,12 @@ def f_num(val):
 
 # --- PESTAÑA COTIZADOR INDIVIDUAL ---
 with tab_cot:
-    modo_impresion_ind = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_ind")
+    st.subheader("📝 Cotizador Seguros Individuales")
     edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
     
+    modo_impresion_ind = st.checkbox("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_ind")
+    
     if not modo_impresion_ind:
-        st.subheader("📝 Cotizador Seguros Individuales")
         with st.container(border=True):
             c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
             doc_in = c_doc.text_input("CI/RUT", value=edit_ind.get("doc", ""), key="ci_v_final")
@@ -259,44 +231,22 @@ with tab_cot:
             datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
             st.session_state.historico.append(datos_i)
             st.session_state.edit_data = datos_i
-            st.success("✅ ¡Guardado con éxito! Activá el interruptor 'Modo Impresión / Vista Previa' de arriba.")
+            st.success("✅ ¡Guardado con éxito! Activá la casilla de arriba.")
             st.rerun()
             
     else:
-        # VISTA DE PROPUESTA LIMPIA
+        # VISTA PREVIA LIMPIA BASE CON TRATAMIENTO DE DATOS EN MARCDOWN SEGURO
         col_l, col_i = st.columns([1, 2])
         with col_l: 
-            st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=160)
+            st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
-            st.markdown(f"""
-            <div class="txt-cliente-chico">
-                <h3>Asegurado: {edit_ind.get('n', 'Cliente')}</h3>
-                <p><b>Vehículo:</b> {edit_ind.get('v', 'Vehículo')}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"## Asegurado: {edit_ind.get('n', 'Cliente')}")
+            st.markdown(f"### 📋 Propuesta para: {edit_ind.get('v', 'Vehículo')}")
         
-        # Tabla sin símbolos monetarios (solo números limpios)
-        t_html = """
-        <table class="tabla-edf">
-            <thead>
-                <tr>
-                    <th style="text-align: left !important;">ASEGURADORA</th>
-                    <th>CONTADO</th>
-                    <th>10 CUOTAS</th>
-                    <th>DEDUCIBLE</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
+        # Renderizado de Tabla por inyección controlada de Strings para evitar fallas de escape
+        t_html = "<table class='tabla-edf'><thead><tr><th>ASEGURADORA</th><th>CONTADO</th><th>10 CUOTAS</th><th>DEDUCIBLE</th></tr></thead><tbody>"
         for row in edit_ind.get("tab", []):
-            t_html += f"""
-                <tr>
-                    <td class="izq-negrita">{row.get('Aseguradora','')}</td>
-                    <td class="der" style="color: #1E3A8A;">{f_num(row.get('Contado',0))}</td>
-                    <td class="der">{f_num(row.get('10 Cuotas',0))}</td>
-                    <td class="der">{f_num(row.get('Deducible',0))}</td>
-                </tr>
-            """
+            t_html += f"<tr><td><b>{row.get('Aseguradora','')}</b></td><td class='der' style='color: #1E3A8A;'>{f_num(row.get('Contado',0))}</td><td class='der'>{f_num(row.get('10 Cuotas',0))}</td><td class='der'>{f_num(row.get('Deducible',0))}</td></tr>"
         t_html += "</tbody></table>"
         st.markdown(t_html, unsafe_allow_html=True)
         
@@ -324,11 +274,12 @@ with tab_cot:
 
 # --- PESTAÑA FLOTAS ---
 with tab_flota:
-    modo_impresion_fl = st.toggle("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_flota")
+    st.subheader("🚛 Cotizador Seguro de Flotas")
     edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
     
+    modo_impresion_fl = st.checkbox("🖨️ ACTIVAR MODO IMPRESIÓN / VISTA PREVIA", value=False, key="toggle_print_flota")
+    
     if not modo_impresion_fl:
-        st.subheader("🚛 Cotizador Seguro de Flotas")
         col_f1, col_f2 = st.columns(2)
         with col_f1:
             f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_fl")
@@ -348,47 +299,19 @@ with tab_flota:
             nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "tipo": "Flota"}
             st.session_state.historico.append(nueva_f)
             st.session_state.edit_data = nueva_f
-            st.success("✅ ¡Propuesta guardada! Activá el 'Modo Impresión' arriba.")
+            st.success("✅ ¡Propuesta guardada!")
             st.rerun()
             
     else:
         col_l, col_i = st.columns([1, 2])
-        with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=160)
+        with col_l: st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
-            st.markdown(f"""
-            <div class="txt-cliente-chico">
-                <h3>Asegurado: {edit_f.get('n', 'Cliente Flota')}</h3>
-                <p><b>Aseguradora:</b> {edit_f.get('e', 'Compañía')}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"## Asegurado: {edit_f.get('n', 'Cliente Flota')}")
+            st.markdown(f"### 🏦 Aseguradora: {edit_f.get('e', 'Compañía')}")
             
-        t_html = """
-        <table class="tabla-edf">
-            <thead>
-                <tr>
-                    <th style="text-align: left !important;">MARCA</th>
-                    <th style="text-align: left !important;">MODELO</th>
-                    <th style="text-align: center !important;">AÑO</th>
-                    <th style="text-align: center !important;">MATRÍCULA</th>
-                    <th style="text-align: left !important;">COBERTURA</th>
-                    <th>CONTADO</th>
-                    <th>DEDUCIBLE</th>
-                </tr>
-            </thead>
-            <tbody>
-        """
+        t_html = "<table class='tabla-edf'><thead><tr><th>MARCA</th><th>MODELO</th><th>AÑO</th><th>MATRÍCULA</th><th>COBERTURA</th><th>CONTADO</th><th>DEDUCIBLE</th></tr></thead><tbody>"
         for row in edit_f.get("tab", []):
-            t_html += f"""
-                <tr>
-                    <td style="text-align: left !important; font-weight: bold;">{row.get('Marca','')}</td>
-                    <td style="text-align: left !important;">{row.get('Modelo','')}</td>
-                    <td style="text-align: center !important;">{row.get('Año','')}</td>
-                    <td style="text-align: center !important;">{row.get('Matrícula','-')}</td>
-                    <td style="text-align: left !important;">{row.get('Cobertura','')}</td>
-                    <td class="der" style="color: #1E3A8A;">{f_num(row.get('Contado',0))}</td>
-                    <td class="der">{f_num(row.get('Deducible',0))}</td>
-                </tr>
-            """
+            t_html += f"<tr><td>{row.get('Marca','')}</td><td>{row.get('Modelo','')}</td><td>{row.get('Año','')}</td><td>{row.get('Matrícula','-')}</td><td>{row.get('Cobertura','')}</td><td class='der' style='color: #1E3A8A;'>{f_num(row.get('Contado',0))}</td><td class='der'>{f_num(row.get('Deducible',0))}</td></tr>"
         t_html += "</tbody></table>"
         st.markdown(t_html, unsafe_allow_html=True)
         
@@ -412,13 +335,13 @@ with tab_historial:
             with col_edit:
                 if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
                     st.session_state.edit_data = reg
-                    st.success(f"Propuesta de {reg.get('n')} cargada.")
+                    st.success(f"Propuesta cargada.")
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
-    else: st.info("No hay propuestas en la memoria temporal todavía.")
+    else: st.info("No hay propuestas en la memoria todavía.")
 
 # --- PESTAÑA ANÁLISIS ---
 with tab_an:
