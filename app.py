@@ -366,6 +366,21 @@ div.stButton > button:hover {
     color: white !important;
     transform: scale(1.01) !important;
 }
+/* Estilo prolijo para el botón de copiar nativo HTML */
+.btn-copiar-edf {
+    background-color: #1E3A8A !important;
+    color: white !important;
+    border: none;
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 10px;
+    display: inline-block;
+}
+.btn-copiar-edf:hover {
+    background-color: #111827 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -417,9 +432,13 @@ with tab_cot:
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         st.success("✅ ¡Propuesta guardada con éxito en el Historial!")
-        # REMOVEMOS EL PARAMETRO read_only PARA EVITAR EL TYPEERROR
-        st.text_input("🔗 Copiá este Link y enviáselo al cliente por WhatsApp:", value=link_cliente)
-        st.copy_to_clipboard(link_cliente, before_text="📋 Copiar Link de Vehículo", after_text="✨ ¡Link de Vehículo Copiado!")
+        st.text_input("🔗 Enlace para mandar al cliente por WhatsApp:", value=link_cliente)
+        
+        # BOTÓN ULTRA COMPATIBLE CON COPIADO EN UN CLIC
+        componente_copiar_html = f"""
+        <button class="btn-copiar-edf" onclick="navigator.clipboard.writeText('{link_cliente}').then(() => {{ this.innerText = '📋 ¡Link Copiado!'; }}).catch(err => {{ alert('Error al copiar'); }})">📋 Copiar Link de Vehículo</button>
+        """
+        st.components.v1.html(componente_copiar_html, height=60)
 
 
 # ==========================================
@@ -468,9 +487,13 @@ with tab_flota:
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
         link_flota = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         st.success("✅ ¡Propuesta de Flota guardada con éxito!")
-        # REMOVEMOS EL PARAMETRO read_only PARA EVITAR EL TYPEERROR
         st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota)
-        st.copy_to_clipboard(link_flota, before_text="📋 Copiar Link de Flota", after_text="✨ ¡Link de Flota Copiado!")
+        
+        # BOTÓN ULTRA COMPATIBLE CON COPIADO EN UN CLIC FOR FLOTAS
+        componente_copiar_flota_html = f"""
+        <button class="btn-copiar-edf" onclick="navigator.clipboard.writeText('{link_flota}').then(() => {{ this.innerText = '📋 ¡Link Copiado!'; }}).catch(err => {{ alert('Error al copiar'); }})">📋 Copiar Link de Flota</button>
+        """
+        st.components.v1.html(componente_copiar_flota_html, height=60)
 
 
 # ==========================================
