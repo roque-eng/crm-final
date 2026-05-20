@@ -172,14 +172,18 @@ with tab_car:
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     
     if not df_c.empty:
-        # Forzamos exactamente el orden de las 8 columnas solicitadas de forma segura
+        # Forzamos estrictamente el orden de las 8 columnas que me pediste
         columnas_resumen = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, c_p_usd, c_p_uyu, 'Premio_Total_USD']
         cols_validas = [c for c in columnas_resumen if c in df_c.columns]
         df_resumen = df_c[cols_validas].copy()
         
         st.markdown("##### 📋 Resumen de Contratos Activos")
-        st.data_editor(
-            df_resumen, use_container_width=True, hide_index=True,
+        st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
+        
+        # ACTIVAMOS LA CAPTURA DE FILAS POR SELECCIÓN DIRECTA (ON_SELECT)
+        tabla_cartera_interactiva = st.dataframe(
+            df_resumen, use_container_width=True, hide_index=False,
+            on_select="rerun", selection_mode="single-row",
             column_config={
                 c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
                 c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
@@ -188,15 +192,16 @@ with tab_car:
             }
         )
         
-        st.write("")
-        columnas_filtro = [c for c in df_c.columns if "asegurado" in c.lower() or "cliente" in c.lower()]
-        col_nombre = columnas_filtro[0] if columnas_filtro else df_c.columns[1]
-        cliente_sel = st.selectbox("🔎 Seleccionar asegurado para ver detalles completos:", ["-- Seleccionar --"] + df_c[col_nombre].dropna().unique().tolist(), key="sel_cliente_cartera")
+        # Si el usuario hace clic en una fila, capturamos el índice y traemos la info abajo
+        filas_seleccionadas = tabla_cartera_interactiva.get("selection", {}).get("rows", [])
         
-        if cliente_sel != "-- Seleccionar --":
-            fila_completa = df_c[df_c[c_asegurado] == cliente_sel].iloc[0]
+        if filas_seleccionadas:
+            indice_fila = filas_seleccionadas[0]
+            fila_completa = df_c.iloc[indice_fila]
+            
+            st.write("")
             with st.container(border=True):
-                st.markdown(f"### 🛡️ Información del Seguro: {cliente_sel}")
+                st.markdown(f"### 🛡️ Detalle de la Póliza: {fila_completa.get(c_asegurado, 'Cliente')}")
                 cx1, cx2, cx3 = st.columns(3)
                 with cx1:
                     st.markdown("**👤 Datos del Cliente:**")
@@ -213,7 +218,68 @@ with tab_car:
                     st.write(f"• **Fin de Vigencia:** {fila_completa.get('Fin de Vigencia', 'N/D')}")
                     st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
                     st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
-    else: st.info("No se encontraron registros en la cartera.")
+    else:
+        st.info("No se encontraron registros en la cartera.")
+
+# --- PESTAÑA VENCIMIENTOS ---
+with tab_ven:
+    st.subheader("🔄 Control de Vencimientos")
+    if not df_f.empty:
+        df_v = df_f.dropna(subset=['Fin de Vigencia'])
+        c1, c2 = st.columns(2)
+        f_ini, f_fin = c1.date_input("Desde:", date.today().replace(day=1)), c2.date_input("Hasta:", date.today() + timedelta(days=90))
+        df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
+        
+        if not df_venc_f.empty:
+            columnas_resumen_v = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, c_p_usd, c_p_uyu, 'Premio_Total_USD']
+            cols_validas_v = [c for c in columnas_resumen_v if c in df_venc_f.columns]
+            df_venc_resumen = df_venc_f[cols_validas_v].copy()
+            
+            st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
+            
+            # FILTROS DE SELECCIÓN DIRECTA (VENCIMIENTOS)
+            tabla_venc_interactiva = st.dataframe(
+                df_venc_resumen, use_container_width=True, hide_index=False,
+                on_select="rerun", selection_mode="single-row",
+                column_config={
+                    c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="$ %,d"),
+                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                    "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="$ %,d")
+                }
+            )
+            
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer: df_venc_f.to_excel(writer, index=False, sheet_name='Vencimientos')
+            st.download_button(label="📥 Exportar Vencimientos Completos a Excel", data=output.getvalue(), file_name=f"Vencimientos.xlsx")
+            
+            filas_seleccionadas_v = tabla_venc_interactiva.get("selection", {}).get("rows", [])
+            
+            if filas_seleccionadas_v:
+                indice_fila_v = filas_seleccionadas_v[0]
+                fila_completa_v = df_venc_f.iloc[indice_fila_v]
+                
+                st.write("")
+                with st.container(border=True):
+                    st.markdown(f"### 🛡️ Detalle de la Póliza (Vencimiento): {fila_completa_v.get(c_asegurado, 'Cliente')}")
+                    cv1, cv2, cv3 = st.columns(3)
+                    with cv1:
+                        st.markdown("**👤 Datos del Cliente:**")
+                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
+                        st.write(f"• **Celular:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
+                        st.write(f"• **Mail:** {fila_completa_v.get('Mail', col_map.get('mail', 'N/D'))}")
+                    with cv2:
+                        st.markdown("**🚗 Detalles del Bien:**")
+                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+                        st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', col_map.get('matrícula', 'N/D'))}")
+                        st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
+                    with cv3:
+                        st.markdown("**📅 Gestión de Vigencia:**")
+                        st.write(f"• **Fin de Vigencia:** {fila_completa_v.get('Fin de Vigencia', 'N/D')}")
+                        st.write(f"• **Ejecutivo:** {fila_completa_v.get('Ejecutivo', 'N/D')}")
+                        st.write(f"• **Corredor/Agente:** {fila_completa_v.get('Corredor', 'N/D')} / {fila_completa_v.get('Agente', 'N/D')}")
+        else:
+            st.info("No hay vencimientos en el rango seleccionado.")
 
 # --- PESTAÑA VENCIMIENTOS ---
 with tab_ven:
