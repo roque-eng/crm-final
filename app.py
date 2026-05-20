@@ -94,7 +94,7 @@ if "q" in query_params:
         st.markdown("---")
         st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont', '')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
         
-        # Freno absoluto: el cliente se planta acá y jamás ve tu CRM interno
+        # Freno absoluto para el cliente
         st.stop()
     except Exception as e:
         st.error("Error al cargar la propuesta externa. Contacte a su asesor.")
@@ -109,7 +109,6 @@ if "edit_data" not in st.session_state: st.session_state.edit_data = {}
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
-# Estilos CSS generales para las grillas del CRM
 st.markdown("""
     <style>
     .ben-fila { background-color: #f8f9fa; padding: 10px 18px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid #1E3A8A !important; font-size: 14px; color: #333; }
@@ -233,9 +232,9 @@ with tab_cot:
         st.session_state.historico.append(datos_i)
         st.session_state.edit_data = datos_i
         
-        # Generamos el enlace encriptado seguro en Base64
+        # Generamos el enlace encriptado seguro apuntando a tu subdominio real 'dfseguros'
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
-        link_cliente = f"https://edfseguros.streamlit.app/?q={datos_b64}"
+        link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         
         st.success("✅ ¡Propuesta guardada con éxito en el Historial!")
         st.text_input("🔗 Copiá este Link y enviáselo al cliente por WhatsApp:", value=link_cliente)
@@ -265,7 +264,7 @@ with tab_flota:
         st.session_state.edit_data = nueva_f
         
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
-        link_flota = f"https://edfseguros.streamlit.app/?q={datos_b64}"
+        link_flota = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         
         st.success("✅ ¡Propuesta de Flota guardada con éxito!")
         st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota)
