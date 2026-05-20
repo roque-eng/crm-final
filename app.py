@@ -172,33 +172,43 @@ with tab_car:
     df_c = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busq, case=False)).any(axis=1)] if busq else df_f
     
     if not df_c.empty:
-        # Definimos el orden estricto de las columnas (Asegurado en 2do lugar y Vencimiento antes de Premios)
-        columnas_ordenadas = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu, 'Premio_Total_USD']
-        cols_validas = [c for c in columnas_ordenadas if c in df_c.columns]
+        # 1. Copia limpia para proteger los índices interactivos del clic
+        df_resumen = df_c.copy()
         
-        # Filtramos y reordenamos el DataFrame original manteniendo sus índices intactos para que no rompa el clic
-        df_resumen = df_c[cols_validas].copy()
+        # 2. Renombramos usando el mapeo nativo directo de tus variables de Sheets
+        df_resumen = df_resumen.rename(columns={
+            c_adjunto: "📄 Póliza",
+            c_asegurado: "Asegurado",  # <--- Acá la magia: toma la columna de tu Sheet ('Cliente') y la bautiza 'Asegurado'
+            c_documento: "Documento",
+            c_aseguradora: "Aseguradora",
+            c_ramo: "Ramo",
+            'Fin de Vigencia': "Vencimiento",
+            c_p_usd: "Premio USD",
+            c_p_uyu: "Premio UYU",
+            'Premio_Total_USD': "Premio Total (USD)"
+        })
+        
+        # 3. Forzamos el orden visual con los nuevos nombres fijos
+        columnas_visibles = ["📄 Póliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
+        cols_validas = [c for c in columnas_visibles if c in df_resumen.columns]
+        df_resumen = df_resumen[cols_validas]
         
         st.markdown("##### 📋 Resumen de Contratos Activos")
         st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
         
+        # 4. Grilla interactiva
         tabla_cartera_interactiva = st.dataframe(
             df_resumen, use_container_width=True, hide_index=False,
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
-                c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                c_asegurado: "Asegurado",
-                c_documento: "Documento",
-                c_aseguradora: "Aseguradora",
-                c_ramo: "Ramo",
-                'Fin de Vigencia': st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-                c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
-                c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
+                "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
+                "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
+                "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                "Premio Total (USD)": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
             }
         )
         
-        # Sistema seguro de detección de clics usando los índices nativos
         selection = st.session_state.get("grid_cartera_unica", {}).get("selection", {})
         filas_seleccionadas = selection.get("rows", [])
         
@@ -238,10 +248,24 @@ with tab_ven:
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
         
         if not df_venc_f.empty:
-            columnas_ordenadas_v = [c_adjunto, c_asegurado, c_documento, c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu, 'Premio_Total_USD']
-            cols_validas_v = [c for c in columnas_ordenadas_v if c in df_venc_f.columns]
+            df_venc_resumen = df_venc_f.copy()
             
-            df_venc_resumen = df_venc_f[cols_validas_v].copy()
+            # Renombramos usando las variables originales del mapeo dinámico
+            df_venc_resumen = df_venc_resumen.rename(columns={
+                c_adjunto: "📄 Póliza",
+                c_asegurado: "Asegurado",
+                c_documento: "Documento",
+                c_aseguradora: "Aseguradora",
+                c_ramo: "Ramo",
+                'Fin de Vigencia': "Vencimiento",
+                c_p_usd: "Premio USD",
+                c_p_uyu: "Premio UYU",
+                'Premio_Total_USD': "Premio Total (USD)"
+            })
+            
+            columnas_visibles_v = ["📄 Póliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
+            cols_validas_v = [c for c in columnas_visibles_v if c in df_venc_resumen.columns]
+            df_venc_resumen = df_venc_resumen[cols_validas_v]
             
             st.markdown("<small style='color:gray;'>💡 Hacé un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
             
@@ -249,15 +273,11 @@ with tab_ven:
                 df_venc_resumen, use_container_width=True, hide_index=False,
                 on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
                 column_config={
-                    c_adjunto: st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
-                    c_asegurado: "Asegurado",
-                    c_documento: "Documento",
-                    c_aseguradora: "Aseguradora",
-                    c_ramo: "Ramo",
-                    'Fin de Vigencia': st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
-                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                    "Premio_Total_USD": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
+                    "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                    "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
+                    "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
+                    "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                    "Premio Total (USD)": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")
                 }
             )
             
