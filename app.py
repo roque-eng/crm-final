@@ -235,18 +235,41 @@ with tab_cot:
             st.rerun()
             
     else:
-        # VISTA PREVIA LIMPIA BASE CON TRATAMIENTO DE DATOS EN MARCDOWN SEGURO
+        # --- VISTA PREVIA LIMPIA BASE (PRIMER PASO ESTÉTICO) ---
         col_l, col_i = st.columns([1, 2])
         with col_l: 
             st.image("https://rpyiditlookfcrgeterf.supabase.co/storage/v1/object/public/logos/EDF%20Logotipo%20PNG.png", width=180)
         with col_i:
-            st.markdown(f"## Asegurado: {edit_ind.get('n', 'Cliente')}")
-            st.markdown(f"### 📋 Propuesta para: {edit_ind.get('v', 'Vehículo')}")
+            # Forzamos la alineación a la izquierda y achicamos la tipografía
+            st.markdown(f"""
+            <div style="font-family: sans-serif; text-align: left !important; color: #333; line-height: 1.4;">
+                <span style="font-size: 18px; font-weight: bold; display: block; margin-bottom: 4px;">Asegurado: {edit_ind.get('n', 'Cliente')}</span>
+                <span style="font-size: 15px; color: #555; display: block;"><b>Vehículo:</b> {edit_ind.get('v', 'Vehículo')}</span>
+            </div>
+            """, unsafe_allow_html=True)
         
-        # Renderizado de Tabla por inyección controlada de Strings para evitar fallas de escape
-        t_html = "<table class='tabla-edf'><thead><tr><th>ASEGURADORA</th><th>CONTADO</th><th>10 CUOTAS</th><th>DEDUCIBLE</th></tr></thead><tbody>"
+        # Renderizado de Tabla con Aseguradoras a la izquierda y TODOS los valores numéricos en AZUL
+        t_html = """
+        <table class="tabla-edf">
+            <thead>
+                <tr>
+                    <th style="text-align: left !important;">ASEGURADORA</th>
+                    <th>CONTADO</th>
+                    <th>10 CUOTAS</th>
+                    <th>DEDUCIBLE</th>
+                </tr>
+            </thead>
+            <tbody>
+        """
         for row in edit_ind.get("tab", []):
-            t_html += f"<tr><td><b>{row.get('Aseguradora','')}</b></td><td class='der' style='color: #1E3A8A;'>{f_num(row.get('Contado',0))}</td><td class='der'>{f_num(row.get('10 Cuotas',0))}</td><td class='der'>{f_num(row.get('Deducible',0))}</td></tr>"
+            t_html += f"""
+                <tr>
+                    <td style="text-align: left !important; font-weight: bold;">{row.get('Aseguradora','')}</td>
+                    <td class="der" style="color: #1E3A8A;">{f_num(row.get('Contado',0))}</td>
+                    <td class="der" style="color: #1E3A8A;">{f_num(row.get('10 Cuotas',0))}</td>
+                    <td class="der" style="color: #1E3A8A;">{f_num(row.get('Deducible',0))}</td>
+                </tr>
+            """
         t_html += "</tbody></table>"
         st.markdown(t_html, unsafe_allow_html=True)
         
