@@ -68,7 +68,25 @@ if "q" in query_params:
             if propuesta_cliente.get("tipo") != "Flota":
                 conf_columnas["10 Cuotas"] = st.column_config.NumberColumn("10 CUOTAS", format="$ %,d")
 
-            st.dataframe(df_cli, use_container_width=True, hide_index=True, column_config=conf_columnas)
+            # Tabla HTML pura (se imprime correctamente)
+            cols_mostrar = [c for c in df_cli.columns if c in ["Aseguradora","Marca","Modelo","Año","Matrícula","Cobertura","Contado","10 Cuotas","Deducible"]]
+            html_tabla = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;">'
+            html_tabla += '<tr style="background:#1E3A8A;color:white;">'
+            for col in cols_mostrar:
+                html_tabla += f'<th style="padding:8px 12px;text-align:left;">{col.upper()}</th>'
+            html_tabla += '</tr>'
+            for i, row in df_cli.iterrows():
+                bg = "#f8f9fa" if i % 2 == 0 else "white"
+                html_tabla += f'<tr style="background:{bg};">'
+                for col in cols_mostrar:
+                    val = row.get(col, "")
+                    if col in ["Contado", "10 Cuotas", "Deducible"]:
+                        try: val = f"$ {int(float(val)):,}".replace(",", ".")
+                        except: pass
+                    html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{val}</td>'
+                html_tabla += '</tr>'
+            html_tabla += '</table>'
+            st.markdown(html_tabla, unsafe_allow_html=True)
             
         if propuesta_cliente.get("ben"):
             st.write("")
