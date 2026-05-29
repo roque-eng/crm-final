@@ -82,7 +82,18 @@ if "q" in query_params:
         def b_html_cli(tit, ico, txt):
             if not txt: return ""
             out = f'<div class="caja-azul"><span style="font-weight:bold; color:#1E3A8A;">{ico} {tit}</span><br>'
-            for l in txt.split('\n'): out += f'<span style="display:block; margin-top:3px;">{l.strip()}</span>'
+            for l in txt.split('\n'):
+                l = l.strip()
+                if not l: continue
+                if l.lower().startswith("• costo") or l.lower().startswith("- costo") or l.lower().startswith("costo"):
+                    # Separamos "Costo:" del valor para formatear
+                    partes = l.lstrip("•- ").split(":", 1)
+                    if len(partes) == 2:
+                        out += f'<span style="display:block; margin-top:8px; padding:6px 10px; background:#EFF6FF; border-radius:6px; font-weight:bold; color:#1E3A8A;">💰 {partes[0].strip()}: <span style="color:#111;">{partes[1].strip()}</span></span>'
+                    else:
+                        out += f'<span style="display:block; margin-top:8px; font-weight:bold; color:#1E3A8A;">💰 {l.lstrip("•- ")}</span>'
+                else:
+                    out += f'<span style="display:block; margin-top:3px;">{l}</span>'
             return out + '</div>'
             
         es_flota = propuesta_cliente.get("tipo") == "Flota"
