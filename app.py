@@ -148,6 +148,33 @@ if 'logueado' not in st.session_state or not st.session_state['logueado']:
     st.stop()
 
 conn = st.connection("gsheets", type=GSheetsConnection)
+# ==========================================
+# 💾 FUNCIONES DE HISTORIAL PERSISTENTE
+# ==========================================
+def guardar_propuesta_en_sheet(datos):
+    try:
+        df_hist = conn.read(spreadsheet=URL_HOJA, worksheet="Historial", ttl=0)
+    except:
+        df_hist = pd.DataFrame(columns=["fecha", "tipo", "asegurado", "datos_json"])
+    nueva_fila = pd.DataFrame([{"fecha": datos.get("fecha", ""), "tipo": datos.get("tipo", ""), "asegurado": datos.get("n", ""), "datos_json": json.dumps(datos)}])
+    df_hist = pd.concat([df_hist, nueva_fila], ignore_index=True)
+    conn.update(spreadsheet=URL_HOJA, worksheet="Historial", data=df_hist)
+
+def cargar_historial_desde_sheet():
+    try:
+        df_hist = conn.read(spreadsheet=URL_HOJA, worksheet="Historial", ttl=0)
+        if df_hist.empty: return []
+        return [json.loads(row["datos_json"]) for _, row in df_hist.iterrows() if row.get("datos_json")]
+    except:
+        return []
+
+def eliminar_propuesta_en_sheet(idx_real):
+    try:
+        df_hist = conn.read(spreadsheet=URL_HOJA, worksheet="Historial", ttl=0)
+        df_hist = df_hist.drop(index=idx_real).reset_index(drop=True)
+        conn.update(spreadsheet=URL_HOJA, worksheet="Historial", data=df_hist)
+    except:
+        pass
 df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
 df_raw.columns = df_raw.columns.str.strip()
 
@@ -445,7 +472,7 @@ with tab_cot:
 
     if st.button("💾 Guardar propuesta y Generar Link", type="primary", use_container_width=True, key="save_ind_btn"):
         datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
-        st.session_state.historico.append(datos_i)
+        guardar_propuesta_en_sheet(datos_i)
         st.session_state.edit_data = datos_i
         
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
@@ -500,7 +527,7 @@ with tab_flota:
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
         nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
-        st.session_state.historico.append(nueva_f)
+        guardar_propuesta_en_sheet(nueva_f)
         st.session_state.edit_data = nueva_f
         
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
@@ -520,9 +547,10 @@ with tab_flota:
 # ==========================================
 with tab_historial:
     st.subheader("📜 Historial de Propuestas Guardadas")
-    if st.session_state.historico:
-        for i, reg in enumerate(reversed(st.session_state.historico)):
-            idx_real = len(st.session_state.historico) - 1 - i
+    historial_persistente = cargar_historial_desde_sheet()
+    if historial_persistente:
+        for i, reg in enumerate(reversed(historial_persistente)):
+            idx_real = len(historial_persistente) - 1 - i
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             with col_info:
                 icon = "🚚" if reg.get("tipo") == "Flota" else "🚗"
@@ -534,7 +562,7 @@ with tab_historial:
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_{idx_real}"):
-                    st.session_state.historico.pop(idx_real)
+                    eliminar_propuesta_en_sheet(idx_real)
                     st.rerun()
     else: 
         st.info("No hay propuestas en el historial temporal todavía.")
