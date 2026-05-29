@@ -449,6 +449,35 @@ div.stButton > button[kind="secondary"]:hover {
 .btn-copiar-edf:hover {
     background-color: #111827 !important;
 }
+@media print {
+    /* Oculta toda la UI de Streamlit excepto el contenido */
+    header, footer, [data-testid="stSidebar"], 
+    [data-testid="stToolbar"], [data-testid="stDecoration"],
+    [data-testid="stStatusWidget"], .stDeployButton { 
+        display: none !important; 
+    }
+    /* Achica y centra el contenido para que entre en A4 */
+    [data-testid="stAppViewContainer"] {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    [data-testid="stMainBlockContainer"] {
+        max-width: 100% !important;
+        padding: 10px !important;
+    }
+    /* Reduce fuente general */
+    body, p, span, div {
+        font-size: 11px !important;
+        line-height: 1.3 !important;
+    }
+    h2 { font-size: 15px !important; }
+    h3 { font-size: 13px !important; }
+    /* Fuerza que todo entre en una página */
+    * { 
+        box-shadow: none !important; 
+        overflow: visible !important;
+    }
+}
 </style>
 """, unsafe_allow_html=True)
 
