@@ -168,7 +168,7 @@ def guardar_propuesta_en_sheet(datos):
         hoja = _get_hoja_historial()
         hoja.append_row([datos.get("fecha",""), datos.get("tipo",""), datos.get("n",""), json.dumps(datos)])
     except Exception as e:
-        st.error(f"Error al guardar: {e}")
+        st.error(f"Error al guardar: {type(e).__name__}: {e}")
 
 def cargar_historial_desde_sheet():
     try:
