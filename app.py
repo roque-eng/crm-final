@@ -10,7 +10,7 @@ import base64
 # ==========================================
 # ⚙️ CONFIGURACIÓN GLOBAL Y ENLACES
 # ==========================================
-URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
+URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit"
 TC_USD = 40.5
 
 # FUNCIÓN COMODÍN PARA LIMPIAR Y FORMATEAR NÚMEROS EN LA VISTA
