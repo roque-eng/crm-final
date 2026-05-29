@@ -347,9 +347,9 @@ with tab_ven:
 
 # --- PLANTILLAS EXCLUSIVAS PARA VEHÍCULOS ---
 txt_ben_veh = "• Auxilio mecánico e ilimitado\n• Cobertura Mercosur\n• Cristales: USD 300 SANCOR, USD 200 BSE O SBI, USD 100 SURA, demás cobran deducible\n• Granizo: SANCOR incluido sin deducible, demás aplican deducible."
-txt_hog_veh = "• Incendio Edificio USD 100.000\n• Incendio Contenido 50.000\n• Hurto Contenido 5.000\n• Costo ANUAL Casas: USD 180\n• Costo ANUAL Aptos: USD 120"
-txt_alq_veh = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo: UYU 3.000 por vehículo."
-txt_bic_veh = "• Cobertura por Hurto y/o Rapiña de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Daños a Terceros que puedas provocar hasta USD 10.000.\n• Costo ANUAL: USD 120"
+txt_hog_veh = "• Incendio Edificio USD 100.000\n• Incendio Contenido 50.000\n• Hurto Contenido 5.000\n• Costo anual Casas: USD 180\n• Costo anual Aptos: USD 120"
+txt_alq_veh = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo anual: UYU 3.000 por vehículo."
+txt_bic_veh = "• Cobertura por Hurto y/o Rapiña de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Daños a Terceros que puedas provocar hasta USD 10.000.\n• Costo anual: USD 120"
 
 # --- PLANTILLAS EXCLUSIVAS PARA FLOTAS ---
 txt_obs_flota = """
@@ -360,9 +360,9 @@ Beneficios
   - Cobertura de cristales, cerraduras: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100, demás compañías aplican deducible y después pagan.
   - Cobertura de Granizo: SANCOR lo cubre, demás compañías cobran deducible y después pagan."""
 
-txt_acc_flota = "• Seguro de Vida a causa de Accidentes (para los choferes): USD 25.000 de cobertura.\n• Costo Anual USD 50 por chofer."
-txt_alq_flota = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo: UYU 3.000 por vehículo."
-txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo Anual: UYU 5.000"
+txt_acc_flota = "• Seguro de Vida a causa de Accidentes (para los choferes): USD 25.000 de cobertura.\n• Costo anual: USD 50 por chofer."
+txt_alq_flota = "• Auto sustituto por hasta 15 días en caso de que tu vehículo sufra un siniestro total o parcial.\n• Costo anual: UYU 3.000 por vehículo."
+txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici eléctrica o moto. Valor hasta USD 1.000.\n• Cobertura: Daños a Terceros + Hurto + Incendio\n• Costo anual: UYU 5.000"
 
 # ==========================================
 # 🎨 ESTILOS CSS (BOTONES ROJOS DE ALTA VISIBILIDAD)
