@@ -508,12 +508,19 @@ with tab_cot:
     edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
     
     with st.container(border=True):
+        # Precarga en session_state para que funcione al traer del historial
+        if edit_ind:
+            st.session_state["ci_v_final"] = edit_ind.get("doc", "")
+            st.session_state["nom_v_final"] = edit_ind.get("n", "")
+            st.session_state["veh_v_final"] = edit_ind.get("v", "")
+            st.session_state["cont_v_final"] = edit_ind.get("cont", "099 635 244")
+
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
-        doc_in = c_doc.text_input("CI/RUT", value=edit_ind.get("doc", ""), key="ci_v_final")
-        n_cot = c_nom.text_input("Nombre", value=edit_ind.get('n', ''), key="nom_v_final")
-        v_cot = c_veh.text_input("Vehículo", value=edit_ind.get("v", ""), key="veh_v_final")
+        doc_in = c_doc.text_input("CI/RUT", key="ci_v_final")
+        n_cot = c_nom.text_input("Nombre", key="nom_v_final")
+        v_cot = c_veh.text_input("Vehículo", key="veh_v_final")
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v_final")
-        cont_cot = c_con.text_input("Contacto Asesor", value=edit_ind.get("cont", "099 635 244"), key="cont_v_final")
+        cont_cot = c_con.text_input("Contacto Asesor", key="cont_v_final")
 
     cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
     if edit_ind and "tab" in edit_ind: 
@@ -563,13 +570,19 @@ with tab_flota:
     st.subheader("🚛 Cotizador Seguro de Flotas")
     edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
     
+    if edit_f:
+        st.session_state["f_nom_fl"] = edit_f.get("n", "")
+        st.session_state["f_cia_fl"] = edit_f.get("e", "SBI")
+        st.session_state["f_as_fl"] = edit_f.get("e_nombre", "EDF SEGUROS")
+        st.session_state["f_co_fl"] = edit_f.get("cont", "099 358 393")
+
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        f_asegurado = st.text_input("Asegurado", value=edit_f.get('n', ''), key="f_nom_fl")
-        f_cia_elegida = st.text_input("Compañía Aseguradora", value=edit_f.get('e', 'SBI'), key="f_cia_fl")
+        f_asegurado = st.text_input("Asegurado", key="f_nom_fl")
+        f_cia_elegida = st.text_input("Compañía Aseguradora", key="f_cia_fl")
     with col_f2:
-        f_asesor_nombre = st.text_input("Asesor", value=edit_f.get('e_nombre', 'EDF SEGUROS'), key="f_as_fl")
-        f_contacto = st.text_input("Contacto", value=edit_f.get('cont', '099 635 244'), key="f_co_fl")
+        f_asesor_nombre = st.text_input("Asesor", key="f_as_fl")
+        f_contacto = st.text_input("Contacto", key="f_co_fl")
 
     cols_f = ["Marca", "Modelo", "Año", "Matrícula", "Cobertura", "Contado", "Deducible"]
     if edit_f and "tab" in edit_f: 
