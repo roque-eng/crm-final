@@ -91,7 +91,7 @@ if "q" in query_params:
                     if len(partes) == 2:
                         out += f'<span style="display:block; margin-top:8px; padding:6px 10px; background:#EFF6FF; border-radius:6px; font-weight:bold; color:#1E3A8A;">💰 {partes[0].strip()}: <span style="color:#111;">{partes[1].strip()}</span></span>'
                     else:
-                        out += f'<span style="display:block; margin-top:8px; font-weight:bold; color:#1E3A8A;">💰 {l.lstrip("•- ")}</span>'
+                        out += f'<span style="display:block; margin-top:8px; padding:6px 10px; background:#EFF6FF; border-radius:6px; font-weight:bold; color:#1E3A8A;">💰 <span style="color:#111;">{l.lstrip("•- ")}</span></span>'
                 else:
                     out += f'<span style="display:block; margin-top:3px;">{l}</span>'
             return out + '</div>'
