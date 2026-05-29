@@ -153,28 +153,40 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # ==========================================
 def guardar_propuesta_en_sheet(datos):
     try:
-        df_hist = conn.read(spreadsheet=URL_HOJA, worksheet="Historial", ttl=0)
-    except:
-        df_hist = pd.DataFrame(columns=["fecha", "tipo", "asegurado", "datos_json"])
-    nueva_fila = pd.DataFrame([{"fecha": datos.get("fecha", ""), "tipo": datos.get("tipo", ""), "asegurado": datos.get("n", ""), "datos_json": json.dumps(datos)}])
-    df_hist = pd.concat([df_hist, nueva_fila], ignore_index=True)
-    conn.update(spreadsheet=URL_HOJA, worksheet="Historial", data=df_hist)
+        import gspread
+        from streamlit_gsheets import GSheetsConnection
+        client = conn._instance  # cliente gspread ya autenticado
+        spreadsheet = client.open_by_url(URL_HOJA)
+        hoja = spreadsheet.worksheet("Historial")
+        nueva_fila = [
+            datos.get("fecha", ""),
+            datos.get("tipo", ""),
+            datos.get("n", ""),
+            json.dumps(datos)
+        ]
+        hoja.append_row(nueva_fila)
+    except Exception as e:
+        st.error(f"Error al guardar: {e}")
 
 def cargar_historial_desde_sheet():
     try:
-        df_hist = conn.read(spreadsheet=URL_HOJA, worksheet="Historial", ttl=0)
-        if df_hist.empty: return []
-        return [json.loads(row["datos_json"]) for _, row in df_hist.iterrows() if row.get("datos_json")]
+        client = conn._instance
+        spreadsheet = client.open_by_url(URL_HOJA)
+        hoja = spreadsheet.worksheet("Historial")
+        registros = hoja.get_all_records()
+        return [json.loads(r["datos_json"]) for r in registros if r.get("datos_json")]
     except:
         return []
 
 def eliminar_propuesta_en_sheet(idx_real):
     try:
-        df_hist = conn.read(spreadsheet=URL_HOJA, worksheet="Historial", ttl=0)
-        df_hist = df_hist.drop(index=idx_real).reset_index(drop=True)
-        conn.update(spreadsheet=URL_HOJA, worksheet="Historial", data=df_hist)
-    except:
-        pass
+        client = conn._instance
+        spreadsheet = client.open_by_url(URL_HOJA)
+        hoja = spreadsheet.worksheet("Historial")
+        # +2 porque Sheets empieza en 1 y la fila 1 es el encabezado
+        hoja.delete_rows(idx_real + 2)
+    except Exception as e:
+        st.error(f"Error al eliminar: {e}")
 df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
 df_raw.columns = df_raw.columns.str.strip()
 
