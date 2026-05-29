@@ -406,8 +406,7 @@ txt_bic_flota = "• Si algún empleado de su empresa quiere asegurar la bici el
 # ==========================================
 st.markdown("""
 <style>
-/* Forzamos el color rojo en los botones principales de generación de link */
-div.stButton > button {
+div.stButton > button[kind="primary"] {
     background-color: #ff4b4b !important;
     color: white !important;
     border: 2px solid #ff4b4b !important;
@@ -416,13 +415,26 @@ div.stButton > button {
     padding: 10px 24px !important;
     transition: all 0.3s ease !important;
 }
-div.stButton > button:hover {
+div.stButton > button[kind="primary"]:hover {
     background-color: #ff3333 !important;
     border-color: #ff3333 !important;
     color: white !important;
     transform: scale(1.01) !important;
 }
-/* Estilo prolijo para el botón de copiar nativo HTML */
+div.stButton > button[kind="secondary"] {
+    background-color: white !important;
+    color: #374151 !important;
+    border: 1px solid #d1d5db !important;
+    font-weight: normal !important;
+    padding: 3px 10px !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
+}
+div.stButton > button[kind="secondary"]:hover {
+    background-color: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+    transform: none !important;
+}
 .btn-copiar-edf {
     background-color: #1E3A8A !important;
     color: white !important;
