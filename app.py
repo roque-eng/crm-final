@@ -151,28 +151,26 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # ==========================================
 # 💾 FUNCIONES DE HISTORIAL PERSISTENTE
 # ==========================================
+def _get_hoja_historial():
+    import gspread
+    from google.oauth2.service_account import Credentials
+    creds_dict = st.secrets["connections"]["gsheets"]
+    scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    client = gspread.authorize(creds)
+    spreadsheet = client.open_by_url(URL_HOJA)
+    return spreadsheet.worksheet("Historial")
+
 def guardar_propuesta_en_sheet(datos):
     try:
-        import gspread
-        from streamlit_gsheets import GSheetsConnection
-        client = conn._instance  # cliente gspread ya autenticado
-        spreadsheet = client.open_by_url(URL_HOJA)
-        hoja = spreadsheet.worksheet("Historial")
-        nueva_fila = [
-            datos.get("fecha", ""),
-            datos.get("tipo", ""),
-            datos.get("n", ""),
-            json.dumps(datos)
-        ]
-        hoja.append_row(nueva_fila)
+        hoja = _get_hoja_historial()
+        hoja.append_row([datos.get("fecha",""), datos.get("tipo",""), datos.get("n",""), json.dumps(datos)])
     except Exception as e:
         st.error(f"Error al guardar: {e}")
 
 def cargar_historial_desde_sheet():
     try:
-        client = conn._instance
-        spreadsheet = client.open_by_url(URL_HOJA)
-        hoja = spreadsheet.worksheet("Historial")
+        hoja = _get_hoja_historial()
         registros = hoja.get_all_records()
         return [json.loads(r["datos_json"]) for r in registros if r.get("datos_json")]
     except:
@@ -180,10 +178,7 @@ def cargar_historial_desde_sheet():
 
 def eliminar_propuesta_en_sheet(idx_real):
     try:
-        client = conn._instance
-        spreadsheet = client.open_by_url(URL_HOJA)
-        hoja = spreadsheet.worksheet("Historial")
-        # +2 porque Sheets empieza en 1 y la fila 1 es el encabezado
+        hoja = _get_hoja_historial()
         hoja.delete_rows(idx_real + 2)
     except Exception as e:
         st.error(f"Error al eliminar: {e}")
