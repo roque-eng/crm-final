@@ -85,9 +85,17 @@ if "q" in query_params:
             for l in txt.split('\n'): out += f'<span style="display:block; margin-top:3px;">{l.strip()}</span>'
             return out + '</div>'
             
-        cx1.markdown(b_html_cli("Hogar", "🏠", propuesta_cliente.get("ch", "")), unsafe_allow_html=True)
-        cx2.markdown(b_html_cli("Alquiler / Auto Sust.", "🚗", propuesta_cliente.get("ca", "")), unsafe_allow_html=True)
-        cx3.markdown(b_html_cli("Bici", "🚲", propuesta_cliente.get("cb", "")), unsafe_allow_html=True)
+        es_flota = propuesta_cliente.get("tipo") == "Flota"
+
+        tit_ch = "Accidentes Personales" if es_flota else "Hogar"
+        ico_ch = "🧑‍⚕️" if es_flota else "🏠"
+        tit_ca = "Auto Sustituto / Alquiler" if es_flota else "Alquiler / Auto Sust."
+        tit_cb = "Bici Eléctrica o Moto" if es_flota else "Bici"
+        ico_cb = "🛵" if es_flota else "🚲"
+        
+        cx1.markdown(b_html_cli(tit_ch, ico_ch, propuesta_cliente.get("ch", "")), unsafe_allow_html=True)
+        cx2.markdown(b_html_cli(tit_ca, "🚗", propuesta_cliente.get("ca", "")), unsafe_allow_html=True)
+        cx3.markdown(b_html_cli(tit_cb, ico_cb, propuesta_cliente.get("cb", "")), unsafe_allow_html=True)
         
         st.markdown("---")
         st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e_nombre' if propuesta_cliente.get('tipo') == 'Flota' else 'e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont', '')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
