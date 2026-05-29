@@ -154,7 +154,9 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def _get_hoja_historial():
     import gspread
     from google.oauth2.service_account import Credentials
-    creds_dict = st.secrets["connections"]["gsheets"]
+    import json
+    
+    creds_dict = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
     scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
