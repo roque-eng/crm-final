@@ -150,22 +150,23 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
+USUARIOS = {"Roque de Freitas": "Rockuda.4428", "Joel Mokosce": "Joe2025", "Andrea Cazarian": "Andre2025", "Amelia Bentancor": "ABentancor2025", "Gonzalo Robaina": "GRobaina2025", "Eduardo Robaina": "ERobaina.2025", "Grismer Sanchez": "GSanchez2025", "Matías de Freitas": "Matiti2025", "Erica Hugo": "EHugo2025", "Ana Perdomo": "APerdomo2025", "Romina Sierra": "RSierra2025", "Letizia Tomasi": "LTomasi2025", "Eugenia Cabral": "ECabral2025", "Pablo Gagliardi": "PGagliardi2025", "Mariana Flores": "Mflores2025"}
 CONTACTOS = {
-    "RDF": "099236116",
-    "JOE": "099595185",
-    "ANDRE": "098592816",
-    "AB": "098358393",
-    "GR": "091339642",
-    "ER": "099430277",
-    "GS": "094536444",
-    "MDF": "095074767",
-    "EH": "099513224",
-    "AP": "099661587",
-    "RS": "092188815",
-    "LT": "099816395",
-    "EC": "099654708",
-    "PG": "091282011"
+    "Roque de Freitas": "099236116",
+    "Joel Mokosce": "099595185",
+    "Andrea Cazarian": "098592816",
+    "Amelia Bentancor": "098358393",
+    "Gonzalo Robaina": "091339642",
+    "Eduardo Robaina": "099430277",
+    "Grismer Sanchez": "094536444",
+    "Matías de Freitas": "095074767",
+    "Erica Hugo": "099513224",
+    "Ana Perdomo": "099661587",
+    "Romina Sierra": "092188815",
+    "Letizia Tomasi": "099816395",
+    "Eugenia Cabral": "099654708",
+    "Pablo Gagliardi": "091282011",
+    "Mariana Flores": "092628791"
 }
 if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] = "RDF"
 
