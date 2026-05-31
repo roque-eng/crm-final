@@ -413,6 +413,54 @@ with tab_ven:
         else:
             st.info("No hay vencimientos en el rango seleccionado.")
 
+        # Botón de mail precargado
+                        st.write("")
+                        nombre_corto = fila_completa_v.get(c_asegurado, '').split()[0].capitalize()
+                        vehiculo = fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', ''))
+                        vencimiento = fila_completa_v.get('Fin de Vigencia', '')
+                        premio_uyu = fila_completa_v.get(c_p_uyu, '')
+                        premio_usd = fila_completa_v.get(c_p_usd, '')
+                        aseguradora_actual = fila_completa_v.get(c_aseguradora, '')
+                        mail_cliente = fila_completa_v.get('Mail', col_map.get('mail', ''))
+        
+                        # Premio que corresponda
+                        if premio_uyu and str(premio_uyu) not in ['0', 'None', 'nan', '']:
+                            premio_txt = f"UYU {f_num(premio_uyu)}"
+                        elif premio_usd and str(premio_usd) not in ['0', 'None', 'nan', '']:
+                            premio_txt = f"USD {f_num(premio_usd)}"
+                        else:
+                            premio_txt = "a coordinar"
+        
+                        nombre_asesor = NOMBRES.get(st.session_state.usuario_actual, st.session_state.usuario_actual)
+                        contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
+        
+                        asunto = f"Renovación de tu seguro - vencimiento {vencimiento}"
+                        cuerpo = f"""Estimado/a {nombre_corto},
+        
+        Te escribo porque está venciendo la póliza de tu {vehiculo} el próximo {vencimiento}.
+        
+        Este año estabas pagando en {aseguradora_actual}: {premio_txt}.
+        
+        Para la renovación sacamos algunos costos comparativos:
+        
+        - BSE: $
+        - SBI: $
+        - MAPFRE: $
+        - SANCOR: $
+        - SURA: $
+        - PORTO: $
+        - BERKLEY: $
+        
+        Quedo a las órdenes,
+        Saludos,
+        
+        {nombre_asesor}
+        EDF Seguros - {contacto_asesor}"""
+        
+                        import urllib.parse
+                        mailto = f"mailto:{mail_cliente}?subject={urllib.parse.quote(asunto)}&body={urllib.parse.quote(cuerpo)}"
+                        st.markdown(f'<a href="{mailto}" target="_blank"><button style="background-color:#1E3A8A;color:white;border:none;padding:8px 18px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">📧 Mail de renovación</button></a>', unsafe_allow_html=True)
+
 # ==========================================
 # 📋 PLANTILLAS DE TEXTOS PRECARGADOS (SEPARADOS)
 # ==========================================
