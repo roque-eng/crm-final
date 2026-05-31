@@ -232,6 +232,7 @@ c_ramo = col_map.get("ramo", "Ramo")
 c_p_usd = col_map.get("premio usd (iva inc)", "Premio USD (IVA inc)")
 c_p_uyu = col_map.get("premio uyu (iva inc)", "Premio UYU (IVA inc)")
 c_adjunto = col_map.get("adjunto (póliza)", col_map.get("adjunto (poliza)", "Adjunto (póliza)"))
+c_mail = col_map.get("mail", col_map.get("dirección de correo electrónico", col_map.get("email", "Mail")))
 
 df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get(c_p_usd, 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get(c_p_uyu, 0), errors='coerce').fillna(0) / TC_USD)).round(0)
 df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw.get('Fin de Vigencia', date.today()), dayfirst=True, errors='coerce').dt.date
@@ -319,7 +320,7 @@ with tab_car:
                     st.markdown("**👤 Datos del Cliente:**")
                     st.write(f"• **Documento:** {fila_completa.get(c_documento, 'N/D')}")
                     st.write(f"• **Celular:** {fila_completa.get('Celular', col_map.get('celular', 'N/D'))}")
-                    st.write(f"• **Mail:** {fila_completa.get('Mail', col_map.get('mail', 'N/D'))}")
+                    st.write(f"• **Mail:** {fila_completa.get(c_mail, col_map.get('mail', 'N/D'))}")
                 with cx2:
                     st.markdown("**🚗 Detalles del Bien:**")
                     st.write(f"• **Ramo:** {fila_completa.get(c_ramo, 'N/D')}")
@@ -399,7 +400,7 @@ with tab_ven:
                         st.markdown("**👤 Datos del Cliente:**")
                         st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
                         st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
-                        st.write(f"• **Mail:** {fila_completa_v.get('Mail', col_map.get('mail', 'N/D'))}")
+                        st.write(f"• **Mail:** {fila_completa_v.get(c_mail, col_map.get('mail', 'N/D'))}")
                     with cv2:
                         st.markdown("**🚗 Detalles del Bien:**")
                         st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
@@ -424,7 +425,7 @@ with tab_ven:
                         premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
                         premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
                         aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
-                        mail_cliente = limpiar(fila_completa_v.get('Mail', col_map.get('mail', '')))    
+                        mail_cliente = limpiar(fila_completa_v.get(c_mail, col_map.get('mail', '')))    
                         
                         # Premio que corresponda
                         if premio_uyu and str(premio_uyu) not in ['0', 'None', 'nan', '']:
