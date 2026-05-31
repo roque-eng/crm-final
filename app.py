@@ -413,13 +413,18 @@ with tab_ven:
 
                         # Botón de mail precargado
                         st.write("")
-                        nombre_corto = fila_completa_v.get(c_asegurado, '').split()[0].capitalize()
-                        vehiculo = fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', ''))
-                        vencimiento = fila_completa_v.get('Fin de Vigencia', '')
-                        premio_uyu = fila_completa_v.get(c_p_uyu, '')
-                        premio_usd = fila_completa_v.get(c_p_usd, '')
-                        aseguradora_actual = fila_completa_v.get(c_aseguradora, '')
-                        mail_cliente = fila_completa_v.get('Mail', col_map.get('mail', ''))
+                        def limpiar(val):
+                            v = str(val).strip()
+                            return '' if v in ['nan', 'None', 'N/D', 'none'] else v
+                        
+                        nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
+                        nombre_corto = nombre_completo.split()[0].capitalize() if nombre_completo else 'Cliente'
+                        vehiculo = limpiar(fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', ''))) or 'su vehículo'
+                        vencimiento = limpiar(str(fila_completa_v.get('Fin de Vigencia', '')))
+                        premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
+                        premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
+                        aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
+                        mail_cliente = limpiar(fila_completa_v.get('Mail', col_map.get('mail', '')))    
                         
                         # Premio que corresponda
                         if premio_uyu and str(premio_uyu) not in ['0', 'None', 'nan', '']:
