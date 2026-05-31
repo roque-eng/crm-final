@@ -151,6 +151,22 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
+CONTACTOS = {
+    "RDF": "099236116",
+    "JOE": "099595185",
+    "ANDRE": "098592816",
+    "AB": "098358393",
+    "GR": "091339642",
+    "ER": "099430277",
+    "GS": "094536444",
+    "MDF": "095074767",
+    "EH": "099513224",
+    "AP": "099661587",
+    "RS": "092188815",
+    "LT": "099816395",
+    "EC": "099654708",
+    "PG": "091282011"
+}
 if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] = "RDF"
 
 if 'logueado' not in st.session_state or not st.session_state['logueado']:
@@ -520,7 +536,9 @@ with tab_cot:
         n_cot = c_nom.text_input("Nombre", key="nom_v_final")
         v_cot = c_veh.text_input("Vehículo", key="veh_v_final")
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v_final")
-        cont_cot = c_con.text_input("Contacto Asesor", key="cont_v_final")
+        if not edit_ind:
+            st.session_state["cont_v_final"] = CONTACTOS.get(e_cot, "")
+        cont_cot = c_con.text_input("Contacto Asesor", key="cont_v_final")   
 
     cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
     if edit_ind and "tab" in edit_ind: 
@@ -582,6 +600,8 @@ with tab_flota:
         f_cia_elegida = st.text_input("Compañía Aseguradora", key="f_cia_fl")
     with col_f2:
         f_asesor_nombre = st.text_input("Asesor", key="f_as_fl")
+        if not edit_f:
+            st.session_state["f_co_fl"] = CONTACTOS.get(st.session_state.get("f_as_fl", ""), "")
         f_contacto = st.text_input("Contacto", key="f_co_fl")
 
     cols_f = ["Marca", "Modelo", "Año", "Matrícula", "Cobertura", "Contado", "Deducible"]
