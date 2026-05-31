@@ -237,7 +237,7 @@ df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get(c_p_usd, 0), errors='coer
 df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw.get('Fin de Vigencia', date.today()), dayfirst=True, errors='coerce').dt.date
 
 with st.sidebar:
-    st.title(f"👤 {USUARIOS.get(st.session_state.usuario_actual, 'Asesor')}")
+    st.title(f"👤 {st.session_state.usuario_actual}")
     def get_list(col): return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
     f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
     f_as = st.selectbox("Aseguradora", get_list(c_aseguradora))
