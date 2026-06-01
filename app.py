@@ -462,8 +462,8 @@ with tab_ven:
                         EDF Seguros - {contacto_asesor}"""
                         
                         import urllib.parse
-                        mailto = f"mailto:{mail_cliente}?subject={urllib.parse.quote(asunto)}&body={urllib.parse.quote(cuerpo)}"
-                        st.markdown(f'<a href="{mailto}" target="_blank"><button style="background-color:#1E3A8A;color:white;border:none;padding:8px 18px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">📧 Mail de renovación</button></a>', unsafe_allow_html=True)
+                        mailto = f"mailto:{mail_cliente}?subject={urllib.parse.quote(asunto, safe='')}&body={urllib.parse.quote(cuerpo, safe='')}"
+                        st.markdown(f'<a href="{mailto}"><button style="background-color:#1E3A8A;color:white;border:none;padding:8px 18px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">📧 Mail de renovación</button></a>', unsafe_allow_html=True)
             else:
                 st.info("No hay vencimientos en el rango seleccionado.")
 
