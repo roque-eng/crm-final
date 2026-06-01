@@ -424,8 +424,8 @@ with tab_ven:
                 aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
                 ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
 				c_detalle = col_map.get("detalle", "")
-                detalle = limpiar(fila_completa_v.get(c_detalle, '')) if c_detalle else ''
-                ramo_completo = f"{ramo} ({detalle})" if detalle else ramo
+				detalle = limpiar(fila_completa_v.get(c_detalle, '')) if c_detalle else ''
+				ramo_completo = f"{ramo} ({detalle})" if detalle else ramo
                 vencimiento = fila_completa_v.get('Fin de Vigencia', '')
                 fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
                 nombre_asesor = st.session_state.usuario_actual
