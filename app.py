@@ -408,19 +408,18 @@ with tab_ven:
                         texto_wp = f"""Hola {nombre_corto}!
 Te escribo porque esta venciendo la poliza de tu {ramo_completo} el proximo *{fecha_fmt}*.
 Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
-Para la renovacion tenemos los siguientes comparativos:
+
+El costo de renovación sería:
+
+También sacamos algunos comparativos:
 
 - BSE:
 - SBI:
 - MAPFRE:
-- SANCOR:
 - SURA:
-- PORTO:
-- BERKLEY:
 
-Auto Sustituto (por 15 dias) en caso de chocar y que tu vehiculo vaya al taller y necesites uno, debemos agregar $3.300 a cualquier aseguradora.
+Si queres agregar Auto Sustituto (por 15 dias) en caso de chocar y que tu vehiculo vaya al taller y necesites uno, debemos agregar $3.300 a cualquier aseguradora.
 
-Quedo a las ordenes,
 Saludos!
 {nombre_asesor}"""
                         st.code(texto_wp, language=None)
