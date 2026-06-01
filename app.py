@@ -368,7 +368,9 @@ with tab_ven:
                     with cv1:
                         st.markdown("**👤 Datos del Cliente:**")
                         st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
-                        st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
+                        c_npoliza = col_map.get("n° de póliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
+                        npoliza_val = limpiar(fila_completa_v.get(c_npoliza, '')) if c_npoliza else 'N/D'
+                        st.write(f"• **N° de Póliza:** {npoliza_val or 'N/D'}")
                         st.write(f"• **Mail:** {fila_completa_v.get(c_mail, 'N/D')}")
                     with cv2:
                         st.markdown("**📋 Detalles del Bien:**")
