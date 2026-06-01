@@ -431,23 +431,23 @@ with tab_ven:
                     fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
                     with st.expander("💬 Texto renovación (predeterminado)"):
                         texto_wp = f"""Hola {nombre_corto}!
-                    Te escribo porque está venciendo la póliza de tu {ramo} el próximo *{fecha_fmt}*.
-                    Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
-                    Para la renovación tenemos los siguientes comparativos:
+    Te escribo porque está venciendo la póliza de tu {ramo} el próximo *{fecha_fmt}*.
+    Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
+    Para la renovación tenemos los siguientes comparativos:
                     
-                    - BSE:
-                    - SBI:
-                    - MAPFRE:
-                    - SANCOR:
-                    - SURA:
-                    - PORTO:
-                    - BERKLEY:
+    - BSE:
+    - SBI:
+    - MAPFRE:
+    - SANCOR:
+    - SURA:
+    - PORTO:
+    - BERKLEY:
                 
-                    Auto Sustituto (por 15 días) en caso de chocar y que tu vehículo vaya al taller a reparar y necesites uno debemos agregar $3.300 a cualquier aseguradora. 
+    Auto Sustituto (por 15 días) en caso de chocar y que tu vehículo vaya al taller a reparar y necesites uno debemos agregar $3.300 a cualquier aseguradora. 
                     
-                    Quedo a las órdenes,
-                    Saludos!
-                    {nombre_asesor}"""
+    Quedo a las órdenes,
+    Saludos!
+    {nombre_asesor}"""
                     st.code(texto_wp, language=None)
                     else:
                     st.info("No hay vencimientos en el rango seleccionado.")
