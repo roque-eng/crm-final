@@ -393,6 +393,7 @@ with tab_ven:
                     premio_txt = "a coordinar"
 
                 texto_wp = f"""Hola {nombre_corto}!
+
 Te escribo porque el proximo *{fecha_fmt}* esta venciendo la poliza de tu {ramo_completo} .
 
 Actualmente el costo en *{aseguradora_actual}* es de *{premio_txt}*. El costo informado para la renovación es: *PRECIO NUEVO*
