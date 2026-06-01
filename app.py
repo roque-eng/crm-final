@@ -431,35 +431,27 @@ with tab_ven:
                     ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
                     fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
                     texto_mail = f"""Asunto: Renovación de tu seguro - vencimiento {fecha_fmt}
-                    
-    hola {nombre_corto}, como estás?
-                    
-    Te escribo porque está venciendo la póliza de tu {ramo} el próximo {fecha_fmt}.
-                    
-    Este año estabas pagando en {aseguradora_actual}: {premio_txt}.
-                    
-    Para esta próxima renovación, tenemos las siguientes opciones:
-                    
-    - BSE: $
-    - SBI: $
-    - MAPFRE: $
-    - SANCOR: $
-    - SURA: $
-    - PORTO: $
-    - BERKLEY: $
 
-    Todas cuentan con auxilio mecánico. 
+                    with st.expander("💬 Texto renovación (predeterminado)"):
+        texto_wp = f"""Hola {nombre_corto}!
+    Te escribo porque está venciendo la póliza de tu {ramo} el próximo *{fecha_fmt}*.
+    Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
+    Para la renovación tenemos los siguientes comparativos:
     
+    - BSE:
+    - SBI:
+    - MAPFRE:
+    - SANCOR:
+    - SURA:
+    - PORTO:
+    - BERKLEY:
+
     Auto Sustituto (por 15 días) en caso de chocar y que tu vehículo vaya al taller a reparar y necesites uno debemos agregar $3.300 a cualquier aseguradora. 
-                    
+    
     Quedo a las órdenes,
-    Saludos,
+    Saludos!
     {nombre_asesor}"""
-                    with st.expander("📧 Ver mail de renovación"):
-                       st.code(texto_mail, language=None)
-                    with st.expander("💬 Ver mensaje de WhatsApp"):
-                        texto_wp = f"Hola {nombre_corto}! Te escribo porque está venciendo la póliza de tu {ramo} el próximo {fecha_fmt}. Este año estabas pagando en {aseguradora_actual}: {premio_txt}. Para la renovación tenemos comparativos de BSE, SBI, MAPFRE, SANCOR, SURA, PORTO y BERKLEY. Quedo a las órdenes, saludos! {nombre_asesor} - {contacto_asesor}"
-                        st.code(texto_wp, language=None)
+        st.code(texto_wp, language=None)
             else:
                 st.info("No hay vencimientos en el rango seleccionado.")
 
