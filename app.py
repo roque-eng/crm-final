@@ -423,6 +423,9 @@ with tab_ven:
                 premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
                 aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
                 ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
+				c_detalle = col_map.get("detalle", "")
+                detalle = limpiar(fila_completa_v.get(c_detalle, '')) if c_detalle else ''
+                ramo_completo = f"{ramo} ({detalle})" if detalle else ramo
                 vencimiento = fila_completa_v.get('Fin de Vigencia', '')
                 fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
                 nombre_asesor = st.session_state.usuario_actual
@@ -435,7 +438,7 @@ with tab_ven:
                     premio_txt = "a coordinar"
                 with st.expander("💬 Texto renovación (predeterminado)"):
                     texto_wp = f"""Hola {nombre_corto}!
-Te escribo porque está venciendo la póliza de tu {ramo} el próximo *{fecha_fmt}*.
+Te escribo porque está venciendo la póliza de tu {ramo_completo} el próximo *{fecha_fmt}*.
 Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
 Para la renovación tenemos los siguientes comparativos:
 
