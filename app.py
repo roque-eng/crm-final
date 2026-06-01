@@ -432,25 +432,29 @@ with tab_ven:
                     fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
                     texto_mail = f"""Asunto: Renovación de tu seguro - vencimiento {fecha_fmt}
                     
-                    Estimado/a {nombre_corto},
+    hola {nombre_corto}, como estás?
                     
-                    Te escribo porque está venciendo la póliza de tu {ramo} el próximo {fecha_fmt}.
+    Te escribo porque está venciendo la póliza de tu {ramo} el próximo {fecha_fmt}.
                     
-                    Este año estabas pagando en {aseguradora_actual}: {premio_txt}.
+    Este año estabas pagando en {aseguradora_actual}: {premio_txt}.
                     
-                    Para la renovación sacamos algunos costos comparativos:
+    Para esta próxima renovación, tenemos las siguientes opciones:
                     
-                    - BSE: $
-                    - SBI: $
-                    - MAPFRE: $
-                    - SANCOR: $
-                    - SURA: $
-                    - PORTO: $
-                    - BERKLEY: $
+    - BSE: $
+    - SBI: $
+    - MAPFRE: $
+    - SANCOR: $
+    - SURA: $
+    - PORTO: $
+    - BERKLEY: $
+
+    Todas cuentan con auxilio mecánico. 
+    
+    Auto Sustituto (por 15 días) en caso de chocar y que tu vehículo vaya al taller a reparar y necesites uno debemos agregar $3.300 a cualquier aseguradora. 
                     
-                    Quedo a las órdenes,
-                    Saludos,
-                    {nombre_asesor}"""
+    Quedo a las órdenes,
+    Saludos,
+    {nombre_asesor}"""
                     with st.expander("📧 Ver mail de renovación"):
                        st.code(texto_mail, language=None)
             else:
