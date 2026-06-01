@@ -406,12 +406,12 @@ with tab_ven:
 
                     with st.expander("💬 Texto renovacion (predeterminado)"):
                         texto_wp = f"""Hola {nombre_corto}!
+
 Te escribo porque esta venciendo la poliza de tu {ramo_completo} el proximo *{fecha_fmt}*.
 
 Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*. El costo de renovación (próxima vigencia) sería: *PRECIO NUEVO*
 
 También sacamos algunos comparativos:
-
 - BSE:
 - SBI:
 - MAPFRE:
