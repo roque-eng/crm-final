@@ -401,10 +401,10 @@ with tab_ven:
                         st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
                         st.write(f"• **Mail:** {fila_completa_v.get(c_mail, col_map.get('mail', 'N/D'))}")
                     with cv2:
-                    st.markdown("**🚗 Detalles del Bien:**")
-                    st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
-                    st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', col_map.get('matricula', 'N/D'))}")
-                    st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
+	                    st.markdown("**🚗 Detalles del Bien:**")
+	                    st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+	                    st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', col_map.get('matricula', 'N/D'))}")
+	                    st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
                 def limpiar(val):
                     v = str(val).strip()
                     return '' if v in ['nan', 'None', 'N/D', 'none'] else v
