@@ -410,9 +410,9 @@ with tab_ven:
                         premio_txt = f"USD {f_num(premio_usd)}"
                     else:
                         premio_txt = "a coordinar"
-
-                    st.markdown('<style>details summary { background-color: #1E3A8A22 !important; border-radius: 6px; padding: 8px 12px; color: #1E3A8A; font-weight: bold; width: fit-content; }</style>', unsafe_allow_html=True)
-                    with st.expander("💬 Texto renovacion (predeterminado)"):
+                        
+                    st.markdown('<style>details summary { background-color: #1E3A8A22 !important; border-radius: 6px; padding: 8px 12px; color: #1E3A8A; font-weight: bold; width: fit-content; }</style>', unsafe_allow_html=True)                        
+                    with st.expander("💬 Texto renovacion (predeterminado)"):                        
                         texto_wp = f"""Hola {nombre_corto}!
 
 Te escribo porque esta venciendo la poliza de tu {ramo_completo} el proximo *{fecha_fmt}*.
