@@ -271,7 +271,7 @@ with tab_car:
             df_resumen, use_container_width=True, hide_index=False,
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
-                "📄 Poliza": st.column_config.LinkColumn("📄 Poliza", display_text="📎 Ver PDF"),
+                "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
                 "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
                 "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                 "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
@@ -322,7 +322,7 @@ with tab_ven:
             if col_cliente_real_v:
                 df_venc_resumen = df_venc_resumen.rename(columns={col_cliente_real_v: "Asegurado"})
             df_venc_resumen = df_venc_resumen.rename(columns={
-                c_adjunto: "📄 Poliza",
+                c_adjunto: "📄 Póliza",
                 c_documento: "Documento",
                 c_aseguradora: "Aseguradora",
                 c_ramo: "Ramo",
