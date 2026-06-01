@@ -331,7 +331,7 @@ with tab_ven:
                 c_p_uyu: "Premio UYU",
                 'Premio_Total_USD': "Premio Total (USD)"
             })
-            columnas_visibles_v = ["📄 Poliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
+            columnas_visibles_v = ["📄 Póliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
             cols_validas_v = [c for c in columnas_visibles_v if c in df_venc_resumen.columns]
             df_venc_resumen = df_venc_resumen[cols_validas_v]
 
