@@ -152,21 +152,20 @@ st.markdown("""
 
 USUARIOS = {"Roque de Freitas": "Rockuda.4428", "Joel Mokosce": "Joe2025", "Andrea Cazarian": "Andre2025", "Amelia Bentancor": "ABentancor2025", "Gonzalo Robaina": "GRobaina2025", "Eduardo Robaina": "ERobaina.2025", "Grismer Sanchez": "GSanchez2025", "Matías de Freitas": "Matiti2025", "Erica Hugo": "EHugo2025", "Ana Perdomo": "APerdomo2025", "Romina Sierra": "RSierra2025", "Letizia Tomasi": "LTomasi2025", "Eugenia Cabral": "ECabral2025", "Pablo Gagliardi": "PGagliardi2025", "Mariana Flores": "Mflores2025"}
 CONTACTOS = {
-    "Roque de Freitas": "099236116",
-    "Joel Mokosce": "099595185",
-    "Andrea Cazarian": "098592816",
-    "Amelia Bentancor": "098358393",
-    "Gonzalo Robaina": "091339642",
-    "Eduardo Robaina": "099430277",
-    "Grismer Sanchez": "094536444",
-    "Matías de Freitas": "095074767",
-    "Erica Hugo": "099513224",
-    "Ana Perdomo": "099661587",
-    "Romina Sierra": "092188815",
-    "Letizia Tomasi": "099816395",
-    "Eugenia Cabral": "099654708",
-    "Pablo Gagliardi": "091282011",
-    "Mariana Flores": "092628791"
+    "RDF": "099236116",
+    "JOE": "099595185",
+    "ANDRE": "098592816",
+    "AB": "098358393",
+    "GR": "091339642",
+    "ER": "094430277",
+    "GS": "094536444",
+    "MDF": "095074767",
+    "EH": "099513224",
+    "AP": "099661587",
+    "RS": "092188815",
+    "LT": "099816395",
+    "EC": "099654708",
+    "PG": "091282011"
 }
 if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] = "RDF"
 
@@ -406,70 +405,59 @@ with tab_ven:
                         st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
                         st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', col_map.get('matrícula', 'N/D'))}")
                         st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
-                    with cv3:
-                        st.markdown("**📅 Gestión de Vigencia:**")
-                        st.write(f"• **Fin de Vigencia:** {fila_completa_v.get('Fin de Vigencia', 'N/D')}")
-                        st.write(f"• **Ejecutivo:** {fila_completa_v.get('Ejecutivo', 'N/D')}")
-                        st.write(f"• **Corredor/Agente:** {fila_completa_v.get('Corredor', 'N/D')} / {fila_completa_v.get('Agente', 'N/D')}")
-
-                        # Botón de mail precargado
-                        st.write("")
-                        def limpiar(val):
-                            v = str(val).strip()
-                            return '' if v in ['nan', 'None', 'N/D', 'none'] else v
-                        
-                        nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
-                        nombre_corto = nombre_completo.split()[0].capitalize() if nombre_completo else 'Cliente'
-                        vehiculo = limpiar(fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', ''))) or 'su vehículo'
-                        vencimiento = limpiar(str(fila_completa_v.get('Fin de Vigencia', '')))
-                        premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
-                        premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
-                        aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
-                        mail_cliente = limpiar(fila_completa_v.get(c_mail, col_map.get('mail', '')))    
-                        
-                        # Premio que corresponda
-                        if premio_uyu and str(premio_uyu) not in ['0', 'None', 'nan', '']:
-                            premio_txt = f"UYU {f_num(premio_uyu)}"
-                        elif premio_usd and str(premio_usd) not in ['0', 'None', 'nan', '']:
-                            premio_txt = f"USD {f_num(premio_usd)}"
-                        else:
-                            premio_txt = "a coordinar"
-                        
-                        nombre_asesor = st.session_state.usuario_actual
-                        contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
-                        
-                        asunto = f"Renovación de tu seguro - vencimiento {vencimiento}"
-                        cuerpo = f"""Estimado/a {nombre_corto},
-                        
-                        Te escribo porque está venciendo la póliza de tu {vehiculo} el próximo {vencimiento}.
-                        
-                        Este año estabas pagando en {aseguradora_actual}: {premio_txt}.
-                        
-                        Para la renovación sacamos algunos costos comparativos:
-                        
-                        - BSE: $
-                        - SBI: $
-                        - MAPFRE: $
-                        - SANCOR: $
-                        - SURA: $
-                        - PORTO: $
-                        - BERKLEY: $
-                        
-                        Quedo a las órdenes,
-                        Saludos,
-                        
-                        {nombre_asesor}
-                        EDF Seguros - {contacto_asesor}"""
-                        
-                        import urllib.parse
-                        asunto_enc = urllib.parse.quote(asunto, safe='')
-                        cuerpo_enc = urllib.parse.quote(cuerpo, safe='')
-                        mailto_js = f"window.location.href='mailto:{mail_cliente}?subject={asunto_enc}&body={cuerpo_enc}';"
-                        st.markdown(f'''
-                            <button onclick="{mailto_js}" style="background-color:#1E3A8A;color:white;border:none;padding:8px 18px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">
-                                📧 Mail de renovación
-                            </button>
-                        ''', unsafe_allow_html=True)
+                    # Botón mail de renovación
+                    import urllib.parse
+                    def limpiar(val):
+                        v = str(val).strip()
+                        return '' if v in ['nan', 'None', 'N/D', 'none'] else v
+                    nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
+                    nombre_corto = nombre_completo.split()[0].capitalize() if nombre_completo else 'Cliente'
+                    vehiculo = limpiar(fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', ''))) or 'su vehículo'
+                    vencimiento = limpiar(str(fila_completa_v.get('Fin de Vigencia', '')))
+                    premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
+                    premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
+                    aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
+                    c_mail = col_map.get("dirección de correo electrónico", col_map.get("mail", col_map.get("email", "")))
+                    mail_cliente = limpiar(fila_completa_v.get(c_mail, ''))
+                    if premio_uyu and str(premio_uyu) not in ['0']:
+                        premio_txt = f"UYU {f_num(premio_uyu)}"
+                    elif premio_usd and str(premio_usd) not in ['0']:
+                        premio_txt = f"USD {f_num(premio_usd)}"
+                    else:
+                        premio_txt = "a coordinar"
+                    nombre_asesor = st.session_state.usuario_actual
+                    contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
+                    asunto = f"Renovación de tu seguro - vencimiento {vencimiento}"
+                    cuerpo = f"""Estimado/a {nombre_corto},
+    
+    Te escribo porque está venciendo la póliza de tu {vehiculo} el próximo {vencimiento}.
+    
+    Este año estabas pagando en {aseguradora_actual}: {premio_txt}.
+    
+    Para la renovación sacamos algunos costos comparativos:
+    
+    - BSE: $
+    - SBI: $
+    - MAPFRE: $
+    - SANCOR: $
+    - SURA: $
+    - PORTO: $
+    - BERKLEY: $
+    
+    Quedo a las órdenes,
+    Saludos,
+    
+    {nombre_asesor}
+    EDF Seguros - {contacto_asesor}"""
+                    asunto_enc = urllib.parse.quote(asunto, safe='')
+                    cuerpo_enc = urllib.parse.quote(cuerpo, safe='')
+                    componente_mail_html = f"""
+                    <button onclick="window.open('mailto:{mail_cliente}?subject={asunto_enc}&body={cuerpo_enc}','_self');"
+                    style="background-color:#1E3A8A;color:white;border:none;padding:8px 18px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">
+                    📧 Mail de renovación
+                    </button>
+                    """
+                    st.components.v1.html(componente_mail_html, height=50)
                         
             else:
                 st.info("No hay vencimientos en el rango seleccionado.")
