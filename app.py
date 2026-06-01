@@ -224,7 +224,7 @@ df_raw.columns = df_raw.columns.str.strip()
 
 # Mapeo dinámico e inteligente de columnas para evitar KeyErrors si cambian las mayúsculas en Sheets
 col_map = {c.lower(): c for c in df_raw.columns}
-c_asegurado = col_map.get("asegurado", col_map.get("cliente", "Asegurado"))
+c_asegurado = col_map.get("asegurado (nombre/razón social)", col_map.get("asegurado", col_map.get("cliente", "Asegurado")))
 c_documento = col_map.get("documento", col_map.get("ci", col_map.get("rut", "Documento")))
 c_aseguradora = col_map.get("aseguradora", col_map.get("compañia", "Aseguradora"))
 c_ramo = col_map.get("ramo", "Ramo")
