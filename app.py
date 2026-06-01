@@ -457,6 +457,9 @@ with tab_ven:
     {nombre_asesor}"""
                     with st.expander("📧 Ver mail de renovación"):
                        st.code(texto_mail, language=None)
+                    with st.expander("💬 Ver mensaje de WhatsApp"):
+                        texto_wp = f"Hola {nombre_corto}! Te escribo porque está venciendo la póliza de tu {ramo} el próximo {fecha_fmt}. Este año estabas pagando en {aseguradora_actual}: {premio_txt}. Para la renovación tenemos comparativos de BSE, SBI, MAPFRE, SANCOR, SURA, PORTO y BERKLEY. Quedo a las órdenes, saludos! {nombre_asesor} - {contacto_asesor}"
+                        st.code(texto_wp, language=None)
             else:
                 st.info("No hay vencimientos en el rango seleccionado.")
 
