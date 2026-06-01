@@ -371,14 +371,17 @@ with tab_ven:
                     st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
                     st.write(f"• **Mail:** {fila_completa_v.get(c_mail, 'N/D')}")
                 with cv2:
-                    st.markdown("**📋 Detalles del Bien:**")
-                    st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
-                    c_npoliza = col_map.get("n° de póliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
-                    npoliza_val = limpiar(fila_completa_v.get(c_npoliza, '')) if c_npoliza else 'N/D'
-                    st.write(f"• **N° de Póliza:** {npoliza_val or 'N/D'}")
-                    detalle_col2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
-                    detalle_val = limpiar(fila_completa_v.get(detalle_col2, '')) if detalle_col2 else 'N/D'
-                    st.write(f"• **Detalle:** {detalle_val or 'N/D'}")
+                   st.markdown("**📋 Detalles del Bien:**")
+                   st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+                   c_npoliza = col_map.get("n° de póliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
+                   npoliza_val = limpiar(fila_completa_v.get(c_npoliza, '')) if c_npoliza else 'N/D'
+                   st.write(f"• **N° de Póliza:** {npoliza_val or 'N/D'}")
+                   detalle_col2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
+                   detalle_val = limpiar(fila_completa_v.get(detalle_col2, '')) if detalle_col2 else 'N/D'
+                   st.write(f"• **Detalle:** {detalle_val or 'N/D'}")
+                   st.markdown('<style>details summary { background-color: #1E3A8A22 !important; border-radius: 6px; padding: 8px 12px; color: #1E3A8A; font-weight: bold; }</style>', unsafe_allow_html=True)
+                   with st.expander("💬 Texto renovacion (predeterminado)"):
+                       st.code(texto_wp, language=None)
 
                     # Texto de renovacion
                     nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
