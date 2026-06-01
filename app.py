@@ -212,7 +212,7 @@ c_aseguradora = col_map.get("aseguradora", col_map.get("compañia", "Aseguradora
 c_ramo = col_map.get("ramo", "Ramo")
 c_p_usd = col_map.get("premio usd (iva inc)", "Premio USD (IVA inc)")
 c_p_uyu = col_map.get("premio uyu (iva inc)", "Premio UYU (IVA inc)")
-c_adjunto = col_map.get("adjunto (póliza)", col_map.get("adjunto (poliza)", col_map.get("adjunto", "Adjunto (póliza)")))
+c_adjunto = col_map.get("adjunto (póliza)", col_map.get("adjunto (poliza)", "Adjunto (póliza)"))
 c_mail = col_map.get("direccion de correo electronico", col_map.get("mail", col_map.get("email", "Mail")))
 c_detalle = col_map.get("detalle", "")
 
