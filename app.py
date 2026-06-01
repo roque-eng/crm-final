@@ -435,7 +435,7 @@ with tab_ven:
                         else:
                             premio_txt = "a coordinar"
                         
-                        nombre_asesor = NOMBRES.get(st.session_state.usuario_actual, st.session_state.usuario_actual)
+                        nombre_asesor = st.session_state.usuario_actual
                         contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
                         
                         asunto = f"Renovación de tu seguro - vencimiento {vencimiento}"
