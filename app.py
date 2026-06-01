@@ -365,20 +365,20 @@ with tab_ven:
                 with st.container(border=True):
                     st.markdown(f"### 🛡️ Detalle de la Poliza (Vencimiento): {fila_completa_v.get(c_asegurado, 'Cliente')}")
                     cv1, cv2 = st.columns(2)
-                    with cv1:
-                        st.markdown("**👤 Datos del Cliente:**")
-                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
-                        c_npoliza = col_map.get("n° de póliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
-                        npoliza_val = limpiar(fila_completa_v.get(c_npoliza, '')) if c_npoliza else 'N/D'
-                        st.write(f"• **N° de Póliza:** {npoliza_val or 'N/D'}")
-                        st.write(f"• **Mail:** {fila_completa_v.get(c_mail, 'N/D')}")
-                    with cv2:
-                        st.markdown("**📋 Detalles del Bien:**")
-                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
-                        st.write(f"• **Matricula:** {fila_completa_v.get('Matricula', col_map.get('matricula', 'N/D'))}")
-                        detalle_col2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
-                        detalle_val = limpiar(fila_completa_v.get(detalle_col2, '')) if detalle_col2 else 'N/D'
-                        st.write(f"• **Detalle:** {detalle_val or 'N/D'}")
+                with cv1:
+                    st.markdown("**👤 Datos del Cliente:**")
+                    st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
+                    st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
+                    st.write(f"• **Mail:** {fila_completa_v.get(c_mail, 'N/D')}")
+                with cv2:
+                    st.markdown("**📋 Detalles del Bien:**")
+                    st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+                    c_npoliza = col_map.get("n° de póliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
+                    npoliza_val = limpiar(fila_completa_v.get(c_npoliza, '')) if c_npoliza else 'N/D'
+                    st.write(f"• **N° de Póliza:** {npoliza_val or 'N/D'}")
+                    detalle_col2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
+                    detalle_val = limpiar(fila_completa_v.get(detalle_col2, '')) if detalle_col2 else 'N/D'
+                    st.write(f"• **Detalle:** {detalle_val or 'N/D'}")
 
                     # Texto de renovacion
                     nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
