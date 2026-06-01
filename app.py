@@ -371,10 +371,12 @@ with tab_ven:
                         st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
                         st.write(f"• **Mail:** {fila_completa_v.get(c_mail, 'N/D')}")
                     with cv2:
-                        st.markdown("**🚗 Detalles del Bien:**")
+                        st.markdown("**📋 Detalles del Bien:**")
                         st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
                         st.write(f"• **Matricula:** {fila_completa_v.get('Matricula', col_map.get('matricula', 'N/D'))}")
-                        st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
+                        detalle_col2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
+                        detalle_val = limpiar(fila_completa_v.get(detalle_col2, '')) if detalle_col2 else 'N/D'
+                        st.write(f"• **Detalle:** {detalle_val or 'N/D'}")
 
                     # Texto de renovacion
                     nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
