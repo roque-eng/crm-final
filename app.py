@@ -427,7 +427,7 @@ with tab_ven:
                         premio_txt = "a coordinar"
                     nombre_asesor = st.session_state.usuario_actual
                     contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
-                         ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
+                    ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
                     fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
                      with st.expander("💬 Texto renovación (predeterminado)"):
                         texto_wp = f"""Hola {nombre_corto}!
