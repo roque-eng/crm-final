@@ -212,7 +212,7 @@ c_aseguradora = col_map.get("aseguradora", col_map.get("compañia", "Aseguradora
 c_ramo = col_map.get("ramo", "Ramo")
 c_p_usd = col_map.get("premio usd (iva inc)", "Premio USD (IVA inc)")
 c_p_uyu = col_map.get("premio uyu (iva inc)", "Premio UYU (IVA inc)")
-c_adjunto = col_map.get("adjunto (poliza)", col_map.get("adjunto (poliza)", "Adjunto (poliza)"))
+c_adjunto = col_map.get("adjunto (póliza)", col_map.get("adjunto (poliza)", col_map.get("adjunto", "Adjunto (póliza)")))
 c_mail = col_map.get("direccion de correo electronico", col_map.get("mail", col_map.get("email", "Mail")))
 c_detalle = col_map.get("detalle", "")
 
@@ -251,7 +251,7 @@ with tab_car:
         if col_cliente_real:
             df_resumen = df_resumen.rename(columns={col_cliente_real: "Asegurado"})
         df_resumen = df_resumen.rename(columns={
-            c_adjunto: "📄 Poliza",
+            c_adjunto: "📄 Póliza",
             c_documento: "Documento",
             c_aseguradora: "Aseguradora",
             c_ramo: "Ramo",
@@ -260,7 +260,7 @@ with tab_car:
             c_p_uyu: "Premio UYU",
             'Premio_Total_USD': "Premio Total (USD)"
         })
-        columnas_visibles = ["📄 Poliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
+        columnas_visibles = ["📄 Póliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
         cols_validas = [c for c in columnas_visibles if c in df_resumen.columns]
         df_resumen = df_resumen[cols_validas]
 
