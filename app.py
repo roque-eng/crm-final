@@ -431,13 +431,9 @@ with tab_ven:
                     cuerpo = f"Estimado/a {nombre_corto}, te escribo porque vence tu poliza el {vencimiento}. Este anio pagabas en {aseguradora_actual}: {premio_txt}. Para la renovacion tenemos comparativos de BSE, SBI, MAPFRE, SANCOR, SURA, PORTO y BERKLEY. Quedo a las ordenes. Saludos, {nombre_asesor} - EDF Seguros {contacto_asesor}"
                     asunto_enc = urllib.parse.quote(asunto, safe='')
                     cuerpo_enc = urllib.parse.quote(cuerpo, safe='')
-                    mailto_link = f"mailto:{mail_cliente}?subject={asunto_enc}&body={cuerpo_enc}"
-                    st.markdown(f'''
-    <a href="{mailto_link}" style="display:inline-block; background-color:#1E3A8A; color:white; text-decoration:none; padding:8px 18px; border-radius:6px; font-weight:bold; font-size:13px;">
-        📧 Mail de renovación
-    </a>
-    ''', unsafe_allow_html=True)
-                        
+                    st.markdown("**📧 Texto para mail de renovación:**")
+                    texto_mail = f"Para: {mail_cliente}\nAsunto: Renovación de tu seguro - vencimiento {vencimiento}\n\nEstimado/a {nombre_corto},\n\nTe escribo porque está venciendo la póliza de tu {vehiculo} el próximo {vencimiento}.\n\nEste año estabas pagando en {aseguradora_actual}: {premio_txt}.\n\nPara la renovación tenemos comparativos de BSE, SBI, MAPFRE, SANCOR, SURA, PORTO y BERKLEY.\n\nQuedo a las órdenes,\nSaludos,\n{nombre_asesor} - EDF Seguros {contacto_asesor}"
+                    st.code(texto_mail, language=None)
             else:
                 st.info("No hay vencimientos en el rango seleccionado.")
 
