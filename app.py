@@ -271,7 +271,7 @@ with tab_car:
             df_resumen, use_container_width=True, hide_index=False,
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
-                "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF", validate="^https://"),
                 "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
                 "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                 "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
