@@ -401,53 +401,58 @@ with tab_ven:
                         st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
                         st.write(f"• **Mail:** {fila_completa_v.get(c_mail, col_map.get('mail', 'N/D'))}")
                     with cv2:
-                        st.markdown("**🚗 Detalles del Bien:**")
-                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
-                        st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', col_map.get('matrícula', 'N/D'))}")
-                        st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
-                    # Botón mail de renovación
-                    import urllib.parse
-                    def limpiar(val):
-                        v = str(val).strip()
-                        return '' if v in ['nan', 'None', 'N/D', 'none'] else v
-                    nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
-                    nombre_corto = nombre_completo.split()[0].capitalize() if nombre_completo else 'Cliente'
-                    vehiculo = limpiar(fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', ''))) or 'su vehículo'
-                    vencimiento = limpiar(str(fila_completa_v.get('Fin de Vigencia', '')))
-                    premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
-                    premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
-                    aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
-                    c_mail = col_map.get("dirección de correo electrónico", col_map.get("mail", col_map.get("email", "")))
-                    mail_cliente = limpiar(fila_completa_v.get(c_mail, ''))
-                    if premio_uyu and str(premio_uyu) not in ['0']:
-                        premio_txt = f"UYU {f_num(premio_uyu)}"
-                    elif premio_usd and str(premio_usd) not in ['0']:
-                        premio_txt = f"USD {f_num(premio_usd)}"
-                    else:
-                        premio_txt = "a coordinar"
-                    nombre_asesor = st.session_state.usuario_actual
-                    contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
-                    ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
-                    fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
-	        		with st.expander("💬 Texto renovación (predeterminado)"):
-	                    texto_wp = f"""Hola {nombre_corto}!
-	Te escribo porque está venciendo la póliza de tu {ramo} el próximo *{fecha_fmt}*.
-	Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
-	Para la renovación tenemos los siguientes comparativos:
-    - BSE:
-	- SBI:
-	- MAPFRE:
-	- SANCOR:
-	- SURA:
-	- PORTO:
-	- BERKLEY:
-	        
-	Auto Sustituto (por 15 días) en caso de chocar y que tu vehículo vaya al taller a reparar y necesites uno debemos agregar $3.300 a cualquier aseguradora.
-	        
-	Quedo a las órdenes,
-	Saludos!
-	{nombre_asesor}"""
-                    	st.code(texto_wp, language=None)
+                    st.markdown("**🚗 Detalles del Bien:**")
+                    st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+                    st.write(f"• **Matrícula:** {fila_completa_v.get('Matricula', col_map.get('matricula', 'N/D'))}")
+                    st.write(f"• **Marca/Modelo:** {fila_completa_v.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
+                def limpiar(val):
+                    v = str(val).strip()
+                    return '' if v in ['nan', 'None', 'N/D', 'none'] else v
+                nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
+                if not nombre_completo:
+                    for col in fila_completa_v.index:
+                        if 'asegurado' in str(col).lower() or 'nombre' in str(col).lower():
+                            val = limpiar(str(fila_completa_v.get(col, '')))
+                            if val:
+                                nombre_completo = val
+                                break
+                nombre_corto = nombre_completo.split()[0].capitalize() if nombre_completo else 'Cliente'
+                c_mail = col_map.get("dirección de correo electrónico", col_map.get("mail", col_map.get("email", "")))
+                mail_cliente = limpiar(fila_completa_v.get(c_mail, ''))
+                premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
+                premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
+                aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
+                ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
+                vencimiento = fila_completa_v.get('Fin de Vigencia', '')
+                fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
+                nombre_asesor = st.session_state.usuario_actual
+                contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
+                if premio_uyu and str(premio_uyu) not in ['0']:
+                    premio_txt = f"UYU {f_num(premio_uyu)}"
+                elif premio_usd and str(premio_usd) not in ['0']:
+                    premio_txt = f"USD {f_num(premio_usd)}"
+                else:
+                    premio_txt = "a coordinar"
+                with st.expander("💬 Texto renovación (predeterminado)"):
+                    texto_wp = f"""Hola {nombre_corto}!
+Te escribo porque está venciendo la póliza de tu {ramo} el próximo *{fecha_fmt}*.
+Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
+Para la renovación tenemos los siguientes comparativos:
+
+- BSE:
+- SBI:
+- MAPFRE:
+- SANCOR:
+- SURA:
+- PORTO:
+- BERKLEY:
+
+Auto Sustituto (por 15 días) en caso de chocar y que tu vehículo vaya al taller necesites uno, debemos agregar $3.300 a cualquier aseguradora.
+
+Quedo a las órdenes,
+Saludos!
+{nombre_asesor}"""
+                    st.code(texto_wp, language=None)
 	        else:
 	            st.info("No hay vencimientos en el rango seleccionado.")
 
