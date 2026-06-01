@@ -341,7 +341,7 @@ with tab_ven:
                 df_venc_resumen, use_container_width=True, hide_index=False,
                 on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
                 column_config={
-                    "📄 Poliza": st.column_config.LinkColumn("📄 Poliza", display_text="📎 Ver PDF"),
+                    "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
                     "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
                     "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                     "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
