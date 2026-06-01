@@ -307,7 +307,9 @@ with tab_car:
     else:
         st.info("No se encontraron registros en la cartera.")
 
+# ==========================================
 # --- PESTAÑA VENCIMIENTOS ---
+# ==========================================
 with tab_ven:
     st.subheader("🔄 Control de Vencimientos")
     if not df_f.empty:
@@ -361,79 +363,78 @@ with tab_ven:
                 indice_fila_v = filas_seleccionadas_v[0]
                 fila_completa_v = df_venc_f.iloc[indice_fila_v]
 
-                st.write("")
-                with st.container(border=True):
-                    st.markdown(f"### 🛡️ Detalle de la Poliza (Vencimiento): {fila_completa_v.get(c_asegurado, 'Cliente')}")
-                    cv1, cv2 = st.columns(2)
-                with cv1:
-                    st.markdown("**👤 Datos del Cliente:**")
-                    st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
-                    st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
-                    st.write(f"• **Mail:** {fila_completa_v.get(c_mail, 'N/D')}")
-                with cv2:
-                    st.markdown("**📋 Detalles del Bien:**")
-                    st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
-                    c_npoliza = col_map.get("n° de póliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
-                    npoliza_val = limpiar(fila_completa_v.get(c_npoliza, '')) if c_npoliza else 'N/D'
-                    st.write(f"• **N° de Póliza:** {npoliza_val or 'N/D'}")
-                    detalle_col2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
-                    detalle_val = limpiar(fila_completa_v.get(detalle_col2, '')) if detalle_col2 else 'N/D'
-                    st.write(f"• **Detalle:** {detalle_val or 'N/D'}")
-                st.markdown('<style>details summary { background-color: #1E3A8A22 !important; border-radius: 6px; padding: 8px 12px; color: #1E3A8A; font-weight: bold; }</style>', unsafe_allow_html=True)
-                with st.expander("💬 Texto renovacion (predeterminado)"):
-                    st.code(texto_wp, language=None)
+                # Calcular todas las variables ANTES de mostrar
+                nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
+                if not nombre_completo:
+                    for col in fila_completa_v.index:
+                        if 'asegurado' in str(col).lower() or 'nombre' in str(col).lower():
+                            val = limpiar(str(fila_completa_v.get(col, '')))
+                            if val:
+                                nombre_completo = val
+                                break
+                nombre_corto = nombre_completo.split()[0].capitalize() if nombre_completo else 'Cliente'
+                mail_cliente = limpiar(fila_completa_v.get(c_mail, ''))
+                premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
+                premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
+                aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
+                ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
+                detalle_col_v = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
+                detalle = limpiar(fila_completa_v.get(detalle_col_v, '')) if detalle_col_v else ''
+                ramo_completo = f"{ramo} ({detalle})" if detalle else ramo
+                vencimiento = fila_completa_v.get('Fin de Vigencia', '')
+                fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
+                nombre_asesor = NOMBRES.get(st.session_state.usuario_actual, st.session_state.usuario_actual)
+                contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
+                if premio_uyu and str(premio_uyu) not in ['0']:
+                    premio_txt = f"UYU {f_num(premio_uyu)}"
+                elif premio_usd and str(premio_usd) not in ['0']:
+                    premio_txt = f"USD {f_num(premio_usd)}"
+                else:
+                    premio_txt = "a coordinar"
 
-                    # Texto de renovacion
-                    nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
-                    if not nombre_completo:
-                        for col in fila_completa_v.index:
-                            if 'asegurado' in str(col).lower() or 'nombre' in str(col).lower():
-                                val = limpiar(str(fila_completa_v.get(col, '')))
-                                if val:
-                                    nombre_completo = val
-                                    break
-                    nombre_corto = nombre_completo.split()[0].capitalize() if nombre_completo else 'Cliente'
-                    mail_cliente = limpiar(fila_completa_v.get(c_mail, ''))
-                    premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
-                    premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
-                    aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
-                    ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
-                    detalle = limpiar(fila_completa_v.get(c_detalle, '')) if c_detalle else ''
-                    ramo_completo = f"{ramo} ({detalle})" if detalle else ramo
-                    vencimiento = fila_completa_v.get('Fin de Vigencia', '')
-                    fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
-                    nombre_asesor = NOMBRES.get(st.session_state.usuario_actual, st.session_state.usuario_actual)
-                    contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
-                    if premio_uyu and str(premio_uyu) not in ['0']:
-                        premio_txt = f"UYU {f_num(premio_uyu)}"
-                    elif premio_usd and str(premio_usd) not in ['0']:
-                        premio_txt = f"USD {f_num(premio_usd)}"
-                    else:
-                        premio_txt = "a coordinar"
-                        
-                    st.markdown('<style>details summary { background-color: #1E3A8A22 !important; border-radius: 6px; padding: 8px 12px; color: #1E3A8A; font-weight: bold; width: fit-content; }</style>', unsafe_allow_html=True)                        
-                    with st.expander("💬 Texto renovacion (predeterminado)"):                        
-                        texto_wp = f"""Hola {nombre_corto}!
-
+                texto_wp = f"""Hola {nombre_corto}!
 Te escribo porque esta venciendo la poliza de tu {ramo_completo} el proximo *{fecha_fmt}*.
-
-Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*. El costo de renovación (próxima vigencia) sería: *PRECIO NUEVO*
-
-También sacamos algunos comparativos:
+Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
+Para la renovacion tenemos los siguientes comparativos:
 
 - BSE:
 - SBI:
 - MAPFRE:
+- SANCOR:
 - SURA:
+- PORTO:
+- BERKLEY:
 
-Si queres agregar Auto Sustituto (por 15 dias) en caso de chocar y que tu vehiculo vaya al taller y necesites uno, debemos agregar $3.300 a cualquier aseguradora.
+Auto Sustituto (por 15 dias) en caso de chocar y que tu vehiculo vaya al taller y necesites uno, debemos agregar $3.300 a cualquier aseguradora.
 
+Quedo a las ordenes,
 Saludos!
 {nombre_asesor}"""
-                        st.code(texto_wp, language=None)
+
+                st.write("")
+                with st.container(border=True):
+                    st.markdown(f"### 🛡️ Detalle de la Poliza (Vencimiento): {fila_completa_v.get(c_asegurado, 'Cliente')}")
+                    cv1, cv2 = st.columns(2)
+                    with cv1:
+                        st.markdown("**👤 Datos del Cliente:**")
+                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
+                        st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
+                        st.write(f"• **Mail:** {fila_completa_v.get(c_mail, 'N/D')}")
+                    with cv2:
+                        st.markdown("**📋 Detalles del Bien:**")
+                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+                        c_npoliza = col_map.get("n° de póliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
+                        npoliza_val = limpiar(fila_completa_v.get(c_npoliza, '')) if c_npoliza else 'N/D'
+                        st.write(f"• **N° de Póliza:** {npoliza_val or 'N/D'}")
+                        detalle_col2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
+                        detalle_val = limpiar(fila_completa_v.get(detalle_col2, '')) if detalle_col2 else 'N/D'
+                        st.write(f"• **Detalle:** {detalle_val or 'N/D'}")
+
+                st.markdown('<style>details summary { background-color: #1E3A8A22 !important; border-radius: 6px; padding: 8px 12px; color: #1E3A8A; font-weight: bold; }</style>', unsafe_allow_html=True)
+                with st.expander("💬 Texto renovacion (predeterminado)"):
+                    st.code(texto_wp, language=None)
         else:
             st.info("No hay vencimientos en el rango seleccionado.")
-
 # ==========================================
 # PLANTILLAS DE TEXTOS PRECARGADOS
 # ==========================================
