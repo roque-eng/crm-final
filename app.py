@@ -451,13 +451,12 @@ with tab_ven:
     EDF Seguros - {contacto_asesor}"""
                     asunto_enc = urllib.parse.quote(asunto, safe='')
                     cuerpo_enc = urllib.parse.quote(cuerpo, safe='')
-                    componente_mail_html = f"""
-                    <button onclick="window.open('mailto:{mail_cliente}?subject={asunto_enc}&body={cuerpo_enc}','_self');"
-                    style="background-color:#1E3A8A;color:white;border:none;padding:8px 18px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:13px;">
-                    📧 Mail de renovación
-                    </button>
-                    """
-                    st.components.v1.html(componente_mail_html, height=50)
+                    mailto_link = f"mailto:{mail_cliente}?subject={asunto_enc}&body={cuerpo_enc}"
+                    st.markdown(f'''
+    <a href="{mailto_link}" style="display:inline-block; background-color:#1E3A8A; color:white; text-decoration:none; padding:8px 18px; border-radius:6px; font-weight:bold; font-size:13px;">
+        📧 Mail de renovación
+    </a>
+    ''', unsafe_allow_html=True)
                         
             else:
                 st.info("No hay vencimientos en el rango seleccionado.")
