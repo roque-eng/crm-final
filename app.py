@@ -429,8 +429,8 @@ with tab_ven:
                     contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
                     asunto = f"Renovación de tu seguro - vencimiento {vencimiento}"
                     ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
-                                    fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
-                                    texto_mail = f"""Asunto: Renovación de tu seguro - vencimiento {fecha_fmt}
+                    fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
+                    texto_mail = f"""Asunto: Renovación de tu seguro - vencimiento {fecha_fmt}
                     
                     Estimado/a {nombre_corto},
                     
