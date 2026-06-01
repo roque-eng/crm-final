@@ -430,7 +430,7 @@ with tab_ven:
                     ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
                     fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
                     with st.expander("💬 Texto renovación (predeterminado)"):
-                    texto_wp = f"""Hola {nombre_corto}!
+                        texto_wp = f"""Hola {nombre_corto}!
                     Te escribo porque está venciendo la póliza de tu {ramo} el próximo *{fecha_fmt}*.
                     Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*.
                     Para la renovación tenemos los siguientes comparativos:
