@@ -412,6 +412,7 @@ Te escribo porque esta venciendo la poliza de tu {ramo_completo} el proximo *{fe
 Este año estabas pagando en *{aseguradora_actual}: {premio_txt}*. El costo de renovación (próxima vigencia) sería: *PRECIO NUEVO*
 
 También sacamos algunos comparativos:
+
 - BSE:
 - SBI:
 - MAPFRE:
