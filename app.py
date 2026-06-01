@@ -428,27 +428,7 @@ with tab_ven:
                     nombre_asesor = st.session_state.usuario_actual
                     contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
                     asunto = f"Renovación de tu seguro - vencimiento {vencimiento}"
-                    cuerpo = f"""Estimado/a {nombre_corto},
-    
-    Te escribo porque está venciendo la póliza de tu {vehiculo} el próximo {vencimiento}.
-    
-    Este año estabas pagando en {aseguradora_actual}: {premio_txt}.
-    
-    Para la renovación sacamos algunos costos comparativos:
-    
-    - BSE: $
-    - SBI: $
-    - MAPFRE: $
-    - SANCOR: $
-    - SURA: $
-    - PORTO: $
-    - BERKLEY: $
-    
-    Quedo a las órdenes,
-    Saludos,
-    
-    {nombre_asesor}
-    EDF Seguros - {contacto_asesor}"""
+                    cuerpo = f"Estimado/a {nombre_corto}, te escribo porque vence tu poliza el {vencimiento}. Este anio pagabas en {aseguradora_actual}: {premio_txt}. Para la renovacion tenemos comparativos de BSE, SBI, MAPFRE, SANCOR, SURA, PORTO y BERKLEY. Quedo a las ordenes. Saludos, {nombre_asesor} - EDF Seguros {contacto_asesor}"
                     asunto_enc = urllib.parse.quote(asunto, safe='')
                     cuerpo_enc = urllib.parse.quote(cuerpo, safe='')
                     mailto_link = f"mailto:{mail_cliente}?subject={asunto_enc}&body={cuerpo_enc}"
