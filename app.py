@@ -810,7 +810,7 @@ with tab_historial:
         if filtro_tipo != "Todos":
             historico_filtrado = [r for r in historico_filtrado if r.get("tipo") == filtro_tipo]
 
-        for reg in reversed(historico_filtrado):
+        for i, reg in enumerate(reversed(historico_filtrado)):
             idx_real = st.session_state.historico.index(reg)
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             with col_info:
@@ -820,12 +820,12 @@ with tab_historial:
                 mat_hist = f" | {reg.get('matricula')}" if reg.get('matricula') else ""
                 st.write(f"📅 **{reg.get('fecha', '')[:10]}** | {icon} {reg.get('tipo')} | **{reg.get('n', 'Cliente')}**{mat_hist}")
             with col_edit:
-                if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
+                if st.button("✏️ Cargar/Editar", key=f"edit_f_{i}_{idx_real}"):
                     st.session_state.edit_data = reg
                     st.success("Cargada.")
                     st.rerun()
             with col_del:
-                if st.button("🗑️", key=f"del_{idx_real}"):
+                if st.button("🗑️", key=f"del_f_{i}_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
     else:
