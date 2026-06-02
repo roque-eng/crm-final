@@ -633,8 +633,7 @@ with tab_aeronave:
                                        index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0,
                                        on_change=actualizar_contacto_av)
         if not edit_av:
-            if "av_contacto" not in st.session_state:
-                st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
+            st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
         av_contacto = av_r2c4.text_input("Contacto", key="av_contacto")
 
     destinos = ["Privado / Otro", "Agricola", "Escuela e Instruccion"]
