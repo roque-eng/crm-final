@@ -67,9 +67,10 @@ if "q" in query_params:
                     asientos_fmt = str(int(asientos)) if asientos and int(float(str(asientos))) > 0 else "—"
                     capital = row.get("Capital", 0)
                     capital_str = str(capital)
+                    cob_str = str(row.get("Cobertura", "")).lower()
                     try: capital_fmt = f"USD {int(float(capital)):,}".replace(",",".")
                     except: capital_fmt = capital_str
-                    if capital_str in ["0", "0.0", ""]:
+                    if capital_str in ["0", "0.0", ""] and "aptitud" in cob_str:
                         capital_fmt = "Incluido"
                     html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{asientos_fmt}</td>'
                     html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{capital_fmt}</td>'
@@ -649,7 +650,7 @@ with tab_aeronave:
     with st.container(border=True):
         av_r1c1, av_r1c2, av_r1c3 = st.columns(3)
         av_asegurado = av_r1c1.text_input("Asegurado", key="av_asegurado")
-        av_aseguradora = av_r1c2.text_input("Aseguradora", key="av_aseguradora")
+        av_aseguradora = av_r1c2.text_input("Aseguradora", value=edit_av.get("aseguradora", "SBI Seguros"), key="av_aseguradora")
         av_aeronave = av_r1c3.text_input("Aeronave (Marca y Modelo)", key="av_aeronave")
 
         av_r2c1, av_r2c2, av_r2c3, av_r2c4 = st.columns(4)
