@@ -59,7 +59,7 @@ if "q" in query_params:
             aeronave = propuesta_cliente.get('aeronave', '')
             destino = propuesta_cliente.get('destino', '')
 
-            st.image("https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg", width=200)
+            st.image("https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg", width=150)
             filas_info = ""
             if aseg: filas_info += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Aseguradora:</b> {aseg}</p>'
             if aeronave: filas_info += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Aeronave:</b> {aeronave}</p>'
@@ -124,7 +124,7 @@ if "q" in query_params:
             st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont','')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
             st.stop()
 
-        st.image("https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg", width=200)
+        st.image("https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg", width=150)
         if propuesta_cliente.get("tipo") == "Flota":
             vig_f = propuesta_cliente.get('vigencia', '')
             filas_info_f = ""
