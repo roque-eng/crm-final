@@ -102,15 +102,27 @@ if "q" in query_params:
             st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont','')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
             st.stop()
 
-        st.markdown(f"""
-        <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 20px; margin-top: 20px;">
-            <h2 style="margin: 0 0 12px 0; font-size: 24px; color: #111; font-weight: bold;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
-            {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Vehículo:</b> ' + propuesta_cliente.get('v','') + '</p>' if propuesta_cliente.get('v') else ''}
-            {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Matrícula:</b> ' + propuesta_cliente.get('matricula','') + '</p>' if propuesta_cliente.get('matricula') else ''}
-            {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Cobertura cotizada:</b> ' + propuesta_cliente.get('cobertura_cot','') + '</p>' if propuesta_cliente.get('cobertura_cot') else ''}
-            {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Zona de Circulación principal:</b> ' + propuesta_cliente.get('zona','') + '</p>' if propuesta_cliente.get('zona') else ''}
-        </div>
-        """, unsafe_allow_html=True)
+        if propuesta_cliente.get("tipo") == "Flota":
+            vig_f = propuesta_cliente.get('vigencia', '')
+            filas_info_f = ""
+            if propuesta_cliente.get('e'): filas_info_f += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Aseguradora:</b> {propuesta_cliente.get("e","")}</p>'
+            if vig_f: filas_info_f += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Vigencia Cotizada:</b> {vig_f}</p>'
+            st.markdown(f"""
+            <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 20px; margin-top: 20px;">
+                <h2 style="margin: 0 0 12px 0; font-size: 24px; color: #111; font-weight: bold;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
+                {filas_info_f}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 20px; margin-top: 20px;">
+                <h2 style="margin: 0 0 12px 0; font-size: 24px; color: #111; font-weight: bold;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
+                {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Vehículo:</b> ' + propuesta_cliente.get('v','') + '</p>' if propuesta_cliente.get('v') else ''}
+                {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Matrícula:</b> ' + propuesta_cliente.get('matricula','') + '</p>' if propuesta_cliente.get('matricula') else ''}
+                {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Cobertura cotizada:</b> ' + propuesta_cliente.get('cobertura_cot','') + '</p>' if propuesta_cliente.get('cobertura_cot') else ''}
+                {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Zona de Circulación principal:</b> ' + propuesta_cliente.get('zona','') + '</p>' if propuesta_cliente.get('zona') else ''}
+            </div>
+            """, unsafe_allow_html=True)
 
         df_cli = pd.DataFrame(propuesta_cliente.get("tab", []))
         if not df_cli.empty:
@@ -597,16 +609,19 @@ with tab_flota:
         st.session_state["f_cia_fl"] = edit_f.get("e", "SBI")
         st.session_state["f_as_fl"] = edit_f.get("e_nombre", "EDF SEGUROS")
         st.session_state["f_co_fl"] = edit_f.get("cont", "")
+        st.session_state["f_vig_fl"] = edit_f.get("vigencia", "")
 
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        f_asegurado = st.text_input("Asegurado", key="f_nom_fl")
-        f_cia_elegida = st.text_input("Compania Aseguradora", key="f_cia_fl")
-    with col_f2:
-        f_asesor_nombre = st.text_input("Asesor", key="f_as_fl")
+    with st.container(border=True):
+        f_c1, f_c2, f_c3 = st.columns([2, 2, 2])
+        f_asegurado = f_c1.text_input("Asegurado", key="f_nom_fl")
+        f_cia_elegida = f_c2.text_input("Compania Aseguradora", key="f_cia_fl")
+        f_vigencia = f_c3.text_input("Vigencia Cotizada", key="f_vig_fl")
+
+        f_c4, f_c5, f_c6 = st.columns([2, 1, 2])
+        f_asesor_nombre = f_c4.text_input("Asesor", key="f_as_fl")
         if not edit_f:
             st.session_state["f_co_fl"] = CONTACTOS.get(st.session_state.get("f_as_fl", ""), "")
-        f_contacto = st.text_input("Contacto", key="f_co_fl")
+        f_contacto = f_c6.text_input("Contacto", key="f_co_fl")
 
     cols_f = ["Marca", "Modelo", "Ano", "Matricula", "Cobertura", "Contado", "Deducible"]
     if edit_f and "tab" in edit_f:
@@ -632,7 +647,7 @@ with tab_flota:
         f_cb = st.text_area("Bici Electrica o Moto:", value=edit_f.get("cb", txt_bic_flota), height=50, key="flota_bic_v_final")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
-        nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
+        nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "vigencia": f_vigencia, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
         st.session_state.historico.append(nueva_f)
         st.session_state.edit_data = nueva_f
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
@@ -810,7 +825,7 @@ with tab_historial:
         if filtro_tipo != "Todos":
             historico_filtrado = [r for r in historico_filtrado if r.get("tipo") == filtro_tipo]
 
-        for i, reg in enumerate(reversed(historico_filtrado)):
+        for reg in reversed(historico_filtrado):
             idx_real = st.session_state.historico.index(reg)
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             with col_info:
@@ -820,12 +835,12 @@ with tab_historial:
                 mat_hist = f" | {reg.get('matricula')}" if reg.get('matricula') else ""
                 st.write(f"📅 **{reg.get('fecha', '')[:10]}** | {icon} {reg.get('tipo')} | **{reg.get('n', 'Cliente')}**{mat_hist}")
             with col_edit:
-                if st.button("✏️ Cargar/Editar", key=f"edit_f_{i}_{idx_real}"):
+                if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
                     st.session_state.edit_data = reg
                     st.success("Cargada.")
                     st.rerun()
             with col_del:
-                if st.button("🗑️", key=f"del_f_{i}_{idx_real}"):
+                if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
     else:
