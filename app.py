@@ -174,7 +174,8 @@ if "q" in query_params:
             </div>
             """, unsafe_allow_html=True)
             st.markdown("---")
-            st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont','')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
+            nombre_asesor_cli = NOMBRES.get(propuesta_cliente.get('e',''), propuesta_cliente.get('e','EDF'))
+            st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {nombre_asesor_cli} | <b>Contacto:</b> {propuesta_cliente.get('cont','')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
             st.stop()
 
         # --- VISTA FLOTA ---
