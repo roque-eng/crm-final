@@ -14,14 +14,19 @@ TC_USD = 40.5
 SHEET_ID = "1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA"
 
 def get_gspread_client():
-    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    service_account_info = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
-    creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
-    return gspread.authorize(creds)
+    try:
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        service_account_info = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
+        creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
+        return gspread.authorize(creds)
+    except:
+        return None
 
 def guardar_en_sheet(hoja_nombre, fila):
     try:
         gc = get_gspread_client()
+        if gc is None:
+            return False
         sh = gc.open_by_key(SHEET_ID)
         ws = sh.worksheet(hoja_nombre)
         ws.append_row(fila, value_input_option="USER_ENTERED")
@@ -226,7 +231,7 @@ if "q" in query_params:
 
 if "historico" not in st.session_state: st.session_state.historico = []
 if "edit_data" not in st.session_state: st.session_state.edit_data = {}
-if "historico_sheet_cargado" not in st.session_state:
+if "historico_sheet_cargado" not in st.session_state and "q" not in st.query_params:
     try:
         gc = get_gspread_client()
         sh = gc.open_by_key(SHEET_ID)
