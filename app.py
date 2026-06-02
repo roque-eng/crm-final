@@ -613,15 +613,13 @@ with tab_flota:
         st.session_state["f_vig_fl"] = ""
 
     with st.container(border=True):
-        f_c1, f_c2 = st.columns([2, 2])
+        f_c1, f_c2, f_c3, f_c4 = st.columns([2, 2, 1, 2])
         f_asegurado = f_c1.text_input("Asegurado", key="f_nom_fl")
-        f_cia_elegida = f_c2.text_input("Compania Aseguradora", key="f_cia_fl")
-
-        f_c4, f_c5, f_c6 = st.columns([2, 1, 2])
-        f_asesor_nombre = f_c4.text_input("Asesor", key="f_as_fl")
+        f_cia_elegida = f_c2.text_input("Aseguradora", key="f_cia_fl")
+        f_asesor_nombre = f_c3.text_input("Asesor", key="f_as_fl")
         if not edit_f:
             st.session_state["f_co_fl"] = CONTACTOS.get(st.session_state.get("f_as_fl", ""), "")
-        f_contacto = f_c6.text_input("Contacto", key="f_co_fl")
+        f_contacto = f_c4.text_input("Contacto", key="f_co_fl")
 
     cols_f = ["Marca", "Modelo", "Ano", "Matricula", "Cobertura", "Contado", "Deducible"]
     if edit_f and "tab" in edit_f:
