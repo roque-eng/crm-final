@@ -1,3 +1,5 @@
+import gspread
+from google.oauth2.service_account import Credentials
 import streamlit as st
 import pandas as pd
 from streamlit_gsheets import GSheetsConnection
@@ -9,6 +11,25 @@ import base64
 
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5
+SHEET_ID = "1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA"
+
+def get_gspread_client():
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    creds_dict = dict(st.secrets["connections"]["gsheets"])
+    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    return gspread.authorize(creds)
+
+def guardar_en_sheet(hoja_nombre, fila):
+    try:
+        gc = get_gspread_client()
+        sh = gc.open_by_key(SHEET_ID)
+        ws = sh.worksheet(hoja_nombre)
+        ws.append_row(fila, value_input_option="USER_ENTERED")
+        return True
+    except Exception as e:
+        st.warning(f"No se pudo guardar en el Sheet: {e}")
+        return False
 
 def f_num(val):
     try: return f"{int(float(str(val).replace('$','').replace('USD','').replace('.','').replace(',','').strip())):,}".replace(",",".")
@@ -204,6 +225,29 @@ if "q" in query_params:
 
 if "historico" not in st.session_state: st.session_state.historico = []
 if "edit_data" not in st.session_state: st.session_state.edit_data = {}
+if "historico_sheet_cargado" not in st.session_state:
+    try:
+        gc = get_gspread_client()
+        sh = gc.open_by_key(SHEET_ID)
+        hist = []
+        for hoja, tipo in [("Cotizaciones Individuales", "Individual"), ("Cotizaciones Flotas", "Flota"), ("Cotizaciones Aeronaves", "Aeronave")]:
+            try:
+                ws = sh.worksheet(hoja)
+                rows = ws.get_all_values()
+                for row in rows[1:]:  # skip header
+                    if row and row[0]:
+                        if tipo == "Individual" and len(row) >= 13:
+                            hist.append({"fecha": row[0], "n": row[1], "doc": row[2], "v": row[3], "matricula": row[4], "cobertura_cot": row[5], "zona": row[6], "e": row[7], "tipo": "Individual", "link": row[12] if len(row) > 12 else ""})
+                        elif tipo == "Flota" and len(row) >= 6:
+                            hist.append({"fecha": row[0], "n": row[1], "e": row[2], "e_nombre": row[3], "tipo": "Flota", "link": row[5] if len(row) > 5 else ""})
+                        elif tipo == "Aeronave" and len(row) >= 12:
+                            hist.append({"fecha": row[0], "n": row[1], "aseguradora": row[2], "aeronave": row[3], "matricula": row[4], "alcance_geo": row[5], "destino": row[6], "e": row[7], "total": row[10], "tipo": "Aeronave", "link": row[11] if len(row) > 11 else ""})
+            except: pass
+        hist.sort(key=lambda x: x.get("fecha", ""), reverse=False)
+        st.session_state.historico = hist
+        st.session_state.historico_sheet_cargado = True
+    except:
+        st.session_state.historico_sheet_cargado = True
 
 st.set_page_config(page_title="EDF SEGUROS", layout="wide", page_icon="🛡️")
 
@@ -524,7 +568,7 @@ txt_ben_veh = "• Auxilio mecanico e ilimitado\n• Cobertura Mercosur\n• Cri
 txt_hog_veh = "• Incendio Edificio USD 100.000\n• Incendio Contenido 50.000\n• Hurto Contenido 5.000\n• Costo anual Casas: USD 180\n• Costo anual Aptos: USD 120"
 txt_alq_veh = "• Auto sustituto por hasta 15 dias.\n• Costo anual: UYU 3.000 por vehiculo."
 txt_bic_veh = "• Cobertura Hurto bicicleta hasta USD 1.000.\n• Costo anual: USD 120"
-txt_obs_flota = "VIGENCIA COTIZADA:\nForma de Pago: redes de cobranza o tarjeta de crédito en 10 cuotas sin recargo.\nBeneficios\n  - Auxilio mecánico ilimitado.\n  - Cristales: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100.\n  - Granizo: SANCOR lo cubre, demás aseguradoras cobran deducible."
+txt_obs_flota = "Vigencia:\nForma de Pago: redes de cobranza o tarjeta de credito en 10 cuotas sin recargo.\nBeneficios\n  - Auxilio mecanico ilimitado.\n  - Cristales: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100.\n  - Granizo: SANCOR lo cubre, demas cobran deducible."
 txt_acc_flota = "• Seguro de Vida Accidentes choferes: USD 25.000.\n• Costo anual: UYU 1.900 por chofer."
 txt_alq_flota = "• Auto sustituto por hasta 15 dias.\n• Costo anual: UYU 3.000 por vehiculo."
 txt_bic_flota = "• Bici electrica o moto hasta USD 1.000.\n• Costo anual: UYU 5.000"
@@ -593,6 +637,16 @@ with tab_cot:
         st.session_state.edit_data = datos_i
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
+        # Guardar en Sheet
+        primera_aseg = t_edit.iloc[0] if not t_edit.empty else {}
+        guardar_en_sheet("Cotizaciones Individuales", [
+            datos_i["fecha"], n_cot, doc_in, v_cot, mat_cot, cob_cot, zona_cot, e_cot,
+            str(primera_aseg.get("Aseguradora", "")),
+            str(primera_aseg.get("Contado", "")),
+            str(primera_aseg.get("10 Cuotas", "")),
+            str(primera_aseg.get("Deducible", "")),
+            link_cliente
+        ])
         st.success("Propuesta guardada!")
         st.text_input("🔗 Enlace para mandar al cliente por WhatsApp:", value=link_cliente)
         componente_copiar_html = f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_cliente}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error al copiar\'); }})">📋 Copiar Link de Vehiculo</button>'
@@ -606,20 +660,22 @@ with tab_flota:
 
     if edit_f:
         st.session_state["f_nom_fl"] = edit_f.get("n", "")
-        st.session_state["f_cia_fl"] = edit_f.get("e", "")
-        st.session_state["f_as_fl"] = edit_f.get("e_nombre", "")
+        st.session_state["f_cia_fl"] = edit_f.get("e", "SBI")
+        st.session_state["f_as_fl"] = edit_f.get("e_nombre", "EDF SEGUROS")
         st.session_state["f_co_fl"] = edit_f.get("cont", "")
-    elif not edit_f and "f_vig_fl" not in st.session_state:
-        st.session_state["f_vig_fl"] = ""
+        st.session_state["f_vig_fl"] = edit_f.get("vigencia", "")
 
     with st.container(border=True):
-        f_c1, f_c2, f_c3, f_c4 = st.columns([2, 2, 1, 2])
+        f_c1, f_c2, f_c3 = st.columns([2, 2, 2])
         f_asegurado = f_c1.text_input("Asegurado", key="f_nom_fl")
-        f_cia_elegida = f_c2.text_input("Aseguradora", key="f_cia_fl")
-        f_asesor_nombre = f_c3.text_input("Asesor", key="f_as_fl")
+        f_cia_elegida = f_c2.text_input("Compania Aseguradora", key="f_cia_fl")
+        f_vigencia = f_c3.text_input("Vigencia Cotizada", key="f_vig_fl")
+
+        f_c4, f_c5, f_c6 = st.columns([2, 1, 2])
+        f_asesor_nombre = f_c4.text_input("Asesor", key="f_as_fl")
         if not edit_f:
             st.session_state["f_co_fl"] = CONTACTOS.get(st.session_state.get("f_as_fl", ""), "")
-        f_contacto = f_c4.text_input("Contacto", key="f_co_fl")
+        f_contacto = f_c6.text_input("Contacto", key="f_co_fl")
 
     cols_f = ["Marca", "Modelo", "Ano", "Matricula", "Cobertura", "Contado", "Deducible"]
     if edit_f and "tab" in edit_f:
@@ -645,11 +701,16 @@ with tab_flota:
         f_cb = st.text_area("Bici Electrica o Moto:", value=edit_f.get("cb", txt_bic_flota), height=50, key="flota_bic_v_final")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
-        nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "vigencia": f_vigencia, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
+        nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
         st.session_state.historico.append(nueva_f)
         st.session_state.edit_data = nueva_f
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
         link_flota = f"https://dfseguros.streamlit.app/?q={datos_b64}"
+        # Vehiculos como texto resumido
+        vehiculos_txt = " | ".join([f"{r.get('Marca','')} {r.get('Modelo','')} {r.get('Matricula','')}" for _, r in t_flota.iterrows() if r.get('Marca','')])
+        guardar_en_sheet("Cotizaciones Flotas", [
+            nueva_f["fecha"], f_asegurado, f_cia_elegida, f_asesor_nombre, vehiculos_txt, link_flota
+        ])
         st.success("Propuesta de Flota guardada!")
         st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota)
         componente_copiar_flota_html = f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_flota}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error al copiar\'); }})">📋 Copiar Link de Flota</button>'
@@ -798,6 +859,11 @@ with tab_aeronave:
         st.session_state.edit_data = datos_av
         datos_b64 = base64.b64encode(json.dumps(datos_av).encode()).decode()
         link_av = f"https://dfseguros.streamlit.app/?q={datos_b64}"
+        guardar_en_sheet("Cotizaciones Aeronaves", [
+            datos_av["fecha"], av_asegurado, av_aseguradora, av_aeronave,
+            av_matricula, av_alcance_geo, av_destino, av_asesor,
+            subtotal, cargos_emision, total_anual, link_av
+        ])
         st.success("Cotizacion de Aeronave guardada!")
         st.text_input("🔗 Enlace para mandar al cliente:", value=link_av)
         componente_copiar_av_html = f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_av}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error al copiar\'); }})">📋 Copiar Link Aeronave</button>'
@@ -823,7 +889,7 @@ with tab_historial:
         if filtro_tipo != "Todos":
             historico_filtrado = [r for r in historico_filtrado if r.get("tipo") == filtro_tipo]
 
-        for i, reg in enumerate(reversed(historico_filtrado)):
+        for reg in reversed(historico_filtrado):
             idx_real = st.session_state.historico.index(reg)
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             with col_info:
@@ -833,12 +899,12 @@ with tab_historial:
                 mat_hist = f" | {reg.get('matricula')}" if reg.get('matricula') else ""
                 st.write(f"📅 **{reg.get('fecha', '')[:10]}** | {icon} {reg.get('tipo')} | **{reg.get('n', 'Cliente')}**{mat_hist}")
             with col_edit:
-                if st.button("✏️ Cargar/Editar", key=f"edit_f_{i}_{idx_real}"):
+                if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
                     st.session_state.edit_data = reg
                     st.success("Cargada.")
                     st.rerun()
             with col_del:
-                if st.button("🗑️", key=f"del_f_{i}_{idx_real}"):
+                if st.button("🗑️", key=f"del_{idx_real}"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
     else:
