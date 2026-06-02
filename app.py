@@ -7,9 +7,6 @@ import io
 import json
 import base64
 
-# ==========================================
-# CONFIGURACION GLOBAL Y ENLACES
-# ==========================================
 URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA/edit#gid=860430337"
 TC_USD = 40.5
 
@@ -17,9 +14,6 @@ def f_num(val):
     try: return f"{int(float(str(val).replace('$','').replace('USD','').replace('.','').replace(',','').strip())):,}".replace(",",".")
     except: return str(val)
 
-# ==========================================
-# DETECCION DEL LINK EXTERNO (CLIENTE)
-# ==========================================
 query_params = st.query_params
 
 if "q" in query_params:
@@ -37,12 +31,18 @@ if "q" in query_params:
             </style>
         """, unsafe_allow_html=True)
 
-        # Vista para Aeronaves
         if propuesta_cliente.get("tipo") == "Aeronave":
+            mat = propuesta_cliente.get('matricula', '')
+            geo = propuesta_cliente.get('alcance_geo', '')
             st.markdown(f"""
             <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
                 <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
-                <p style="margin: 0; font-size: 16px; color: #555;"><b>Aeronave:</b> {propuesta_cliente.get('aeronave', '')} | <b>Destino:</b> {propuesta_cliente.get('destino', '')}</p>
+                <p style="margin: 0; font-size: 16px; color: #555;">
+                    <b>Aeronave:</b> {propuesta_cliente.get('aeronave', '')}
+                    {f' | <b>Matricula:</b> {mat}' if mat else ''}
+                    {f' | <b>Alcance Geografico:</b> {geo}' if geo else ''}
+                    | <b>Destino:</b> {propuesta_cliente.get('destino', '')}
+                </p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -59,10 +59,16 @@ if "q" in query_params:
                     html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{row.get("Cobertura","")}</td>'
                     capital = row.get("Capital", 0)
                     costo = row.get("Costo", 0)
+                    capital_str = str(capital)
+                    costo_str = str(costo)
                     try: capital_fmt = f"USD {int(float(capital)):,}".replace(",",".")
-                    except: capital_fmt = str(capital)
+                    except: capital_fmt = capital_str
+                    if capital_str in ["0", "0.0", ""]:
+                        capital_fmt = "—"
                     try: costo_fmt = f"USD {int(float(costo)):,}".replace(",",".")
-                    except: costo_fmt = str(costo)
+                    except: costo_fmt = costo_str
+                    if costo_str in ["0", "0.0", ""]:
+                        costo_fmt = "Incluido"
                     html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{capital_fmt}</td>'
                     html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{costo_fmt}</td>'
                     html_tabla += '</tr>'
@@ -75,7 +81,7 @@ if "q" in query_params:
             st.markdown(f"""
             <div style="margin-top:20px; padding:15px; background:#EFF6FF; border-radius:10px; border-left:5px solid #1E3A8A;">
                 <p style="margin:4px 0;">Subtotal: <b>USD {subtotal:,.0f}</b></p>
-                <p style="margin:4px 0;">Cargos de Emisión (15%): <b>USD {cargos:,.0f}</b></p>
+                <p style="margin:4px 0;">Cargos de Emision (15%): <b>USD {cargos:,.0f}</b></p>
                 <p style="margin:4px 0; font-size:17px; color:#1E3A8A;">Costo Anual Total: <b>USD {total:,.0f}</b></p>
             </div>
             """, unsafe_allow_html=True)
@@ -84,11 +90,10 @@ if "q" in query_params:
             st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont','')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
             st.stop()
 
-        # Vista para Individual y Flota
         st.markdown(f"""
-        <div style="font-family: sans-serif; text-align: left !important; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
-            <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111; text-align: left !important;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
-            <p style="margin: 0; font-size: 16px; color: #555; text-align: left !important;"><b>{"Aseguradora" if propuesta_cliente.get("tipo") == "Flota" else "Vehiculo"}:</b> {propuesta_cliente.get('v' if propuesta_cliente.get('tipo') != 'Flota' else 'e', 'Detalle')}</p>
+        <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
+            <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
+            <p style="margin: 0; font-size: 16px; color: #555;"><b>{"Aseguradora" if propuesta_cliente.get("tipo") == "Flota" else "Vehiculo"}:</b> {propuesta_cliente.get('v' if propuesta_cliente.get('tipo') != 'Flota' else 'e', 'Detalle')}</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -100,17 +105,30 @@ if "q" in query_params:
                     df_cli[col] = pd.to_numeric(df_cli[col], errors='coerce').fillna(0).astype(int)
             conf_columnas = {
                 "Aseguradora": st.column_config.TextColumn("ASEGURADORA"),
-                "Marca": st.column_config.TextColumn("MARCA"),
-                "Modelo": st.column_config.TextColumn("MODELO"),
-                "Ano": st.column_config.TextColumn("ANO"),
-                "Matricula": st.column_config.TextColumn("MATRICULA"),
-                "Cobertura": st.column_config.TextColumn("COBERTURA"),
                 "Contado": st.column_config.NumberColumn("CONTADO", format="$ %,d"),
                 "Deducible": st.column_config.NumberColumn("DEDUCIBLE", format="$ %,d")
             }
             if propuesta_cliente.get("tipo") != "Flota":
                 conf_columnas["10 Cuotas"] = st.column_config.NumberColumn("10 CUOTAS", format="$ %,d")
-            st.dataframe(df_cli, use_container_width=True, hide_index=True, column_config=conf_columnas)
+
+            cols_mostrar = [c for c in df_cli.columns if c in ["Aseguradora","Marca","Modelo","Ano","Matricula","Cobertura","Contado","10 Cuotas","Deducible"]]
+            html_tabla = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;">'
+            html_tabla += '<tr style="background:#1E3A8A;color:white;">'
+            for col in cols_mostrar:
+                html_tabla += f'<th style="padding:8px 12px;text-align:left;">{col.upper()}</th>'
+            html_tabla += '</tr>'
+            for i, row in df_cli.iterrows():
+                bg = "#f8f9fa" if i % 2 == 0 else "white"
+                html_tabla += f'<tr style="background:{bg};">'
+                for col in cols_mostrar:
+                    val = row.get(col, "")
+                    if col in ["Contado", "10 Cuotas", "Deducible"]:
+                        try: val = f"$ {int(float(val)):,}".replace(",", ".")
+                        except: pass
+                    html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{val}</td>'
+                html_tabla += '</tr>'
+            html_tabla += '</table>'
+            st.markdown(html_tabla, unsafe_allow_html=True)
 
         if propuesta_cliente.get("ben"):
             st.write("")
@@ -157,9 +175,6 @@ if "q" in query_params:
         st.stop()
 
 
-# ==========================================
-# LOGICA DEL INTERFAZ DEL ASESOR (CRM)
-# ==========================================
 if "historico" not in st.session_state: st.session_state.historico = []
 if "edit_data" not in st.session_state: st.session_state.edit_data = {}
 
@@ -169,6 +184,22 @@ st.markdown("""
     <style>
     .ben-fila { background-color: #f8f9fa; padding: 10px 18px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid #1E3A8A !important; font-size: 14px; color: #333; }
     .caja-azul { background-color: #ffffff; padding: 18px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #1E3A8A !important; }
+    div.stButton > button {
+        background-color: #ff4b4b !important; color: white !important;
+        border: 2px solid #ff4b4b !important; font-weight: bold !important;
+        border-radius: 8px !important; padding: 10px 24px !important;
+        transition: all 0.3s ease !important;
+    }
+    div.stButton > button:hover {
+        background-color: #ff3333 !important; border-color: #ff3333 !important;
+        color: white !important; transform: scale(1.01) !important;
+    }
+    .btn-copiar-edf {
+        background-color: #1E3A8A !important; color: white !important;
+        border: none; padding: 10px 20px; font-weight: bold;
+        border-radius: 8px; cursor: pointer; margin-top: 10px; display: inline-block;
+    }
+    .btn-copiar-edf:hover { background-color: #111827 !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -190,26 +221,31 @@ NOMBRES = {
     "EC": "Eugenia Cabral", "PG": "Pablo Gagliardi"
 }
 
-# Tasas predefinidas por destino
+# Coberturas con asientos habilitados
+COB_CON_ASIENTOS = ["Accidente Personales Tripulantes", "Accidente Personales Pasajeros"]
+
 TASAS_AERONAVE = {
-    "Privado / Otro": {
-        "Perdida o Dano de la Aeronave": 1.50,
-        "RC hacia Terceros (Excepto pasajeros)": 0.50,
-        "Responsabilidad Civil Legal de Carga": 0.50,
-        "Accidente Personales Tripulantes": 0.30,
-        "Accidente Personales Pasajeros": 0.30,
-    },
-    "Agricola": {
-        "Perdida o Dano de la Aeronave": 3.00,
-        "RC hacia Terceros (Excepto pasajeros)": 0.50,
-        "Responsabilidad Civil Danos Quimicos": 3.00,
-        "Accidente Personales Tripulantes": 0.30,
-        "Accidente Personales Pasajeros": 0.30,
-    },
-    "Escuela e Instruccion": {
-        "Perdida o Dano de la Aeronave": 2.50,
-        "RC hacia Terceros (Excepto pasajeros)": 0.50,
-    },
+    "Privado / Otro": [
+        {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 1.50, "Asientos": 0, "Capital (USD)": 0},
+        {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Asientos": 0, "Capital (USD)": 0},
+        {"Cobertura": "Responsabilidad Civil Legal de Carga", "Tasa (%)": 0.50, "Asientos": 0, "Capital (USD)": 0},
+        {"Cobertura": "Accidente Personales Tripulantes", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
+        {"Cobertura": "Accidente Personales Pasajeros", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
+        {"Cobertura": "Aptitud de aterrizaje en pistas no autorizadas", "Tasa (%)": 0, "Asientos": 0, "Capital (USD)": 0},
+    ],
+    "Agricola": [
+        {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 3.00, "Asientos": 0, "Capital (USD)": 0},
+        {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Asientos": 0, "Capital (USD)": 0},
+        {"Cobertura": "Responsabilidad Civil Danos Quimicos", "Tasa (%)": 3.00, "Asientos": 0, "Capital (USD)": 0},
+        {"Cobertura": "Accidente Personales Tripulantes", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
+        {"Cobertura": "Accidente Personales Pasajeros", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
+        {"Cobertura": "Aptitud de aterrizaje en pistas no autorizadas", "Tasa (%)": 0, "Asientos": 0, "Capital (USD)": 0},
+    ],
+    "Escuela e Instruccion": [
+        {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 2.50, "Asientos": 0, "Capital (USD)": 0},
+        {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Asientos": 0, "Capital (USD)": 0},
+        {"Cobertura": "Aptitud de aterrizaje en pistas no autorizadas", "Tasa (%)": 0, "Asientos": 0, "Capital (USD)": 0},
+    ],
 }
 
 if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] = "RDF"
@@ -237,7 +273,7 @@ c_aseguradora = col_map.get("aseguradora", col_map.get("compania", "Aseguradora"
 c_ramo = col_map.get("ramo", "Ramo")
 c_p_usd = col_map.get("premio usd (iva inc)", "Premio USD (IVA inc)")
 c_p_uyu = col_map.get("premio uyu (iva inc)", "Premio UYU (IVA inc)")
-c_adjunto = col_map.get("adjunto (poliza)", col_map.get("adjunto (poliza)", "Adjunto (poliza)"))
+c_adjunto = col_map.get("adjunto (poliza)", "Adjunto (poliza)")
 
 df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get(c_p_usd, 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get(c_p_uyu, 0), errors='coerce').fillna(0) / TC_USD)).round(0)
 df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw.get('Fin de Vigencia', date.today()), dayfirst=True, errors='coerce').dt.date
@@ -275,8 +311,8 @@ with tab_car:
             df_resumen = df_resumen.rename(columns={col_cliente_real: "Asegurado"})
         df_resumen = df_resumen.rename(columns={
             c_adjunto: "📄 Poliza", c_documento: "Documento", c_aseguradora: "Aseguradora",
-            c_ramo: "Ramo", 'Fin de Vigencia': "Vencimiento", c_p_usd: "Premio USD",
-            c_p_uyu: "Premio UYU", 'Premio_Total_USD': "Premio Total (USD)"
+            c_ramo: "Ramo", 'Fin de Vigencia': "Vencimiento",
+            c_p_usd: "Premio USD", c_p_uyu: "Premio UYU", 'Premio_Total_USD': "Premio Total (USD)"
         })
         columnas_visibles = ["📄 Poliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
         cols_validas = [c for c in columnas_visibles if c in df_resumen.columns]
@@ -285,7 +321,7 @@ with tab_car:
         st.markdown("##### 📋 Resumen de Contratos Activos")
         st.markdown("<small style='color:gray;'>💡 Hace un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
 
-        tabla_cartera_interactiva = st.dataframe(
+        st.dataframe(
             df_resumen, use_container_width=True, hide_index=False,
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
@@ -301,8 +337,7 @@ with tab_car:
         filas_seleccionadas = selection.get("rows", [])
 
         if filas_seleccionadas:
-            indice_fila = filas_seleccionadas[0]
-            fila_completa = df_c.iloc[indice_fila]
+            fila_completa = df_c.iloc[filas_seleccionadas[0]]
             st.write("")
             with st.container(border=True):
                 st.markdown(f"### 🛡️ Detalle de la Poliza: {fila_completa.get(c_asegurado, 'Cliente')}")
@@ -310,13 +345,13 @@ with tab_car:
                 with cx1:
                     st.markdown("**👤 Datos del Cliente:**")
                     st.write(f"• **Documento:** {fila_completa.get(c_documento, 'N/D')}")
-                    st.write(f"• **Celular:** {fila_completa.get('Celular', col_map.get('celular', 'N/D'))}")
-                    st.write(f"• **Mail:** {fila_completa.get('Mail', col_map.get('mail', 'N/D'))}")
+                    st.write(f"• **Celular:** {fila_completa.get('Celular', 'N/D')}")
+                    st.write(f"• **Mail:** {fila_completa.get('Mail', 'N/D')}")
                 with cx2:
                     st.markdown("**🚗 Detalles del Bien:**")
                     st.write(f"• **Ramo:** {fila_completa.get(c_ramo, 'N/D')}")
-                    st.write(f"• **Matricula:** {fila_completa.get('Matricula', col_map.get('matricula', 'N/D'))}")
-                    st.write(f"• **Marca/Modelo:** {fila_completa.get('Marca/Modelo', col_map.get('marca/modelo', 'N/D'))}")
+                    st.write(f"• **Matricula:** {fila_completa.get('Matricula', 'N/D')}")
+                    st.write(f"• **Marca/Modelo:** {fila_completa.get('Marca/Modelo', 'N/D')}")
                 with cx3:
                     st.markdown("**📅 Gestion e Intermediacion:**")
                     st.write(f"• **Fin de Vigencia:** {fila_completa.get('Fin de Vigencia', 'N/D')}")
@@ -331,7 +366,8 @@ with tab_ven:
     if not df_f.empty:
         df_v = df_f.dropna(subset=['Fin de Vigencia'])
         c1, c2 = st.columns(2)
-        f_ini, f_fin = c1.date_input("Desde:", date.today().replace(day=1)), c2.date_input("Hasta:", date.today() + timedelta(days=90))
+        f_ini = c1.date_input("Desde:", date.today().replace(day=1))
+        f_fin = c2.date_input("Hasta:", date.today() + timedelta(days=90))
         df_venc_f = df_v[(df_v['Fin de Vigencia'] >= f_ini) & (df_v['Fin de Vigencia'] <= f_fin)].sort_values('Fin de Vigencia')
 
         if not df_venc_f.empty:
@@ -341,8 +377,8 @@ with tab_ven:
                 df_venc_resumen = df_venc_resumen.rename(columns={col_cliente_real_v: "Asegurado"})
             df_venc_resumen = df_venc_resumen.rename(columns={
                 c_adjunto: "📄 Poliza", c_documento: "Documento", c_aseguradora: "Aseguradora",
-                c_ramo: "Ramo", 'Fin de Vigencia': "Vencimiento", c_p_usd: "Premio USD",
-                c_p_uyu: "Premio UYU", 'Premio_Total_USD': "Premio Total (USD)"
+                c_ramo: "Ramo", 'Fin de Vigencia': "Vencimiento",
+                c_p_usd: "Premio USD", c_p_uyu: "Premio UYU", 'Premio_Total_USD': "Premio Total (USD)"
             })
             columnas_visibles_v = ["📄 Poliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
             cols_validas_v = [c for c in columnas_visibles_v if c in df_venc_resumen.columns]
@@ -350,7 +386,7 @@ with tab_ven:
 
             st.markdown("<small style='color:gray;'>💡 Hace un clic en el extremo izquierdo de cualquier fila para ver el detalle abajo</small>", unsafe_allow_html=True)
 
-            tabla_venc_interactiva = st.dataframe(
+            st.dataframe(
                 df_venc_resumen, use_container_width=True, hide_index=False,
                 on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
                 column_config={
@@ -371,29 +407,8 @@ with tab_ven:
             filas_seleccionadas_v = selection_v.get("rows", [])
 
             if filas_seleccionadas_v:
-                indice_fila_v = filas_seleccionadas_v[0]
-                fila_completa_v = df_venc_f.iloc[indice_fila_v]
+                fila_completa_v = df_venc_f.iloc[filas_seleccionadas_v[0]]
 
-                st.write("")
-                with st.container(border=True):
-                    st.markdown(f"### 🛡️ Detalle de la Poliza (Vencimiento): {fila_completa_v.get(c_asegurado, 'Cliente')}")
-                    cv1, cv2 = st.columns(2)
-                    with cv1:
-                        st.markdown("**👤 Datos del Cliente:**")
-                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
-                        st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
-                        st.write(f"• **Mail:** {fila_completa_v.get('Mail', col_map.get('mail', 'N/D'))}")
-                    with cv2:
-                        st.markdown("**📋 Detalles del Bien:**")
-                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
-                        c_npoliza_v = col_map.get("n° de poliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
-                        npoliza_val_v = str(fila_completa_v.get(c_npoliza_v, 'N/D')) if c_npoliza_v else 'N/D'
-                        st.write(f"• **N° de Poliza:** {npoliza_val_v}")
-                        detalle_col_v = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
-                        detalle_val_v = str(fila_completa_v.get(detalle_col_v, 'N/D')) if detalle_col_v else 'N/D'
-                        st.write(f"• **Detalle:** {detalle_val_v}")
-
-                # Texto de renovacion
                 def limpiar(val):
                     v = str(val).strip()
                     return '' if v in ['nan', 'None', 'N/D', 'none'] else v
@@ -418,7 +433,6 @@ with tab_ven:
                 vencimiento_v = fila_completa_v.get('Fin de Vigencia', '')
                 fecha_fmt = vencimiento_v.strftime('%d/%m/%Y') if hasattr(vencimiento_v, 'strftime') else str(vencimiento_v)
                 nombre_asesor_v = NOMBRES.get(st.session_state.usuario_actual, st.session_state.usuario_actual)
-                contacto_asesor_v = CONTACTOS.get(st.session_state.usuario_actual, '')
                 if premio_uyu_v and str(premio_uyu_v) not in ['0']:
                     premio_txt = f"UYU {f_num(premio_uyu_v)}"
                 elif premio_usd_v and str(premio_usd_v) not in ['0']:
@@ -445,70 +459,42 @@ Quedo a las ordenes,
 Saludos!
 {nombre_asesor_v}"""
 
+                st.write("")
+                with st.container(border=True):
+                    st.markdown(f"### 🛡️ Detalle de la Poliza (Vencimiento): {fila_completa_v.get(c_asegurado, 'Cliente')}")
+                    cv1, cv2 = st.columns(2)
+                    with cv1:
+                        st.markdown("**👤 Datos del Cliente:**")
+                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
+                        st.write(f"• **Cell:** {fila_completa_v.get('Celular', 'N/D')}")
+                        st.write(f"• **Mail:** {fila_completa_v.get(c_mail_v, 'N/D') if c_mail_v else 'N/D'}")
+                    with cv2:
+                        st.markdown("**📋 Detalles del Bien:**")
+                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+                        c_npoliza_v = col_map.get("n de poliza", col_map.get("numero de poliza", ""))
+                        npoliza_val_v = str(fila_completa_v.get(c_npoliza_v, 'N/D')) if c_npoliza_v else 'N/D'
+                        st.write(f"• **N de Poliza:** {npoliza_val_v}")
+                        detalle_col_v2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
+                        detalle_val_v2 = str(fila_completa_v.get(detalle_col_v2, 'N/D')) if detalle_col_v2 else 'N/D'
+                        st.write(f"• **Detalle:** {detalle_val_v2}")
+
                 st.markdown('<style>details summary { background-color: #1E3A8A22 !important; border-radius: 6px; padding: 8px 12px; color: #1E3A8A; font-weight: bold; }</style>', unsafe_allow_html=True)
                 with st.expander("💬 Texto renovacion (predeterminado)"):
                     st.code(texto_wp, language=None)
         else:
             st.info("No hay vencimientos en el rango seleccionado.")
 
-# ==========================================
-# PLANTILLAS DE TEXTOS PRECARGADOS
-# ==========================================
+# PLANTILLAS
 txt_ben_veh = "• Auxilio mecanico e ilimitado\n• Cobertura Mercosur\n• Cristales: USD 300 SANCOR, USD 200 BSE O SBI, USD 100 SURA, demas cobran deducible\n• Granizo: SANCOR incluido sin deducible, demas aplican deducible."
 txt_hog_veh = "• Incendio Edificio USD 100.000\n• Incendio Contenido 50.000\n• Hurto Contenido 5.000\n• Costo anual Casas: USD 180\n• Costo anual Aptos: USD 120"
-txt_alq_veh = "• Auto sustituto por hasta 15 dias en caso de que tu vehiculo sufra un siniestro total o parcial.\n• Costo anual: UYU 3.000 por vehiculo."
-txt_bic_veh = "• Cobertura por Hurto y/o Rapina de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Danos a Terceros que puedas provocar hasta USD 10.000.\n• Costo anual: USD 120"
+txt_alq_veh = "• Auto sustituto por hasta 15 dias.\n• Costo anual: UYU 3.000 por vehiculo."
+txt_bic_veh = "• Cobertura Hurto bicicleta hasta USD 1.000.\n• Costo anual: USD 120"
+txt_obs_flota = "Vigencia:\nForma de Pago: redes de cobranza o tarjeta de credito en 10 cuotas sin recargo.\nBeneficios\n  - Auxilio mecanico ilimitado.\n  - Cristales: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100.\n  - Granizo: SANCOR lo cubre, demas cobran deducible."
+txt_acc_flota = "• Seguro de Vida Accidentes choferes: USD 25.000.\n• Costo anual: UYU 1.900 por chofer."
+txt_alq_flota = "• Auto sustituto por hasta 15 dias.\n• Costo anual: UYU 3.000 por vehiculo."
+txt_bic_flota = "• Bici electrica o moto hasta USD 1.000.\n• Costo anual: UYU 5.000"
 
-txt_obs_flota = """Vigencia:
-Forma de Pago: redes de cobranza o tarjeta de credito en 10 cuotas sin recargo.
-Beneficios
-  - Auxilio mecanico ilimitado para toda la flota (Uruguay y paises limitrofes) menos camiones y motos.
-  - Cobertura de cristales, cerraduras: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100, demas companias aplican deducible y despues pagan.
-  - Cobertura de Granizo: SANCOR lo cubre, demas companias cobran deducible y despues pagan."""
-
-txt_acc_flota = "• Seguro de Vida a causa de Accidentes (para los choferes): USD 25.000 de cobertura.\n• Costo anual: UYU 1.900 por chofer."
-txt_alq_flota = "• Auto sustituto por hasta 15 dias en caso de que tu vehiculo sufra un siniestro total o parcial.\n• Costo anual: UYU 3.000 por vehiculo."
-txt_bic_flota = "• Si algun empleado de su empresa quiere asegurar la bici electrica o moto. Valor hasta USD 1.000.\n• Cobertura: Danos a Terceros + Hurto + Incendio\n• Costo anual: UYU 5.000"
-
-# ==========================================
-# ESTILOS CSS
-# ==========================================
-st.markdown("""
-<style>
-div.stButton > button {
-    background-color: #ff4b4b !important;
-    color: white !important;
-    border: 2px solid #ff4b4b !important;
-    font-weight: bold !important;
-    border-radius: 8px !important;
-    padding: 10px 24px !important;
-    transition: all 0.3s ease !important;
-}
-div.stButton > button:hover {
-    background-color: #ff3333 !important;
-    border-color: #ff3333 !important;
-    color: white !important;
-    transform: scale(1.01) !important;
-}
-.btn-copiar-edf {
-    background-color: #1E3A8A !important;
-    color: white !important;
-    border: none;
-    padding: 10px 20px;
-    font-weight: bold;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 10px;
-    display: inline-block;
-}
-.btn-copiar-edf:hover { background-color: #111827 !important; }
-</style>
-""", unsafe_allow_html=True)
-
-
-# ==========================================
-# PESTANA VEHICULOS (INDIVIDUAL)
-# ==========================================
+# --- PESTAÑA VEHICULOS ---
 with tab_cot:
     st.subheader("📝 Cotizador Seguros Individuales")
     edit_ind = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Individual" else {}
@@ -517,13 +503,15 @@ with tab_cot:
         st.session_state["ci_v_final"] = edit_ind.get("doc", "")
         st.session_state["nom_v_final"] = edit_ind.get("n", "")
         st.session_state["veh_v_final"] = edit_ind.get("v", "")
+        st.session_state["mat_v_final"] = edit_ind.get("matricula", "")
         st.session_state["cont_v_final"] = edit_ind.get("cont", "")
 
     with st.container(border=True):
-        c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
+        c_doc, c_nom, c_veh, c_mat, c_ase, c_con = st.columns([1.5, 2, 2, 1.5, 1, 2])
         doc_in = c_doc.text_input("CI/RUT", key="ci_v_final")
         n_cot = c_nom.text_input("Nombre", key="nom_v_final")
-        v_cot = c_veh.text_input("Vehiculo", key="veh_v_final")
+        v_cot = c_veh.text_input("Vehiculo (marca/modelo)", key="veh_v_final")
+        mat_cot = c_mat.text_input("Matricula", key="mat_v_final")
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v_final")
         if not edit_ind:
             st.session_state["cont_v_final"] = CONTACTOS.get(e_cot, "")
@@ -533,7 +521,12 @@ with tab_cot:
     if edit_ind and "tab" in edit_ind:
         df_p_init = pd.DataFrame(edit_ind["tab"])
     else:
-        df_p_init = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
+        df_p_init = pd.DataFrame([
+            {"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+            {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+            {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+            {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}
+        ])
 
     t_edit = st.data_editor(
         df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo",
@@ -554,7 +547,7 @@ with tab_cot:
         c_b = st.text_area("Bici Electrica:", value=edit_ind.get("cb", txt_bic_veh), height=50, key="ind_bic_v_final")
 
     if st.button("💾 Guardar propuesta y Generar Link", type="primary", use_container_width=True, key="save_ind_btn"):
-        datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
+        datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "matricula": mat_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
         st.session_state.historico.append(datos_i)
         st.session_state.edit_data = datos_i
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
@@ -565,9 +558,7 @@ with tab_cot:
         st.components.v1.html(componente_copiar_html, height=60)
 
 
-# ==========================================
-# PESTANA FLOTAS (CORPORATIVO)
-# ==========================================
+# --- PESTAÑA FLOTAS ---
 with tab_flota:
     st.subheader("🚛 Cotizador Seguro de Flotas")
     edit_f = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Flota" else {}
@@ -609,7 +600,7 @@ with tab_flota:
         st.markdown("**Coberturas Complementarias para la Flota**")
         f_ch = st.text_area("Accidentes Personales:", value=edit_f.get("ch", txt_acc_flota), height=80, key="flota_hog_v_final")
         f_ca = st.text_area("Auto Sustituto / Alquiler:", value=edit_f.get("ca", txt_alq_flota), height=50, key="flota_alq_v_final")
-        f_cb = st.text_area("Bici Electrica o Moto (Movilidad):", value=edit_f.get("cb", txt_bic_flota), height=50, key="flota_bic_v_final")
+        f_cb = st.text_area("Bici Electrica o Moto:", value=edit_f.get("cb", txt_bic_flota), height=50, key="flota_bic_v_final")
 
     if st.button("💾 Guardar propuesta de Flota y Generar Link", key="btn_save_fl", use_container_width=True):
         nueva_f = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": f_asegurado, "e": f_cia_elegida, "e_nombre": f_asesor_nombre, "cont": f_contacto, "tab": t_flota.to_dict(orient='records'), "ben": f_obs, "ch": f_ch, "ca": f_ca, "cb": f_cb, "tipo": "Flota"}
@@ -623,9 +614,7 @@ with tab_flota:
         st.components.v1.html(componente_copiar_flota_html, height=60)
 
 
-# ==========================================
-# PESTANA AERONAVES
-# ==========================================
+# --- PESTAÑA AERONAVES ---
 with tab_aeronave:
     st.subheader("✈️ Cotizador Seguros de Aeronaves")
     edit_av = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Aeronave" else {}
@@ -634,19 +623,24 @@ with tab_aeronave:
         st.session_state["av_asegurado"] = edit_av.get("n", "")
         st.session_state["av_aseguradora"] = edit_av.get("aseguradora", "")
         st.session_state["av_aeronave"] = edit_av.get("aeronave", "")
-        st.session_state["av_asesor"] = edit_av.get("e", st.session_state.usuario_actual)
+        st.session_state["av_matricula"] = edit_av.get("matricula", "")
+        st.session_state["av_alcance_geo"] = edit_av.get("alcance_geo", "")
         st.session_state["av_contacto"] = edit_av.get("cont", "")
 
     with st.container(border=True):
-        av_c1, av_c2, av_c3, av_c4 = st.columns([2, 2, 2, 2])
-        av_asegurado = av_c1.text_input("Asegurado", key="av_asegurado")
-        av_aseguradora = av_c2.text_input("Aseguradora", key="av_aseguradora")
-        av_aeronave = av_c3.text_input("Aeronave (marca/modelo/matricula)", key="av_aeronave")
-        av_asesor = av_c4.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
-                                     index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in USUARIOS else 0)
+        av_r1c1, av_r1c2, av_r1c3 = st.columns(3)
+        av_asegurado = av_r1c1.text_input("Asegurado", key="av_asegurado")
+        av_aseguradora = av_r1c2.text_input("Aseguradora", key="av_aseguradora")
+        av_aeronave = av_r1c3.text_input("Aeronave (Marca y Modelo)", key="av_aeronave")
+
+        av_r2c1, av_r2c2, av_r2c3, av_r2c4 = st.columns(4)
+        av_matricula = av_r2c1.text_input("Matricula", key="av_matricula")
+        av_alcance_geo = av_r2c2.text_input("Alcance Geografico", key="av_alcance_geo")
+        av_asesor = av_r2c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
+                                       index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0)
         if not edit_av:
             st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
-        av_contacto = av_c4.text_input("Contacto", key="av_contacto")
+        av_contacto = av_r2c4.text_input("Contacto", key="av_contacto")
 
     destinos = ["Privado / Otro", "Agricola", "Escuela e Instruccion"]
     av_destino_idx = destinos.index(edit_av.get("destino", "Privado / Otro")) if edit_av.get("destino") in destinos else 0
@@ -655,41 +649,41 @@ with tab_aeronave:
     st.markdown("---")
     st.markdown("**Coberturas y Tasas** *(las tasas no se muestran al cliente)*")
 
-    tasas_default = TASAS_AERONAVE[av_destino]
-    coberturas_disponibles = list(tasas_default.keys())
-
-    # Inicializar tabla desde historial o desde defaults
     if edit_av and "tab_av" in edit_av:
         df_av_init = pd.DataFrame(edit_av["tab_av"])
     else:
-        df_av_init = pd.DataFrame([
-            {"Cobertura": cob, "Tasa (%)": tasa, "Capital (USD)": 0, "Asientos": 0}
-            for cob, tasa in tasas_default.items()
-        ])
+        df_av_init = pd.DataFrame(TASAS_AERONAVE[av_destino])
 
+    # Columnas con asientos bloqueados segun cobertura
     t_av = st.data_editor(
         df_av_init,
         num_rows="dynamic",
         use_container_width=True,
         key="editor_aeronaves",
+        column_order=["Cobertura", "Tasa (%)", "Asientos", "Capital (USD)"],
         column_config={
             "Cobertura": st.column_config.TextColumn("Cobertura"),
-            "Tasa (%)": st.column_config.NumberColumn("Tasa (%)", format="%.2f%%", min_value=0.0, max_value=100.0, step=0.01),
+            "Tasa (%)": st.column_config.NumberColumn("Tasa (%)", format="%.2f%%", min_value=0.0, step=0.01),
+            "Asientos": st.column_config.NumberColumn("Asientos", format="%d", min_value=0),
             "Capital (USD)": st.column_config.NumberColumn("Capital (USD)", format="$ %,d"),
-            "Asientos": st.column_config.NumberColumn("Asientos", format="%d"),
         }
     )
 
-    # Calculos automaticos
+    # Calculos
     filas_calc = []
     subtotal = 0.0
     for _, row in t_av.iterrows():
         cob = str(row.get("Cobertura", ""))
         tasa = float(row.get("Tasa (%)", 0) or 0)
         capital = float(row.get("Capital (USD)", 0) or 0)
-        costo = round(capital * tasa / 100, 2)
+        asientos = int(row.get("Asientos", 0) or 0)
+        # Aptitud de aterrizaje: costo = 0, se muestra como Incluido
+        if "aptitud" in cob.lower() or "pista" in cob.lower():
+            costo = 0.0
+        else:
+            costo = round(capital * tasa / 100, 2)
         subtotal += costo
-        filas_calc.append({"Cobertura": cob, "Tasa (%)": tasa, "Capital": capital, "Costo": costo})
+        filas_calc.append({"Cobertura": cob, "Tasa (%)": tasa, "Asientos": asientos, "Capital": capital, "Costo": costo})
 
     cargos_emision = round(subtotal * 0.15, 2)
     total_anual = round(subtotal + cargos_emision, 2)
@@ -706,6 +700,8 @@ with tab_aeronave:
             "n": av_asegurado,
             "aseguradora": av_aseguradora,
             "aeronave": av_aeronave,
+            "matricula": av_matricula,
+            "alcance_geo": av_alcance_geo,
             "destino": av_destino,
             "e": av_asesor,
             "cont": av_contacto,
@@ -726,33 +722,34 @@ with tab_aeronave:
         st.components.v1.html(componente_copiar_av_html, height=60)
 
 
-# ==========================================
-# PESTANA HISTORIAL
-# ==========================================
+# --- PESTAÑA HISTORIAL ---
 with tab_historial:
     st.subheader("📜 Historial de Propuestas Guardadas")
 
     if st.session_state.historico:
-        # Filtros
-        hf1, hf2 = st.columns([2, 1])
-        busq_hist = hf1.text_input("🔍 Buscar por asegurado:", key="busq_historial")
-        tipos_disponibles = ["Todos"] + list(set(r.get("tipo", "") for r in st.session_state.historico))
-        filtro_tipo = hf2.selectbox("Filtrar por tipo:", tipos_disponibles, key="filtro_tipo_hist")
+        hf1, hf2, hf3 = st.columns([2, 1, 1])
+        busq_hist_nom = hf1.text_input("🔍 Buscar por asegurado:", key="busq_hist_nom")
+        busq_hist_mat = hf2.text_input("🔍 Buscar por matricula:", key="busq_hist_mat")
+        tipos_disponibles = ["Todos"] + sorted(list(set(r.get("tipo", "") for r in st.session_state.historico)))
+        filtro_tipo = hf3.selectbox("Filtrar por tipo:", tipos_disponibles, key="filtro_tipo_hist")
 
         historico_filtrado = st.session_state.historico
-        if busq_hist:
-            historico_filtrado = [r for r in historico_filtrado if busq_hist.lower() in r.get("n", "").lower()]
+        if busq_hist_nom:
+            historico_filtrado = [r for r in historico_filtrado if busq_hist_nom.lower() in r.get("n", "").lower()]
+        if busq_hist_mat:
+            historico_filtrado = [r for r in historico_filtrado if busq_hist_mat.lower() in r.get("matricula", "").lower()]
         if filtro_tipo != "Todos":
             historico_filtrado = [r for r in historico_filtrado if r.get("tipo") == filtro_tipo]
 
-        for i, reg in enumerate(reversed(historico_filtrado)):
+        for reg in reversed(historico_filtrado):
             idx_real = st.session_state.historico.index(reg)
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             with col_info:
                 if reg.get("tipo") == "Flota": icon = "🚚"
                 elif reg.get("tipo") == "Aeronave": icon = "✈️"
                 else: icon = "🚗"
-                st.write(f"📅 **{reg.get('fecha', '')[:10]}** | {icon} {reg.get('tipo')} | **{reg.get('n', 'Cliente')}**")
+                mat_hist = f" | {reg.get('matricula')}" if reg.get('matricula') else ""
+                st.write(f"📅 **{reg.get('fecha', '')[:10]}** | {icon} {reg.get('tipo')} | **{reg.get('n', 'Cliente')}**{mat_hist}")
             with col_edit:
                 if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
                     st.session_state.edit_data = reg
@@ -766,9 +763,7 @@ with tab_historial:
         st.info("No hay propuestas en el historial todavia.")
 
 
-# ==========================================
-# PESTANA ANALISIS
-# ==========================================
+# --- PESTAÑA ANALISIS ---
 with tab_an:
     st.subheader("📊 Analisis de Cartera")
     if not df_f.empty:
