@@ -6,7 +6,6 @@ from datetime import date, datetime, timedelta
 import io
 import json
 import base64
-import urllib.parse
 
 # ==========================================
 # CONFIGURACION GLOBAL Y ENLACES
@@ -15,12 +14,8 @@ URL_HOJA = "https://docs.google.com/spreadsheets/d/1xyzaQncW_4XcjV5hcrc41YGFUst5
 TC_USD = 40.5
 
 def f_num(val):
-    try: return f"{int(float(str(val).replace('$', '').replace('USD', '').replace('.', '').replace(',', '').strip())):,}".replace(",", ".")
+    try: return f"{int(float(str(val).replace('$','').replace('USD','').replace('.','').replace(',','').strip())):,}".replace(",",".")
     except: return str(val)
-
-def limpiar(val):
-    v = str(val).strip()
-    return '' if v in ['nan', 'None', 'N/D', 'none'] else v
 
 # ==========================================
 # DETECCION DEL LINK EXTERNO (CLIENTE)
@@ -37,13 +32,59 @@ if "q" in query_params:
 
         st.markdown("""
             <style>
-            .tabla-edf { width:100%; border-collapse: collapse; margin-top: 15px; font-family: sans-serif; background-color: white; }
-            .izq-negrita { text-align: left !important; font-weight: bold; }
             .ben-fila { background-color: #f8f9fa; padding: 10px 18px; border-radius: 8px; margin-bottom: 8px; border-left: 5px solid #1E3A8A !important; font-size: 14px; color: #333; }
             .caja-azul { background-color: #ffffff; padding: 18px; border-radius: 12px; height: 100%; border: 1px solid #e0e0e0; border-top: 5px solid #1E3A8A !important; }
             </style>
         """, unsafe_allow_html=True)
 
+        # Vista para Aeronaves
+        if propuesta_cliente.get("tipo") == "Aeronave":
+            st.markdown(f"""
+            <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
+                <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
+                <p style="margin: 0; font-size: 16px; color: #555;"><b>Aeronave:</b> {propuesta_cliente.get('aeronave', '')} | <b>Destino:</b> {propuesta_cliente.get('destino', '')}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            tab_data = propuesta_cliente.get("tab", [])
+            if tab_data:
+                html_tabla = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">'
+                html_tabla += '<tr style="background:#1E3A8A;color:white;">'
+                for col in ["Cobertura", "Capital (USD)", "Costo Anual (USD)"]:
+                    html_tabla += f'<th style="padding:8px 12px;text-align:left;">{col}</th>'
+                html_tabla += '</tr>'
+                for i, row in enumerate(tab_data):
+                    bg = "#f8f9fa" if i % 2 == 0 else "white"
+                    html_tabla += f'<tr style="background:{bg};">'
+                    html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{row.get("Cobertura","")}</td>'
+                    capital = row.get("Capital", 0)
+                    costo = row.get("Costo", 0)
+                    try: capital_fmt = f"USD {int(float(capital)):,}".replace(",",".")
+                    except: capital_fmt = str(capital)
+                    try: costo_fmt = f"USD {int(float(costo)):,}".replace(",",".")
+                    except: costo_fmt = str(costo)
+                    html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{capital_fmt}</td>'
+                    html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{costo_fmt}</td>'
+                    html_tabla += '</tr>'
+                html_tabla += '</table>'
+                st.markdown(html_tabla, unsafe_allow_html=True)
+
+            subtotal = propuesta_cliente.get("subtotal", 0)
+            cargos = propuesta_cliente.get("cargos", 0)
+            total = propuesta_cliente.get("total", 0)
+            st.markdown(f"""
+            <div style="margin-top:20px; padding:15px; background:#EFF6FF; border-radius:10px; border-left:5px solid #1E3A8A;">
+                <p style="margin:4px 0;">Subtotal: <b>USD {subtotal:,.0f}</b></p>
+                <p style="margin:4px 0;">Cargos de Emisión (15%): <b>USD {cargos:,.0f}</b></p>
+                <p style="margin:4px 0; font-size:17px; color:#1E3A8A;">Costo Anual Total: <b>USD {total:,.0f}</b></p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("---")
+            st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont','')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
+            st.stop()
+
+        # Vista para Individual y Flota
         st.markdown(f"""
         <div style="font-family: sans-serif; text-align: left !important; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
             <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111; text-align: left !important;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
@@ -57,12 +98,11 @@ if "q" in query_params:
             for col in cols_num:
                 if col in df_cli.columns:
                     df_cli[col] = pd.to_numeric(df_cli[col], errors='coerce').fillna(0).astype(int)
-
             conf_columnas = {
                 "Aseguradora": st.column_config.TextColumn("ASEGURADORA"),
                 "Marca": st.column_config.TextColumn("MARCA"),
                 "Modelo": st.column_config.TextColumn("MODELO"),
-                "Año": st.column_config.TextColumn("AÑO"),
+                "Ano": st.column_config.TextColumn("ANO"),
                 "Matricula": st.column_config.TextColumn("MATRICULA"),
                 "Cobertura": st.column_config.TextColumn("COBERTURA"),
                 "Contado": st.column_config.NumberColumn("CONTADO", format="$ %,d"),
@@ -70,26 +110,7 @@ if "q" in query_params:
             }
             if propuesta_cliente.get("tipo") != "Flota":
                 conf_columnas["10 Cuotas"] = st.column_config.NumberColumn("10 CUOTAS", format="$ %,d")
-
-            # Tabla HTML pura (se imprime correctamente)
-            cols_mostrar = [c for c in df_cli.columns if c in ["Aseguradora","Marca","Modelo","Año","Matricula","Cobertura","Contado","10 Cuotas","Deducible"]]
-            html_tabla = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;">'
-            html_tabla += '<tr style="background:#1E3A8A;color:white;">'
-            for col in cols_mostrar:
-                html_tabla += f'<th style="padding:8px 12px;text-align:left;">{col.upper()}</th>'
-            html_tabla += '</tr>'
-            for i, row in df_cli.iterrows():
-                bg = "#f8f9fa" if i % 2 == 0 else "white"
-                html_tabla += f'<tr style="background:{bg};">'
-                for col in cols_mostrar:
-                    val = row.get(col, "")
-                    if col in ["Contado", "10 Cuotas", "Deducible"]:
-                        try: val = f"$ {int(float(val)):,}".replace(",", ".")
-                        except: pass
-                    html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{val}</td>'
-                html_tabla += '</tr>'
-            html_tabla += '</table>'
-            st.markdown(html_tabla, unsafe_allow_html=True)
+            st.dataframe(df_cli, use_container_width=True, hide_index=True, column_config=conf_columnas)
 
         if propuesta_cliente.get("ben"):
             st.write("")
@@ -106,7 +127,7 @@ if "q" in query_params:
             for l in txt.split('\n'):
                 l = l.strip()
                 if not l: continue
-                if l.lower().startswith("costo") or l.lower().startswith("- costo") or l.lower().startswith("costo"):
+                if l.lower().startswith("costo") or l.lower().startswith("- costo"):
                     partes = l.lstrip("- ").split(":", 1)
                     if len(partes) == 2:
                         out += f'<span style="display:block; margin-top:8px; padding:6px 10px; background:#EFF6FF; border-radius:6px; font-weight:bold; color:#1E3A8A;">💰 {partes[0].strip()}: <span style="color:#111;">{partes[1].strip()}</span></span>'
@@ -154,37 +175,41 @@ st.markdown("""
 USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB": "ABentancor2025", "GR": "GRobaina2025", "ER": "ERobaina.2025", "GS": "GSanchez2025", "MDF": "Matiti2025", "EH": "EHugo2025", "AP": "APerdomo2025", "RS": "RSierra2025", "LT": "LTomasi2025", "EC": "ECabral2025", "PG": "PGagliardi2025"}
 
 CONTACTOS = {
-    "RDF": "099236116",
-    "JOE": "099595185",
-    "ANDRE": "098592816",
-    "AB": "098358393",
-    "GR": "091339642",
-    "ER": "094430277",
-    "GS": "094536444",
-    "MDF": "095074767",
-    "EH": "099513224",
-    "AP": "099661587",
-    "RS": "092188815",
-    "LT": "099816395",
-    "EC": "099654708",
-    "PG": "091282011"
+    "RDF": "099236116", "JOE": "099595185", "ANDRE": "098592816",
+    "AB": "098358393", "GR": "091339642", "ER": "094430277",
+    "GS": "094536444", "MDF": "095074767", "EH": "099513224",
+    "AP": "099661587", "RS": "092188815", "LT": "099816395",
+    "EC": "099654708", "PG": "091282011"
 }
 
 NOMBRES = {
-    "RDF": "Roque de Freitas",
-    "JOE": "Joel Mokosce",
-    "ANDRE": "Andrea Cazarian",
-    "AB": "Amelia Bentancor",
-    "GR": "Gonzalo Robaina",
-    "ER": "Eduardo Robaina",
-    "GS": "Grismer Sanchez",
-    "MDF": "Matias de Freitas",
-    "EH": "Erica Hugo",
-    "AP": "Ana Perdomo",
-    "RS": "Romina Sierra",
-    "LT": "Letizia Tomasi",
-    "EC": "Eugenia Cabral",
-    "PG": "Pablo Gagliardi"
+    "RDF": "Roque de Freitas", "JOE": "Joel Mokosce", "ANDRE": "Andrea Cazarian",
+    "AB": "Amelia Bentancor", "GR": "Gonzalo Robaina", "ER": "Eduardo Robaina",
+    "GS": "Grismer Sanchez", "MDF": "Matias de Freitas", "EH": "Erica Hugo",
+    "AP": "Ana Perdomo", "RS": "Romina Sierra", "LT": "Letizia Tomasi",
+    "EC": "Eugenia Cabral", "PG": "Pablo Gagliardi"
+}
+
+# Tasas predefinidas por destino
+TASAS_AERONAVE = {
+    "Privado / Otro": {
+        "Perdida o Dano de la Aeronave": 1.50,
+        "RC hacia Terceros (Excepto pasajeros)": 0.50,
+        "Responsabilidad Civil Legal de Carga": 0.50,
+        "Accidente Personales Tripulantes": 0.30,
+        "Accidente Personales Pasajeros": 0.30,
+    },
+    "Agricola": {
+        "Perdida o Dano de la Aeronave": 3.00,
+        "RC hacia Terceros (Excepto pasajeros)": 0.50,
+        "Responsabilidad Civil Danos Quimicos": 3.00,
+        "Accidente Personales Tripulantes": 0.30,
+        "Accidente Personales Pasajeros": 0.30,
+    },
+    "Escuela e Instruccion": {
+        "Perdida o Dano de la Aeronave": 2.50,
+        "RC hacia Terceros (Excepto pasajeros)": 0.50,
+    },
 }
 
 if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] = "RDF"
@@ -206,15 +231,13 @@ df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
 df_raw.columns = df_raw.columns.str.strip()
 
 col_map = {c.lower(): c for c in df_raw.columns}
-c_asegurado = col_map.get("asegurado (nombre/razon social)", col_map.get("asegurado", col_map.get("cliente", "Asegurado")))
+c_asegurado = col_map.get("asegurado", col_map.get("cliente", "Asegurado"))
 c_documento = col_map.get("documento", col_map.get("ci", col_map.get("rut", "Documento")))
-c_aseguradora = col_map.get("aseguradora", col_map.get("compañia", "Aseguradora"))
+c_aseguradora = col_map.get("aseguradora", col_map.get("compania", "Aseguradora"))
 c_ramo = col_map.get("ramo", "Ramo")
 c_p_usd = col_map.get("premio usd (iva inc)", "Premio USD (IVA inc)")
 c_p_uyu = col_map.get("premio uyu (iva inc)", "Premio UYU (IVA inc)")
-c_adjunto = col_map.get("adjunto (póliza)", col_map.get("adjunto (poliza)", "Adjunto (póliza)"))
-c_mail = col_map.get("direccion de correo electronico", col_map.get("mail", col_map.get("email", "Mail")))
-c_detalle = col_map.get("detalle", "")
+c_adjunto = col_map.get("adjunto (poliza)", col_map.get("adjunto (poliza)", "Adjunto (poliza)"))
 
 df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get(c_p_usd, 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get(c_p_uyu, 0), errors='coerce').fillna(0) / TC_USD)).round(0)
 df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw.get('Fin de Vigencia', date.today()), dayfirst=True, errors='coerce').dt.date
@@ -238,7 +261,7 @@ if f_ra != "Todos": df_f = df_f[df_f[c_ramo] == f_ra]
 if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
 
-tab_car, tab_ven, tab_cot, tab_flota, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHICULOS", "🚛 FLOTAS", "📜 HISTORIAL", "📊 ANALISIS"])
+tab_car, tab_ven, tab_cot, tab_flota, tab_aeronave, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHICULOS", "🚛 FLOTAS", "✈️ AERONAVES", "📜 HISTORIAL", "📊 ANALISIS"])
 
 # --- PESTAÑA CARTERA ---
 with tab_car:
@@ -251,16 +274,11 @@ with tab_car:
         if col_cliente_real:
             df_resumen = df_resumen.rename(columns={col_cliente_real: "Asegurado"})
         df_resumen = df_resumen.rename(columns={
-            c_adjunto: "📄 Póliza",
-            c_documento: "Documento",
-            c_aseguradora: "Aseguradora",
-            c_ramo: "Ramo",
-            'Fin de Vigencia': "Vencimiento",
-            c_p_usd: "Premio USD",
-            c_p_uyu: "Premio UYU",
-            'Premio_Total_USD': "Premio Total (USD)"
+            c_adjunto: "📄 Poliza", c_documento: "Documento", c_aseguradora: "Aseguradora",
+            c_ramo: "Ramo", 'Fin de Vigencia': "Vencimiento", c_p_usd: "Premio USD",
+            c_p_uyu: "Premio UYU", 'Premio_Total_USD': "Premio Total (USD)"
         })
-        columnas_visibles = ["📄 Póliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
+        columnas_visibles = ["📄 Poliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
         cols_validas = [c for c in columnas_visibles if c in df_resumen.columns]
         df_resumen = df_resumen[cols_validas]
 
@@ -271,7 +289,7 @@ with tab_car:
             df_resumen, use_container_width=True, hide_index=False,
             on_select="rerun", selection_mode="single-row", key="grid_cartera_unica",
             column_config={
-                "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF", validate="^https://"),
+                "📄 Poliza": st.column_config.LinkColumn("📄 Poliza", display_text="📎 Ver PDF"),
                 "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
                 "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                 "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
@@ -293,7 +311,7 @@ with tab_car:
                     st.markdown("**👤 Datos del Cliente:**")
                     st.write(f"• **Documento:** {fila_completa.get(c_documento, 'N/D')}")
                     st.write(f"• **Celular:** {fila_completa.get('Celular', col_map.get('celular', 'N/D'))}")
-                    st.write(f"• **Mail:** {fila_completa.get(c_mail, 'N/D')}")
+                    st.write(f"• **Mail:** {fila_completa.get('Mail', col_map.get('mail', 'N/D'))}")
                 with cx2:
                     st.markdown("**🚗 Detalles del Bien:**")
                     st.write(f"• **Ramo:** {fila_completa.get(c_ramo, 'N/D')}")
@@ -307,9 +325,7 @@ with tab_car:
     else:
         st.info("No se encontraron registros en la cartera.")
 
-# ==========================================
 # --- PESTAÑA VENCIMIENTOS ---
-# ==========================================
 with tab_ven:
     st.subheader("🔄 Control de Vencimientos")
     if not df_f.empty:
@@ -324,16 +340,11 @@ with tab_ven:
             if col_cliente_real_v:
                 df_venc_resumen = df_venc_resumen.rename(columns={col_cliente_real_v: "Asegurado"})
             df_venc_resumen = df_venc_resumen.rename(columns={
-                c_adjunto: "📄 Póliza",
-                c_documento: "Documento",
-                c_aseguradora: "Aseguradora",
-                c_ramo: "Ramo",
-                'Fin de Vigencia': "Vencimiento",
-                c_p_usd: "Premio USD",
-                c_p_uyu: "Premio UYU",
-                'Premio_Total_USD': "Premio Total (USD)"
+                c_adjunto: "📄 Poliza", c_documento: "Documento", c_aseguradora: "Aseguradora",
+                c_ramo: "Ramo", 'Fin de Vigencia': "Vencimiento", c_p_usd: "Premio USD",
+                c_p_uyu: "Premio UYU", 'Premio_Total_USD': "Premio Total (USD)"
             })
-            columnas_visibles_v = ["📄 Póliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
+            columnas_visibles_v = ["📄 Poliza", "Asegurado", "Documento", "Aseguradora", "Ramo", "Vencimiento", "Premio USD", "Premio UYU", "Premio Total (USD)"]
             cols_validas_v = [c for c in columnas_visibles_v if c in df_venc_resumen.columns]
             df_venc_resumen = df_venc_resumen[cols_validas_v]
 
@@ -343,7 +354,7 @@ with tab_ven:
                 df_venc_resumen, use_container_width=True, hide_index=False,
                 on_select="rerun", selection_mode="single-row", key="grid_venc_unico",
                 column_config={
-                    "📄 Póliza": st.column_config.LinkColumn("📄 Póliza", display_text="📎 Ver PDF"),
+                    "📄 Poliza": st.column_config.LinkColumn("📄 Poliza", display_text="📎 Ver PDF"),
                     "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
                     "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                     "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
@@ -363,7 +374,30 @@ with tab_ven:
                 indice_fila_v = filas_seleccionadas_v[0]
                 fila_completa_v = df_venc_f.iloc[indice_fila_v]
 
-                # Calcular todas las variables ANTES de mostrar
+                st.write("")
+                with st.container(border=True):
+                    st.markdown(f"### 🛡️ Detalle de la Poliza (Vencimiento): {fila_completa_v.get(c_asegurado, 'Cliente')}")
+                    cv1, cv2 = st.columns(2)
+                    with cv1:
+                        st.markdown("**👤 Datos del Cliente:**")
+                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
+                        st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
+                        st.write(f"• **Mail:** {fila_completa_v.get('Mail', col_map.get('mail', 'N/D'))}")
+                    with cv2:
+                        st.markdown("**📋 Detalles del Bien:**")
+                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
+                        c_npoliza_v = col_map.get("n° de poliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
+                        npoliza_val_v = str(fila_completa_v.get(c_npoliza_v, 'N/D')) if c_npoliza_v else 'N/D'
+                        st.write(f"• **N° de Poliza:** {npoliza_val_v}")
+                        detalle_col_v = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
+                        detalle_val_v = str(fila_completa_v.get(detalle_col_v, 'N/D')) if detalle_col_v else 'N/D'
+                        st.write(f"• **Detalle:** {detalle_val_v}")
+
+                # Texto de renovacion
+                def limpiar(val):
+                    v = str(val).strip()
+                    return '' if v in ['nan', 'None', 'N/D', 'none'] else v
+
                 nombre_completo = limpiar(fila_completa_v.get(c_asegurado, ''))
                 if not nombre_completo:
                     for col in fila_completa_v.index:
@@ -373,69 +407,50 @@ with tab_ven:
                                 nombre_completo = val
                                 break
                 nombre_corto = nombre_completo.split()[0].capitalize() if nombre_completo else 'Cliente'
-                mail_cliente = limpiar(fila_completa_v.get(c_mail, ''))
-                premio_uyu = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
-                premio_usd = limpiar(str(fila_completa_v.get(c_p_usd, '')))
+                c_mail_v = col_map.get("direccion de correo electronico", col_map.get("mail", col_map.get("email", "")))
+                premio_uyu_v = limpiar(str(fila_completa_v.get(c_p_uyu, '')))
+                premio_usd_v = limpiar(str(fila_completa_v.get(c_p_usd, '')))
                 aseguradora_actual = limpiar(fila_completa_v.get(c_aseguradora, '')) or 'su aseguradora'
-                ramo = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
-                detalle_col_v = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
-                detalle = limpiar(fila_completa_v.get(detalle_col_v, '')) if detalle_col_v else ''
-                ramo_completo = f"{ramo} ({detalle})" if detalle else ramo
-                vencimiento = fila_completa_v.get('Fin de Vigencia', '')
-                fecha_fmt = vencimiento.strftime('%d/%m/%Y') if hasattr(vencimiento, 'strftime') else str(vencimiento)
-                nombre_asesor = NOMBRES.get(st.session_state.usuario_actual, st.session_state.usuario_actual)
-                contacto_asesor = CONTACTOS.get(st.session_state.usuario_actual, '')
-                if premio_uyu and str(premio_uyu) not in ['0']:
-                    premio_txt = f"UYU {f_num(premio_uyu)}"
-                elif premio_usd and str(premio_usd) not in ['0']:
-                    premio_txt = f"USD {f_num(premio_usd)}"
+                ramo_v = limpiar(fila_completa_v.get(c_ramo, '')) or 'bien asegurado'
+                c_detalle_v = col_map.get("detalle", "")
+                detalle_ren = limpiar(fila_completa_v.get(c_detalle_v, '')) if c_detalle_v else ''
+                ramo_completo = f"{ramo_v} ({detalle_ren})" if detalle_ren else ramo_v
+                vencimiento_v = fila_completa_v.get('Fin de Vigencia', '')
+                fecha_fmt = vencimiento_v.strftime('%d/%m/%Y') if hasattr(vencimiento_v, 'strftime') else str(vencimiento_v)
+                nombre_asesor_v = NOMBRES.get(st.session_state.usuario_actual, st.session_state.usuario_actual)
+                contacto_asesor_v = CONTACTOS.get(st.session_state.usuario_actual, '')
+                if premio_uyu_v and str(premio_uyu_v) not in ['0']:
+                    premio_txt = f"UYU {f_num(premio_uyu_v)}"
+                elif premio_usd_v and str(premio_usd_v) not in ['0']:
+                    premio_txt = f"USD {f_num(premio_usd_v)}"
                 else:
                     premio_txt = "a coordinar"
 
                 texto_wp = f"""Hola {nombre_corto}!
-
-Te escribo porque el proximo *{fecha_fmt}* esta venciendo la poliza de tu {ramo_completo} .
-
-Actualmente el costo en *{aseguradora_actual}* es de *{premio_txt}*. El costo informado para la renovación es: *PRECIO NUEVO*
-
-También hemos revisado costos de otras aseguradoras del mercado:
+Te escribo porque esta venciendo la poliza de tu {ramo_completo} el proximo *{fecha_fmt}*.
+Este anio estabas pagando en *{aseguradora_actual}: {premio_txt}*.
+Para la renovacion tenemos los siguientes comparativos:
 
 - BSE:
 - SBI:
 - MAPFRE:
+- SANCOR:
 - SURA:
+- PORTO:
+- BERKLEY:
 
-Te recordamos que puedes incluir la cobertura de Auto Sustituto (por 15 dias) en caso de siniestro y que tu vehiculo vaya al taller y necesites uno, debemos agregar $3.300 a cualquier aseguradora.
+Auto Sustituto (por 15 dias) en caso de chocar y que tu vehiculo vaya al taller y necesites uno, debemos agregar $3.300 a cualquier aseguradora.
 
-Quedo a la espera de tus comentarios para proceder con la opción que prefieras.
-
+Quedo a las ordenes,
 Saludos!
-{nombre_asesor}"""
-
-                st.write("")
-                with st.container(border=True):
-                    st.markdown(f"### 🛡️ Detalle de la Poliza (Vencimiento): {fila_completa_v.get(c_asegurado, 'Cliente')}")
-                    cv1, cv2 = st.columns(2)
-                    with cv1:
-                        st.markdown("**👤 Datos del Cliente:**")
-                        st.write(f"• **Documento:** {fila_completa_v.get(c_documento, 'N/D')}")
-                        st.write(f"• **Cell:** {fila_completa_v.get('Celular', col_map.get('celular', 'N/D'))}")
-                        st.write(f"• **Mail:** {fila_completa_v.get(c_mail, 'N/D')}")
-                    with cv2:
-                        st.markdown("**📋 Detalles del Bien:**")
-                        st.write(f"• **Ramo:** {fila_completa_v.get(c_ramo, 'N/D')}")
-                        c_npoliza = col_map.get("n° de póliza", col_map.get("n de poliza", col_map.get("numero de poliza", "")))
-                        npoliza_val = limpiar(fila_completa_v.get(c_npoliza, '')) if c_npoliza else 'N/D'
-                        st.write(f"• **N° de Póliza:** {npoliza_val or 'N/D'}")
-                        detalle_col2 = next((col for col in fila_completa_v.index if str(col).lower() == 'detalle'), None)
-                        detalle_val = limpiar(fila_completa_v.get(detalle_col2, '')) if detalle_col2 else 'N/D'
-                        st.write(f"• **Detalle:** {detalle_val or 'N/D'}")
+{nombre_asesor_v}"""
 
                 st.markdown('<style>details summary { background-color: #1E3A8A22 !important; border-radius: 6px; padding: 8px 12px; color: #1E3A8A; font-weight: bold; }</style>', unsafe_allow_html=True)
                 with st.expander("💬 Texto renovacion (predeterminado)"):
                     st.code(texto_wp, language=None)
         else:
             st.info("No hay vencimientos en el rango seleccionado.")
+
 # ==========================================
 # PLANTILLAS DE TEXTOS PRECARGADOS
 # ==========================================
@@ -444,8 +459,7 @@ txt_hog_veh = "• Incendio Edificio USD 100.000\n• Incendio Contenido 50.000\
 txt_alq_veh = "• Auto sustituto por hasta 15 dias en caso de que tu vehiculo sufra un siniestro total o parcial.\n• Costo anual: UYU 3.000 por vehiculo."
 txt_bic_veh = "• Cobertura por Hurto y/o Rapina de la bicicleta dentro y fuera del hogar hasta USD 1.000 y Danos a Terceros que puedas provocar hasta USD 10.000.\n• Costo anual: USD 120"
 
-txt_obs_flota = """
-Vigencia:
+txt_obs_flota = """Vigencia:
 Forma de Pago: redes de cobranza o tarjeta de credito en 10 cuotas sin recargo.
 Beneficios
   - Auxilio mecanico ilimitado para toda la flota (Uruguay y paises limitrofes) menos camiones y motos.
@@ -461,7 +475,7 @@ txt_bic_flota = "• Si algun empleado de su empresa quiere asegurar la bici ele
 # ==========================================
 st.markdown("""
 <style>
-div.stButton > button[kind="primary"] {
+div.stButton > button {
     background-color: #ff4b4b !important;
     color: white !important;
     border: 2px solid #ff4b4b !important;
@@ -470,25 +484,11 @@ div.stButton > button[kind="primary"] {
     padding: 10px 24px !important;
     transition: all 0.3s ease !important;
 }
-div.stButton > button[kind="primary"]:hover {
+div.stButton > button:hover {
     background-color: #ff3333 !important;
     border-color: #ff3333 !important;
     color: white !important;
     transform: scale(1.01) !important;
-}
-div.stButton > button[kind="secondary"] {
-    background-color: white !important;
-    color: #374151 !important;
-    border: 1px solid #d1d5db !important;
-    font-weight: normal !important;
-    padding: 3px 10px !important;
-    font-size: 13px !important;
-    border-radius: 6px !important;
-}
-div.stButton > button[kind="secondary"]:hover {
-    background-color: #f3f4f6 !important;
-    border-color: #9ca3af !important;
-    transform: none !important;
 }
 .btn-copiar-edf {
     background-color: #1E3A8A !important;
@@ -501,22 +501,7 @@ div.stButton > button[kind="secondary"]:hover {
     margin-top: 10px;
     display: inline-block;
 }
-.btn-copiar-edf:hover {
-    background-color: #111827 !important;
-}
-@media print {
-    header, footer, [data-testid="stSidebar"],
-    [data-testid="stToolbar"], [data-testid="stDecoration"],
-    [data-testid="stStatusWidget"], .stDeployButton {
-        display: none !important;
-    }
-    [data-testid="stAppViewContainer"] { padding: 0 !important; margin: 0 !important; }
-    [data-testid="stMainBlockContainer"] { max-width: 100% !important; padding: 10px !important; }
-    body, p, span, div { font-size: 11px !important; line-height: 1.3 !important; }
-    h2 { font-size: 15px !important; }
-    h3 { font-size: 13px !important; }
-    * { box-shadow: none !important; overflow: visible !important; }
-}
+.btn-copiar-edf:hover { background-color: #111827 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -532,7 +517,7 @@ with tab_cot:
         st.session_state["ci_v_final"] = edit_ind.get("doc", "")
         st.session_state["nom_v_final"] = edit_ind.get("n", "")
         st.session_state["veh_v_final"] = edit_ind.get("v", "")
-        st.session_state["cont_v_final"] = edit_ind.get("cont", "099 635 244")
+        st.session_state["cont_v_final"] = edit_ind.get("cont", "")
 
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_ase, c_con = st.columns([1.5, 2, 2, 1, 2])
@@ -574,11 +559,9 @@ with tab_cot:
         st.session_state.edit_data = datos_i
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
-        st.success("✅ Propuesta guardada con exito en el Historial!")
+        st.success("Propuesta guardada!")
         st.text_input("🔗 Enlace para mandar al cliente por WhatsApp:", value=link_cliente)
-        componente_copiar_html = f"""
-        <button class="btn-copiar-edf" onclick="navigator.clipboard.writeText('{link_cliente}').then(() => {{ this.innerText = '📋 Link Copiado!'; }}).catch(err => {{ alert('Error al copiar'); }})">📋 Copiar Link de Vehiculo</button>
-        """
+        componente_copiar_html = f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_cliente}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error al copiar\'); }})">📋 Copiar Link de Vehiculo</button>'
         st.components.v1.html(componente_copiar_html, height=60)
 
 
@@ -593,7 +576,7 @@ with tab_flota:
         st.session_state["f_nom_fl"] = edit_f.get("n", "")
         st.session_state["f_cia_fl"] = edit_f.get("e", "SBI")
         st.session_state["f_as_fl"] = edit_f.get("e_nombre", "EDF SEGUROS")
-        st.session_state["f_co_fl"] = edit_f.get("cont", "099 635 244")
+        st.session_state["f_co_fl"] = edit_f.get("cont", "")
 
     col_f1, col_f2 = st.columns(2)
     with col_f1:
@@ -605,11 +588,11 @@ with tab_flota:
             st.session_state["f_co_fl"] = CONTACTOS.get(st.session_state.get("f_as_fl", ""), "")
         f_contacto = st.text_input("Contacto", key="f_co_fl")
 
-    cols_f = ["Marca", "Modelo", "Año", "Matricula", "Cobertura", "Contado", "Deducible"]
+    cols_f = ["Marca", "Modelo", "Ano", "Matricula", "Cobertura", "Contado", "Deducible"]
     if edit_f and "tab" in edit_f:
         df_f_init = pd.DataFrame(edit_f["tab"])
     else:
-        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Año": "", "Matricula": "", "Cobertura": "Todo Riesgo", "Contado": 0, "Deducible": 0}])
+        df_f_init = pd.DataFrame([{"Marca": "", "Modelo": "", "Ano": "", "Matricula": "", "Cobertura": "Todo Riesgo", "Contado": 0, "Deducible": 0}])
 
     t_flota = st.data_editor(
         df_f_init, num_rows="dynamic", use_container_width=True, column_order=cols_f, key="editor_flotas",
@@ -634,12 +617,113 @@ with tab_flota:
         st.session_state.edit_data = nueva_f
         datos_b64 = base64.b64encode(json.dumps(nueva_f).encode()).decode()
         link_flota = f"https://dfseguros.streamlit.app/?q={datos_b64}"
-        st.success("✅ Propuesta de Flota guardada con exito!")
+        st.success("Propuesta de Flota guardada!")
         st.text_input("🔗 Enlace para mandar al cliente de Flotas:", value=link_flota)
-        componente_copiar_flota_html = f"""
-        <button class="btn-copiar-edf" onclick="navigator.clipboard.writeText('{link_flota}').then(() => {{ this.innerText = '📋 Link Copiado!'; }}).catch(err => {{ alert('Error al copiar'); }})">📋 Copiar Link de Flota</button>
-        """
+        componente_copiar_flota_html = f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_flota}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error al copiar\'); }})">📋 Copiar Link de Flota</button>'
         st.components.v1.html(componente_copiar_flota_html, height=60)
+
+
+# ==========================================
+# PESTANA AERONAVES
+# ==========================================
+with tab_aeronave:
+    st.subheader("✈️ Cotizador Seguros de Aeronaves")
+    edit_av = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Aeronave" else {}
+
+    if edit_av:
+        st.session_state["av_asegurado"] = edit_av.get("n", "")
+        st.session_state["av_aseguradora"] = edit_av.get("aseguradora", "")
+        st.session_state["av_aeronave"] = edit_av.get("aeronave", "")
+        st.session_state["av_asesor"] = edit_av.get("e", st.session_state.usuario_actual)
+        st.session_state["av_contacto"] = edit_av.get("cont", "")
+
+    with st.container(border=True):
+        av_c1, av_c2, av_c3, av_c4 = st.columns([2, 2, 2, 2])
+        av_asegurado = av_c1.text_input("Asegurado", key="av_asegurado")
+        av_aseguradora = av_c2.text_input("Aseguradora", key="av_aseguradora")
+        av_aeronave = av_c3.text_input("Aeronave (marca/modelo/matricula)", key="av_aeronave")
+        av_asesor = av_c4.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
+                                     index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in USUARIOS else 0)
+        if not edit_av:
+            st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
+        av_contacto = av_c4.text_input("Contacto", key="av_contacto")
+
+    destinos = ["Privado / Otro", "Agricola", "Escuela e Instruccion"]
+    av_destino_idx = destinos.index(edit_av.get("destino", "Privado / Otro")) if edit_av.get("destino") in destinos else 0
+    av_destino = st.selectbox("Destino / Uso", destinos, index=av_destino_idx, key="av_destino")
+
+    st.markdown("---")
+    st.markdown("**Coberturas y Tasas** *(las tasas no se muestran al cliente)*")
+
+    tasas_default = TASAS_AERONAVE[av_destino]
+    coberturas_disponibles = list(tasas_default.keys())
+
+    # Inicializar tabla desde historial o desde defaults
+    if edit_av and "tab_av" in edit_av:
+        df_av_init = pd.DataFrame(edit_av["tab_av"])
+    else:
+        df_av_init = pd.DataFrame([
+            {"Cobertura": cob, "Tasa (%)": tasa, "Capital (USD)": 0, "Asientos": 0}
+            for cob, tasa in tasas_default.items()
+        ])
+
+    t_av = st.data_editor(
+        df_av_init,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editor_aeronaves",
+        column_config={
+            "Cobertura": st.column_config.TextColumn("Cobertura"),
+            "Tasa (%)": st.column_config.NumberColumn("Tasa (%)", format="%.2f%%", min_value=0.0, max_value=100.0, step=0.01),
+            "Capital (USD)": st.column_config.NumberColumn("Capital (USD)", format="$ %,d"),
+            "Asientos": st.column_config.NumberColumn("Asientos", format="%d"),
+        }
+    )
+
+    # Calculos automaticos
+    filas_calc = []
+    subtotal = 0.0
+    for _, row in t_av.iterrows():
+        cob = str(row.get("Cobertura", ""))
+        tasa = float(row.get("Tasa (%)", 0) or 0)
+        capital = float(row.get("Capital (USD)", 0) or 0)
+        costo = round(capital * tasa / 100, 2)
+        subtotal += costo
+        filas_calc.append({"Cobertura": cob, "Tasa (%)": tasa, "Capital": capital, "Costo": costo})
+
+    cargos_emision = round(subtotal * 0.15, 2)
+    total_anual = round(subtotal + cargos_emision, 2)
+
+    st.markdown("")
+    col_res1, col_res2, col_res3 = st.columns(3)
+    col_res1.metric("Subtotal", f"USD {subtotal:,.0f}")
+    col_res2.metric("Cargos de Emision (15%)", f"USD {cargos_emision:,.0f}")
+    col_res3.metric("Costo Anual Total", f"USD {total_anual:,.0f}")
+
+    if st.button("💾 Guardar cotizacion y Generar Link", type="primary", use_container_width=True, key="save_av_btn"):
+        datos_av = {
+            "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "n": av_asegurado,
+            "aseguradora": av_aseguradora,
+            "aeronave": av_aeronave,
+            "destino": av_destino,
+            "e": av_asesor,
+            "cont": av_contacto,
+            "tab": filas_calc,
+            "tab_av": t_av.to_dict(orient='records'),
+            "subtotal": subtotal,
+            "cargos": cargos_emision,
+            "total": total_anual,
+            "tipo": "Aeronave"
+        }
+        st.session_state.historico.append(datos_av)
+        st.session_state.edit_data = datos_av
+        datos_b64 = base64.b64encode(json.dumps(datos_av).encode()).decode()
+        link_av = f"https://dfseguros.streamlit.app/?q={datos_b64}"
+        st.success("Cotizacion de Aeronave guardada!")
+        st.text_input("🔗 Enlace para mandar al cliente:", value=link_av)
+        componente_copiar_av_html = f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_av}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error al copiar\'); }})">📋 Copiar Link Aeronave</button>'
+        st.components.v1.html(componente_copiar_av_html, height=60)
 
 
 # ==========================================
@@ -647,12 +731,27 @@ with tab_flota:
 # ==========================================
 with tab_historial:
     st.subheader("📜 Historial de Propuestas Guardadas")
+
     if st.session_state.historico:
-        for i, reg in enumerate(reversed(st.session_state.historico)):
-            idx_real = len(st.session_state.historico) - 1 - i
+        # Filtros
+        hf1, hf2 = st.columns([2, 1])
+        busq_hist = hf1.text_input("🔍 Buscar por asegurado:", key="busq_historial")
+        tipos_disponibles = ["Todos"] + list(set(r.get("tipo", "") for r in st.session_state.historico))
+        filtro_tipo = hf2.selectbox("Filtrar por tipo:", tipos_disponibles, key="filtro_tipo_hist")
+
+        historico_filtrado = st.session_state.historico
+        if busq_hist:
+            historico_filtrado = [r for r in historico_filtrado if busq_hist.lower() in r.get("n", "").lower()]
+        if filtro_tipo != "Todos":
+            historico_filtrado = [r for r in historico_filtrado if r.get("tipo") == filtro_tipo]
+
+        for i, reg in enumerate(reversed(historico_filtrado)):
+            idx_real = st.session_state.historico.index(reg)
             col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
             with col_info:
-                icon = "🚚" if reg.get("tipo") == "Flota" else "🚗"
+                if reg.get("tipo") == "Flota": icon = "🚚"
+                elif reg.get("tipo") == "Aeronave": icon = "✈️"
+                else: icon = "🚗"
                 st.write(f"📅 **{reg.get('fecha', '')[:10]}** | {icon} {reg.get('tipo')} | **{reg.get('n', 'Cliente')}**")
             with col_edit:
                 if st.button("✏️ Cargar/Editar", key=f"edit_{idx_real}"):
@@ -664,7 +763,7 @@ with tab_historial:
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
     else:
-        st.info("No hay propuestas en el historial temporal todavia.")
+        st.info("No hay propuestas en el historial todavia.")
 
 
 # ==========================================
