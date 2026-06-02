@@ -524,7 +524,7 @@ txt_ben_veh = "• Auxilio mecanico e ilimitado\n• Cobertura Mercosur\n• Cri
 txt_hog_veh = "• Incendio Edificio USD 100.000\n• Incendio Contenido 50.000\n• Hurto Contenido 5.000\n• Costo anual Casas: USD 180\n• Costo anual Aptos: USD 120"
 txt_alq_veh = "• Auto sustituto por hasta 15 dias.\n• Costo anual: UYU 3.000 por vehiculo."
 txt_bic_veh = "• Cobertura Hurto bicicleta hasta USD 1.000.\n• Costo anual: USD 120"
-txt_obs_flota = "Vigencia:\nForma de Pago: redes de cobranza o tarjeta de credito en 10 cuotas sin recargo.\nBeneficios\n  - Auxilio mecanico ilimitado.\n  - Cristales: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100.\n  - Granizo: SANCOR lo cubre, demas cobran deducible."
+txt_obs_flota = "Forma de Pago: redes de cobranza o tarjeta de credito en 10 cuotas sin recargo.\nBeneficios\n  - Auxilio mecanico ilimitado.\n  - Cristales: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100.\n  - Granizo: SANCOR lo cubre, demas cobran deducible."
 txt_acc_flota = "• Seguro de Vida Accidentes choferes: USD 25.000.\n• Costo anual: UYU 1.900 por chofer."
 txt_alq_flota = "• Auto sustituto por hasta 15 dias.\n• Costo anual: UYU 3.000 por vehiculo."
 txt_bic_flota = "• Bici electrica o moto hasta USD 1.000.\n• Costo anual: UYU 5.000"
@@ -614,7 +614,7 @@ with tab_flota:
     with st.container(border=True):
         f_c1, f_c2, f_c3 = st.columns([2, 2, 2])
         f_asegurado = f_c1.text_input("Asegurado", key="f_nom_fl")
-        f_cia_elegida = f_c2.text_input("Compania Aseguradora", key="f_cia_fl")
+        f_cia_elegida = f_c2.text_input("Aseguradora", key="f_cia_fl")
         f_vigencia = f_c3.text_input("Vigencia Cotizada", key="f_vig_fl")
 
         f_c4, f_c5, f_c6 = st.columns([2, 1, 2])
