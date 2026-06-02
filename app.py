@@ -627,7 +627,7 @@ with tab_aeronave:
         av_alcance_geo = av_r2c2.text_input("Alcance Geografico", key="av_alcance_geo")
 
         def actualizar_contacto_av():
-            st.session_state["av_contacto"] = CONTACTOS.get(st.session_state.av_asesor_sel, "")
+            st.session_state["av_contacto"] = CONTACTOS.get(st.session_state.get("av_asesor_sel", ""), "")
 
         av_asesor = av_r2c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
                                        index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0,
