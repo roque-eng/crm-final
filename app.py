@@ -745,10 +745,16 @@ with tab_aeronave:
         av_r2c1, av_r2c2, av_r2c3, av_r2c4 = st.columns(4)
         av_matricula = av_r2c1.text_input("Matricula", key="av_matricula")
         av_alcance_geo = av_r2c2.text_input("Alcance Geográfico", key="av_alcance_geo")
+
+        def actualizar_contacto_av():
+            st.session_state["av_contacto"] = CONTACTOS.get(st.session_state.av_asesor_sel, "")
+
         av_asesor = av_r2c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
-                                       index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0)
+                                       index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0,
+                                       on_change=actualizar_contacto_av)
         if not edit_av:
-            st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
+            if "av_contacto" not in st.session_state:
+                st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
         av_contacto = av_r2c4.text_input("Contacto", key="av_contacto")
 
     destinos = ["Privado / Otro", "Agricola", "Escuela e Instruccion"]
