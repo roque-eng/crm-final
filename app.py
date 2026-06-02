@@ -609,15 +609,13 @@ with tab_flota:
         st.session_state["f_cia_fl"] = edit_f.get("e", "")
         st.session_state["f_as_fl"] = edit_f.get("e_nombre", "")
         st.session_state["f_co_fl"] = edit_f.get("cont", "")
-        st.session_state["f_vig_fl"] = edit_f.get("vigencia", "")
     elif not edit_f and "f_vig_fl" not in st.session_state:
         st.session_state["f_vig_fl"] = ""
 
     with st.container(border=True):
-        f_c1, f_c2, f_c3 = st.columns([2, 2, 2])
+        f_c1, f_c2 = st.columns([2, 2])
         f_asegurado = f_c1.text_input("Asegurado", key="f_nom_fl")
-        f_cia_elegida = f_c2.text_input("Aseguradora", key="f_cia_fl")
-        f_vigencia = f_c3.text_input("Vigencia Cotizada", value=edit_f.get("vigencia", ""), key="f_vig_fl")
+        f_cia_elegida = f_c2.text_input("Compania Aseguradora", key="f_cia_fl")
 
         f_c4, f_c5, f_c6 = st.columns([2, 1, 2])
         f_asesor_nombre = f_c4.text_input("Asesor", key="f_as_fl")
