@@ -103,9 +103,12 @@ if "q" in query_params:
             st.stop()
 
         st.markdown(f"""
-        <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
-            <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
-            <p style="margin: 0; font-size: 16px; color: #555;"><b>{"Aseguradora" if propuesta_cliente.get("tipo") == "Flota" else "Vehiculo"}:</b> {propuesta_cliente.get('v' if propuesta_cliente.get('tipo') != 'Flota' else 'e', 'Detalle')}</p>
+        <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 20px; margin-top: 20px;">
+            <h2 style="margin: 0 0 12px 0; font-size: 24px; color: #111; font-weight: bold;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
+            {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Vehículo:</b> ' + propuesta_cliente.get('v','') + '</p>' if propuesta_cliente.get('v') else ''}
+            {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Matrícula:</b> ' + propuesta_cliente.get('matricula','') + '</p>' if propuesta_cliente.get('matricula') else ''}
+            {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Cobertura cotizada:</b> ' + propuesta_cliente.get('cobertura_cot','') + '</p>' if propuesta_cliente.get('cobertura_cot') else ''}
+            {'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Zona de Circulación principal:</b> ' + propuesta_cliente.get('zona','') + '</p>' if propuesta_cliente.get('zona') else ''}
         </div>
         """, unsafe_allow_html=True)
 
@@ -524,14 +527,20 @@ with tab_cot:
         st.session_state["nom_v_final"] = edit_ind.get("n", "")
         st.session_state["veh_v_final"] = edit_ind.get("v", "")
         st.session_state["mat_v_final"] = edit_ind.get("matricula", "")
+        st.session_state["cob_v_final"] = edit_ind.get("cobertura_cot", "")
+        st.session_state["zona_v_final"] = edit_ind.get("zona", "")
         st.session_state["cont_v_final"] = edit_ind.get("cont", "")
 
     with st.container(border=True):
-        c_doc, c_nom, c_veh, c_mat, c_ase, c_con = st.columns([1.5, 2, 2, 1.5, 1, 2])
+        c_doc, c_nom, c_veh, c_mat = st.columns([1.5, 2, 2, 1.5])
         doc_in = c_doc.text_input("CI/RUT", key="ci_v_final")
         n_cot = c_nom.text_input("Nombre", key="nom_v_final")
         v_cot = c_veh.text_input("Vehiculo (marca/modelo)", key="veh_v_final")
         mat_cot = c_mat.text_input("Matricula", key="mat_v_final")
+
+        c_cob, c_zona, c_ase, c_con = st.columns([2, 2, 1, 2])
+        cob_cot = c_cob.text_input("Cobertura cotizada", key="cob_v_final")
+        zona_cot = c_zona.text_input("Zona de Circulacion principal", key="zona_v_final")
         e_cot = c_ase.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="ase_v_final")
         if not edit_ind:
             st.session_state["cont_v_final"] = CONTACTOS.get(e_cot, "")
@@ -567,7 +576,7 @@ with tab_cot:
         c_b = st.text_area("Bici Electrica:", value=edit_ind.get("cb", txt_bic_veh), height=50, key="ind_bic_v_final")
 
     if st.button("💾 Guardar propuesta y Generar Link", type="primary", use_container_width=True, key="save_ind_btn"):
-        datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "matricula": mat_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
+        datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "matricula": mat_cot, "cobertura_cot": cob_cot, "zona": zona_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
         st.session_state.historico.append(datos_i)
         st.session_state.edit_data = datos_i
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
