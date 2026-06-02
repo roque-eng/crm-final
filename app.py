@@ -606,10 +606,12 @@ with tab_flota:
 
     if edit_f:
         st.session_state["f_nom_fl"] = edit_f.get("n", "")
-        st.session_state["f_cia_fl"] = edit_f.get("e", "SBI")
-        st.session_state["f_as_fl"] = edit_f.get("e_nombre", "EDF SEGUROS")
+        st.session_state["f_cia_fl"] = edit_f.get("e", "")
+        st.session_state["f_as_fl"] = edit_f.get("e_nombre", "")
         st.session_state["f_co_fl"] = edit_f.get("cont", "")
         st.session_state["f_vig_fl"] = edit_f.get("vigencia", "")
+    elif not edit_f and "f_vig_fl" not in st.session_state:
+        st.session_state["f_vig_fl"] = ""
 
     with st.container(border=True):
         f_c1, f_c2, f_c3 = st.columns([2, 2, 2])
