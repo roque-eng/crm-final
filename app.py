@@ -40,7 +40,7 @@ if "q" in query_params:
                 <p style="margin: 0; font-size: 16px; color: #555;">
                     <b>Aeronave:</b> {propuesta_cliente.get('aeronave', '')}
                     {f' | <b>Matricula:</b> {mat}' if mat else ''}
-                    {f' | <b>Alcance Geografico:</b> {geo}' if geo else ''}
+                    {f' | <b>Alcance Geográfico:</b> {geo}' if geo else ''}
                     | <b>Destino:</b> {propuesta_cliente.get('destino', '')}
                 </p>
             </div>
@@ -225,27 +225,35 @@ NOMBRES = {
 COB_CON_ASIENTOS = ["Accidente Personales Tripulantes", "Accidente Personales Pasajeros"]
 
 TASAS_AERONAVE = {
-    "Privado / Otro": [
-        {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 1.50, "Asientos": 0, "Capital (USD)": 0},
-        {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Asientos": 0, "Capital (USD)": 0},
-        {"Cobertura": "Responsabilidad Civil Legal de Carga", "Tasa (%)": 0.50, "Asientos": 0, "Capital (USD)": 0},
-        {"Cobertura": "Accidente Personales Tripulantes", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
-        {"Cobertura": "Accidente Personales Pasajeros", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
-        {"Cobertura": "Aptitud de aterrizaje en pistas no autorizadas", "Tasa (%)": 0, "Asientos": 0, "Capital (USD)": 0},
-    ],
-    "Agricola": [
-        {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 3.00, "Asientos": 0, "Capital (USD)": 0},
-        {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Asientos": 0, "Capital (USD)": 0},
-        {"Cobertura": "Responsabilidad Civil Danos Quimicos", "Tasa (%)": 3.00, "Asientos": 0, "Capital (USD)": 0},
-        {"Cobertura": "Accidente Personales Tripulantes", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
-        {"Cobertura": "Accidente Personales Pasajeros", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
-        {"Cobertura": "Aptitud de aterrizaje en pistas no autorizadas", "Tasa (%)": 0, "Asientos": 0, "Capital (USD)": 0},
-    ],
-    "Escuela e Instruccion": [
-        {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 2.50, "Asientos": 0, "Capital (USD)": 0},
-        {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Asientos": 0, "Capital (USD)": 0},
-        {"Cobertura": "Aptitud de aterrizaje en pistas no autorizadas", "Tasa (%)": 0, "Asientos": 0, "Capital (USD)": 0},
-    ],
+    "Privado / Otro": {
+        "principales": [
+            {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 1.50, "Capital (USD)": 0},
+            {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Capital (USD)": 0},
+            {"Cobertura": "Responsabilidad Civil Legal de Carga", "Tasa (%)": 0.50, "Capital (USD)": 0},
+        ],
+        "accidentes": [
+            {"Cobertura": "Accidente Personales Tripulantes", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
+            {"Cobertura": "Accidente Personales Pasajeros", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
+        ],
+    },
+    "Agricola": {
+        "principales": [
+            {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 3.00, "Capital (USD)": 0},
+            {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Capital (USD)": 0},
+            {"Cobertura": "Responsabilidad Civil Danos Quimicos", "Tasa (%)": 3.00, "Capital (USD)": 0},
+        ],
+        "accidentes": [
+            {"Cobertura": "Accidente Personales Tripulantes", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
+            {"Cobertura": "Accidente Personales Pasajeros", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
+        ],
+    },
+    "Escuela e Instruccion": {
+        "principales": [
+            {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 2.50, "Capital (USD)": 0},
+            {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Capital (USD)": 0},
+        ],
+        "accidentes": [],
+    },
 }
 
 if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] = "RDF"
@@ -635,7 +643,7 @@ with tab_aeronave:
 
         av_r2c1, av_r2c2, av_r2c3, av_r2c4 = st.columns(4)
         av_matricula = av_r2c1.text_input("Matricula", key="av_matricula")
-        av_alcance_geo = av_r2c2.text_input("Alcance Geografico", key="av_alcance_geo")
+        av_alcance_geo = av_r2c2.text_input("Alcance Geográfico", key="av_alcance_geo")
         av_asesor = av_r2c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
                                        index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0)
         if not edit_av:
@@ -649,41 +657,74 @@ with tab_aeronave:
     st.markdown("---")
     st.markdown("**Coberturas y Tasas** *(las tasas no se muestran al cliente)*")
 
-    if edit_av and "tab_av" in edit_av:
-        df_av_init = pd.DataFrame(edit_av["tab_av"])
-    else:
-        df_av_init = pd.DataFrame(TASAS_AERONAVE[av_destino])
+    tasas_dest = TASAS_AERONAVE[av_destino]
 
-    # Columnas con asientos bloqueados segun cobertura
-    t_av = st.data_editor(
-        df_av_init,
-        num_rows="dynamic",
-        use_container_width=True,
-        key="editor_aeronaves",
-        column_order=["Cobertura", "Tasa (%)", "Asientos", "Capital (USD)"],
+    # Tabla principal (sin asientos)
+    if edit_av and "tab_principales" in edit_av:
+        df_princ_init = pd.DataFrame(edit_av["tab_principales"])
+    else:
+        df_princ_init = pd.DataFrame(tasas_dest["principales"])
+
+    t_princ = st.data_editor(
+        df_princ_init, num_rows="dynamic", use_container_width=True,
+        key="editor_av_principales",
+        column_order=["Cobertura", "Tasa (%)", "Capital (USD)"],
         column_config={
             "Cobertura": st.column_config.TextColumn("Cobertura"),
             "Tasa (%)": st.column_config.NumberColumn("Tasa (%)", format="%.2f%%", min_value=0.0, step=0.01),
-            "Asientos": st.column_config.NumberColumn("Asientos", format="%d", min_value=0),
             "Capital (USD)": st.column_config.NumberColumn("Capital (USD)", format="$ %,d"),
         }
     )
 
+    # Tabla accidentes (con asientos) — solo si hay coberturas de accidentes
+    t_acc = pd.DataFrame()
+    if tasas_dest["accidentes"]:
+        st.markdown("<small style='color:gray;'>Coberturas de Accidentes Personales</small>", unsafe_allow_html=True)
+        if edit_av and "tab_accidentes" in edit_av:
+            df_acc_init = pd.DataFrame(edit_av["tab_accidentes"])
+        else:
+            df_acc_init = pd.DataFrame(tasas_dest["accidentes"])
+
+        t_acc = st.data_editor(
+            df_acc_init, num_rows="dynamic", use_container_width=True,
+            key="editor_av_accidentes",
+            column_order=["Cobertura", "Tasa (%)", "Asientos", "Capital (USD)"],
+            column_config={
+                "Cobertura": st.column_config.TextColumn("Cobertura"),
+                "Tasa (%)": st.column_config.NumberColumn("Tasa (%)", format="%.2f%%", min_value=0.0, step=0.01),
+                "Asientos": st.column_config.NumberColumn("Asientos", format="%d", min_value=0),
+                "Capital (USD)": st.column_config.NumberColumn("Capital (USD)", format="$ %,d"),
+            }
+        )
+
+    # Checkbox Aptitud de aterrizaje
+    aptitud_default = edit_av.get("aptitud_aterrizaje", True) if edit_av else True
+    aptitud_incluida = st.checkbox("✅ Aptitud de aterrizaje en pistas no autorizadas: Incluido", value=aptitud_default, key="av_aptitud")
+
     # Calculos
     filas_calc = []
     subtotal = 0.0
-    for _, row in t_av.iterrows():
+
+    for _, row in t_princ.iterrows():
         cob = str(row.get("Cobertura", ""))
         tasa = float(row.get("Tasa (%)", 0) or 0)
         capital = float(row.get("Capital (USD)", 0) or 0)
-        asientos = int(row.get("Asientos", 0) or 0)
-        # Aptitud de aterrizaje: costo = 0, se muestra como Incluido
-        if "aptitud" in cob.lower() or "pista" in cob.lower():
-            costo = 0.0
-        else:
-            costo = round(capital * tasa / 100, 2)
+        costo = round(capital * tasa / 100, 2)
         subtotal += costo
-        filas_calc.append({"Cobertura": cob, "Tasa (%)": tasa, "Asientos": asientos, "Capital": capital, "Costo": costo})
+        filas_calc.append({"Cobertura": cob, "Tasa (%)": tasa, "Asientos": 0, "Capital": capital, "Costo": costo})
+
+    if not t_acc.empty:
+        for _, row in t_acc.iterrows():
+            cob = str(row.get("Cobertura", ""))
+            tasa = float(row.get("Tasa (%)", 0) or 0)
+            capital = float(row.get("Capital (USD)", 0) or 0)
+            asientos = int(row.get("Asientos", 0) or 0)
+            costo = round(capital * tasa / 100, 2)
+            subtotal += costo
+            filas_calc.append({"Cobertura": cob, "Tasa (%)": tasa, "Asientos": asientos, "Capital": capital, "Costo": costo})
+
+    if aptitud_incluida:
+        filas_calc.append({"Cobertura": "Aptitud de aterrizaje en pistas no autorizadas", "Tasa (%)": 0, "Asientos": 0, "Capital": 0, "Costo": 0})
 
     cargos_emision = round(subtotal * 0.15, 2)
     total_anual = round(subtotal + cargos_emision, 2)
@@ -706,7 +747,9 @@ with tab_aeronave:
             "e": av_asesor,
             "cont": av_contacto,
             "tab": filas_calc,
-            "tab_av": t_av.to_dict(orient='records'),
+            "tab_principales": t_princ.to_dict(orient='records'),
+            "tab_accidentes": t_acc.to_dict(orient='records') if not t_acc.empty else [],
+            "aptitud_aterrizaje": aptitud_incluida,
             "subtotal": subtotal,
             "cargos": cargos_emision,
             "total": total_anual,
