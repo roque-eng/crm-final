@@ -34,46 +34,57 @@ if "q" in query_params:
         if propuesta_cliente.get("tipo") == "Aeronave":
             mat = propuesta_cliente.get('matricula', '')
             geo = propuesta_cliente.get('alcance_geo', '')
+            aseg = propuesta_cliente.get('aseguradora', '')
+            aeronave = propuesta_cliente.get('aeronave', '')
+            destino = propuesta_cliente.get('destino', '')
+
+            filas_info = ""
+            if aseg: filas_info += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Aseguradora:</b> {aseg}</p>'
+            if aeronave: filas_info += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Aeronave:</b> {aeronave}</p>'
+            if mat: filas_info += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Matrícula:</b> {mat}</p>'
+            if geo: filas_info += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Alcance Geográfico:</b> {geo}</p>'
+            if destino: filas_info += f'<p style="margin:2px 0; font-size:15px; color:#333;"><b>Destino:</b> {destino}</p>'
+
             st.markdown(f"""
-            <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 15px; margin-top: 20px;">
-                <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
-                <p style="margin: 0; font-size: 16px; color: #555;">
-                    <b>Aeronave:</b> {propuesta_cliente.get('aeronave', '')}
-                    {f' | <b>Matricula:</b> {mat}' if mat else ''}
-                    {f' | <b>Alcance Geográfico:</b> {geo}' if geo else ''}
-                    | <b>Destino:</b> {propuesta_cliente.get('destino', '')}
-                </p>
+            <div style="font-family: sans-serif; padding-left: 5px; margin-bottom: 20px; margin-top: 20px;">
+                <h2 style="margin: 0 0 12px 0; font-size: 24px; color: #111; font-weight: bold;">Asegurado: {propuesta_cliente.get('n', 'Cliente')}</h2>
+                {filas_info}
             </div>
             """, unsafe_allow_html=True)
 
             tab_data = propuesta_cliente.get("tab", [])
             if tab_data:
-                html_tabla = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">'
+                html_tabla = '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:15px;">'
                 html_tabla += '<tr style="background:#1E3A8A;color:white;">'
-                for col in ["Cobertura", "Capital (USD)", "Costo Anual (USD)"]:
+                for col in ["Cobertura", "Asientos", "Capital (USD)"]:
                     html_tabla += f'<th style="padding:8px 12px;text-align:left;">{col}</th>'
                 html_tabla += '</tr>'
                 for i, row in enumerate(tab_data):
                     bg = "#f8f9fa" if i % 2 == 0 else "white"
                     html_tabla += f'<tr style="background:{bg};">'
                     html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{row.get("Cobertura","")}</td>'
+                    asientos = row.get("Asientos", 0)
+                    asientos_fmt = str(int(asientos)) if asientos and int(float(str(asientos))) > 0 else "—"
                     capital = row.get("Capital", 0)
-                    costo = row.get("Costo", 0)
                     capital_str = str(capital)
-                    costo_str = str(costo)
                     try: capital_fmt = f"USD {int(float(capital)):,}".replace(",",".")
                     except: capital_fmt = capital_str
                     if capital_str in ["0", "0.0", ""]:
-                        capital_fmt = "—"
-                    try: costo_fmt = f"USD {int(float(costo)):,}".replace(",",".")
-                    except: costo_fmt = costo_str
-                    if costo_str in ["0", "0.0", ""]:
-                        costo_fmt = "Incluido"
+                        capital_fmt = "Incluido"
+                    html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{asientos_fmt}</td>'
                     html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{capital_fmt}</td>'
-                    html_tabla += f'<td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;">{costo_fmt}</td>'
                     html_tabla += '</tr>'
                 html_tabla += '</table>'
                 st.markdown(html_tabla, unsafe_allow_html=True)
+
+            # Observaciones entre tabla y precio
+            obs_av = propuesta_cliente.get("obs_av", "")
+            if obs_av:
+                st.markdown(f"""
+                <div style="margin-top:15px; padding:12px 16px; background:#f8f9fa; border-radius:8px; border-left:4px solid #1E3A8A; font-size:14px; color:#333;">
+                    {obs_av.replace(chr(10), '<br>')}
+                </div>
+                """, unsafe_allow_html=True)
 
             subtotal = propuesta_cliente.get("subtotal", 0)
             cargos = propuesta_cliente.get("cargos", 0)
@@ -726,6 +737,10 @@ with tab_aeronave:
     if aptitud_incluida:
         filas_calc.append({"Cobertura": "Aptitud de aterrizaje en pistas no autorizadas", "Tasa (%)": 0, "Asientos": 0, "Capital": 0, "Costo": 0})
 
+    st.markdown("")
+    obs_av_default = edit_av.get("obs_av", "") if edit_av else ""
+    obs_av = st.text_area("Observaciones (aparece entre la tabla y el precio en la vista del cliente):", value=obs_av_default, height=80, key="av_obs")
+
     cargos_emision = round(subtotal * 0.15, 2)
     total_anual = round(subtotal + cargos_emision, 2)
 
@@ -750,6 +765,7 @@ with tab_aeronave:
             "tab_principales": t_princ.to_dict(orient='records'),
             "tab_accidentes": t_acc.to_dict(orient='records') if not t_acc.empty else [],
             "aptitud_aterrizaje": aptitud_incluida,
+            "obs_av": obs_av,
             "subtotal": subtotal,
             "cargos": cargos_emision,
             "total": total_anual,
