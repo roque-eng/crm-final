@@ -553,7 +553,6 @@ with tab_cot:
     if st.button("💾 Guardar propuesta y Generar Link", type="primary", use_container_width=True, key="save_ind_btn"):
         datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "matricula": mat_cot, "cobertura_cot": cob_cot, "zona": zona_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
         st.session_state.historico.append(datos_i)
-        st.session_state.edit_data = datos_i
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         primera_aseg = t_edit.iloc[0] if not t_edit.empty else {}
@@ -645,8 +644,9 @@ with tab_aeronave:
     st.markdown("**Coberturas y Tasas** *(las tasas no se muestran al cliente)*")
     tasas_dest = TASAS_AERONAVE[av_destino]
 
-    if edit_av and "tab_principales" in edit_av:
-        df_princ_init = pd.DataFrame(edit_av["tab_principales"])
+    tab_princ_data = edit_av.get("tab_principales", []) if edit_av else []
+    if tab_princ_data:
+        df_princ_init = pd.DataFrame(tab_princ_data)
     else:
         df_princ_init = pd.DataFrame(tasas_dest["principales"])
 
@@ -657,10 +657,11 @@ with tab_aeronave:
     t_acc = pd.DataFrame()
     if tasas_dest["accidentes"]:
         st.markdown("<small style='color:gray;'>Coberturas de Accidentes Personales</small>", unsafe_allow_html=True)
-        if edit_av and "tab_accidentes" in edit_av:
-            df_acc_init = pd.DataFrame(edit_av["tab_accidentes"])
-        else:
-            df_acc_init = pd.DataFrame(tasas_dest["accidentes"])
+        tab_acc_data = edit_av.get("tab_accidentes", []) if edit_av else []
+    if tab_acc_data:
+        df_acc_init = pd.DataFrame(tab_acc_data)
+    else:
+        df_acc_init = pd.DataFrame(tasas_dest["accidentes"]) if tasas_dest["accidentes"] else pd.DataFrame()
         t_acc = st.data_editor(df_acc_init, num_rows="dynamic", use_container_width=True, key="editor_av_accidentes",
             column_order=["Cobertura", "Tasa (%)", "Asientos", "Capital (USD)"],
             column_config={"Cobertura": st.column_config.TextColumn("Cobertura"), "Tasa (%)": st.column_config.NumberColumn("Tasa (%)", format="%.2f%%", min_value=0.0, step=0.01), "Asientos": st.column_config.NumberColumn("Asientos", format="%d", min_value=0), "Capital (USD)": st.column_config.NumberColumn("Capital (USD)", format="$ %,d")})
