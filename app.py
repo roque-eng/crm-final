@@ -678,9 +678,9 @@ with tab_flota:
         f_vigencia = f_c3.text_input("Vigencia Cotizada", key="f_vig_fl")
 
         f_c4, f_c5, f_c6 = st.columns([2, 1, 2])
-        f_asesor_nombre = f_c4.text_input("Asesor", key="f_as_fl")
+        f_asesor_nombre = f_c4.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="f_as_fl")
         if not edit_f:
-            st.session_state["f_co_fl"] = CONTACTOS.get(st.session_state.get("f_as_fl", ""), "")
+            st.session_state["f_co_fl"] = CONTACTOS.get(f_asesor_nombre, "")
         f_contacto = f_c6.text_input("Contacto", key="f_co_fl")
 
     cols_f = ["Marca", "Modelo", "Ano", "Matricula", "Cobertura", "Contado", "Deducible"]
