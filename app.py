@@ -15,9 +15,8 @@ SHEET_ID = "1xyzaQncW_4XcjV5hcrc41YGFUst5068tYglGTAQZ2AA"
 
 def get_gspread_client():
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    creds_dict = dict(st.secrets["connections"]["gsheets"])
-    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    service_account_info = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
+    creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
     return gspread.authorize(creds)
 
 def guardar_en_sheet(hoja_nombre, fila):
