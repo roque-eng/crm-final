@@ -628,13 +628,17 @@ with tab_flota:
 with tab_aeronave:
     st.subheader("✈️ Cotizador Seguros de Aeronaves")
     edit_av = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "Aeronave" else {}
-    if edit_av:
+    # Solo cargamos los valores al session_state UNA vez (cuando se acaba de elegir editar),
+    # igual que Individual/Flotas. Usamos un flag para no pisar lo que el usuario escribe.
+    edit_av_id = id(st.session_state.edit_data) if edit_av else None
+    if edit_av and st.session_state.get("_av_edit_loaded_id") != edit_av_id:
         st.session_state["av_asegurado"] = edit_av.get("n", "")
         st.session_state["av_aseguradora"] = edit_av.get("aseguradora", "")
         st.session_state["av_aeronave"] = edit_av.get("aeronave", "")
         st.session_state["av_matricula"] = edit_av.get("matricula", "")
         st.session_state["av_alcance_geo"] = edit_av.get("alcance_geo", "")
         st.session_state["av_contacto"] = edit_av.get("cont", "")
+        st.session_state["_av_edit_loaded_id"] = edit_av_id
     with st.container(border=True):
         av_r1c1, av_r1c2, av_r1c3 = st.columns(3)
         av_asegurado = av_r1c1.text_input("Asegurado", key="av_asegurado")
@@ -646,9 +650,9 @@ with tab_aeronave:
 
         av_asesor = av_r2c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
                                        index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0)
-        # Contacto: campo texto libre, se pre-completa con cel del asesor pero es editable
-        contacto_sugerido = edit_av.get("cont", "") or CONTACTOS.get(av_asesor, "")
-        av_contacto = av_r2c4.text_input("Contacto (cel / mail)", value=contacto_sugerido, key="av_contacto")
+        if not edit_av:
+            st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
+        av_contacto = av_r2c4.text_input("Contacto (cel / mail)", key="av_contacto")
 
     destinos = ["Privado / Otro", "Agrícola", "Escuela e Instrucción"]
     av_destino_idx = destinos.index(edit_av.get("destino", "Privado / Otro")) if edit_av.get("destino") in destinos else 0
@@ -717,6 +721,7 @@ with tab_aeronave:
         datos_av = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": av_asegurado, "aseguradora": av_aseguradora, "aeronave": av_aeronave, "matricula": av_matricula, "alcance_geo": av_alcance_geo, "destino": av_destino, "e": av_asesor, "cont": av_contacto, "tab": filas_calc, "tab_principales": t_princ.to_dict(orient='records'), "tab_accidentes": t_acc.to_dict(orient='records') if not t_acc.empty else [], "aptitud_aterrizaje": aptitud_incluida, "obs_av": obs_av, "subtotal": subtotal, "cargos": cargos_emision, "total": total_anual, "tipo": "Aeronave"}
         st.session_state.historico.append(datos_av)
         st.session_state.edit_data = datos_av
+        st.session_state["_av_edit_loaded_id"] = None  # reset flag para proxima edicion
         datos_b64 = base64.b64encode(json.dumps(datos_av).encode()).decode()
         link_av = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         guardar_en_sheet("Cotizaciones Aeronaves", [datos_av["fecha"], av_asegurado, av_aseguradora, av_aeronave, av_matricula, av_alcance_geo, av_destino, av_asesor, subtotal, cargos_emision, total_anual, link_av, json.dumps(datos_av)])
