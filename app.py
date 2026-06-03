@@ -325,17 +325,21 @@ USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB":
 if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] = "RDF"
 
 if 'logueado' not in st.session_state or not st.session_state['logueado']:
-    col_logo, col_form = st.columns([1, 1.6])
-    with col_logo:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.image("https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg", use_container_width=True)
-    with col_form:
-        st.markdown("<br><br>", unsafe_allow_html=True)
+    # Logo pequeño arriba a la derecha
+    st.markdown("""
+        <div style="display:flex; justify-content:flex-end; padding: 10px 20px 0 0;">
+            <img src="https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg" width="140">
+        </div>
+    """, unsafe_allow_html=True)
+    # Formulario centrado
+    _, col_mid, _ = st.columns([1, 1.4, 1])
+    with col_mid:
+        st.markdown("<br>", unsafe_allow_html=True)
         st.title("EDF SEGUROS")
         st.markdown("##### Sistema de Gestión y Cotización")
         u_sel = st.selectbox("Seleccione su Usuario:", list(USUARIOS.keys()))
         p_in = st.text_input("Contrasena:", type="password")
-        if st.button("Ingresar", type="primary"):
+        if st.button("Ingresar", type="primary", use_container_width=True):
             if USUARIOS.get(u_sel) == p_in:
                 st.session_state['logueado'] = True
                 st.session_state['usuario_actual'] = u_sel
