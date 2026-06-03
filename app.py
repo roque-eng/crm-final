@@ -327,7 +327,7 @@ if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] 
 if 'logueado' not in st.session_state or not st.session_state['logueado']:
     # Logo pequeño arriba a la derecha
     st.markdown("""
-        <div style="display:flex; justify-content:flex-end; padding: 20px 0 0 0;">
+        <div style="display:flex; justify-content:center; padding: 20px 0 0 0;">
             <img src="https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg" width="140">
         </div>
     """, unsafe_allow_html=True)
