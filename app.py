@@ -644,16 +644,11 @@ with tab_aeronave:
         av_matricula = av_r2c1.text_input("Matricula", key="av_matricula")
         av_alcance_geo = av_r2c2.text_input("Alcance Geografico", key="av_alcance_geo")
 
-        def actualizar_contacto_av():
-            st.session_state["av_contacto"] = CONTACTOS.get(st.session_state.av_asesor_sel, "")
-
         av_asesor = av_r2c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
-                                       index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0,
-                                       on_change=actualizar_contacto_av)
-        if not edit_av:
-            if "av_contacto" not in st.session_state or st.session_state.get("av_contacto") == "":
-                st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
-        av_contacto = av_r2c4.text_input("Contacto", key="av_contacto")
+                                       index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0)
+        # Contacto: campo texto libre, se pre-completa con cel del asesor pero es editable
+        contacto_sugerido = edit_av.get("cont", "") or CONTACTOS.get(av_asesor, "")
+        av_contacto = av_r2c4.text_input("Contacto (cel / mail)", value=contacto_sugerido, key="av_contacto")
 
     destinos = ["Privado / Otro", "Agricola", "Escuela e Instruccion"]
     av_destino_idx = destinos.index(edit_av.get("destino", "Privado / Otro")) if edit_av.get("destino") in destinos else 0
