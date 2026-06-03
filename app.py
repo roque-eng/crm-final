@@ -67,7 +67,7 @@ TASAS_AERONAVE = {
             {"Cobertura": "Accidente Personales Pasajeros", "Tasa (%)": 0.30, "Asientos": 1, "Capital (USD)": 0},
         ],
     },
-    "Agricola": {
+    "Agrícola": {
         "principales": [
             {"Cobertura": "Perdida o Dano de la Aeronave", "Tasa (%)": 3.00, "Capital (USD)": 0},
             {"Cobertura": "RC hacia Terceros (Excepto pasajeros)", "Tasa (%)": 0.50, "Capital (USD)": 0},
@@ -650,7 +650,7 @@ with tab_aeronave:
         contacto_sugerido = edit_av.get("cont", "") or CONTACTOS.get(av_asesor, "")
         av_contacto = av_r2c4.text_input("Contacto (cel / mail)", value=contacto_sugerido, key="av_contacto")
 
-    destinos = ["Privado / Otro", "Agricola", "Escuela e Instruccion"]
+    destinos = ["Privado / Otro", "Agrícola", "Escuela e Instruccion"]
     av_destino_idx = destinos.index(edit_av.get("destino", "Privado / Otro")) if edit_av.get("destino") in destinos else 0
     av_destino = st.selectbox("Destino / Uso", destinos, index=av_destino_idx, key="av_destino")
 
