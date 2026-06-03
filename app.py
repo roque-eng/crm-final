@@ -728,7 +728,7 @@ with tab_aeronave:
         st.session_state["_av_edit_loaded_id"] = None  # reset flag para proxima edicion
         datos_b64 = base64.b64encode(json.dumps(datos_av).encode()).decode()
         link_av = f"https://dfseguros.streamlit.app/?q={datos_b64}"
-        guardar_en_sheet("Cotizaciones Aeronaves", [datos_av["fecha"], av_asegurado, av_aseguradora, av_aeronave, av_matricula, av_alcance_geo, av_destino, av_asesor, subtotal, cargos_emision, total_anual, link_av, json.dumps(datos_av)])
+        guardar_en_sheet("Cotizaciones Aeronaves", [datos_av["fecha"], av_asegurado, av_aseguradora, av_aeronave, av_matricula, av_alcance_geo, av_destino, av_asesor, subtotal, cargos_emision, total_anual, link_av, json.dumps(datos_av), obs_av])
         st.success("Cotizacion de Aeronave guardada!")
         st.text_input("🔗 Enlace para mandar al cliente:", value=link_av)
         st.components.v1.html(f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_av}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error\'); }})">📋 Copiar Link Aeronave</button>', height=60)
