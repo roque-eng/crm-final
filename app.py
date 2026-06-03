@@ -525,11 +525,11 @@ Saludos!
 # PLANTILLAS
 txt_ben_veh = "• Auxilio mecanico e ilimitado\n• Cobertura Mercosur\n• Cristales: USD 300 SANCOR, USD 200 BSE O SBI, USD 100 SURA, demas cobran deducible\n• Granizo: SANCOR incluido sin deducible, demas aplican deducible."
 txt_hog_veh = "• Incendio Edificio USD 100.000\n• Incendio Contenido 50.000\n• Hurto Contenido 5.000\n• Costo anual Casas: USD 180\n• Costo anual Aptos: USD 120"
-txt_alq_veh = "• Auto sustituto por hasta 15 dias.\n• Costo anual: UYU 3.000 por vehiculo."
+txt_alq_veh = "• Auto de alquiler por hasta 15 días en caso de que sufras un siniestro con tu vehículo asegurado.\n• Costo anual: UYU 3.300 por vehiculo."
 txt_bic_veh = "• Cobertura Hurto bicicleta hasta USD 1.000.\n• Costo anual: USD 120"
 txt_obs_flota = "Vigencia:\nForma de Pago: redes de cobranza o tarjeta de credito en 10 cuotas sin recargo.\nBeneficios\n  - Auxilio mecanico ilimitado.\n  - Cristales: SANCOR USD 300, BSE y SBI USD 200, SURA USD 100.\n  - Granizo: SANCOR lo cubre, demas cobran deducible."
 txt_acc_flota = "• Seguro de Vida Accidentes choferes: USD 25.000.\n• Costo anual: UYU 1.900 por chofer."
-txt_alq_flota = "• Auto sustituto por hasta 15 dias.\n• Costo anual: UYU 3.000 por vehiculo."
+txt_alq_flota = "• Auto de alquiler por hasta 15 días en caso de que sufras un siniestro con tu vehículo asegurado.\n• Costo anual: UYU 3.300 por vehiculo."
 txt_bic_flota = "• Bici electrica o moto hasta USD 1.000.\n• Costo anual: UYU 5.000"
 
 # --- VEHICULOS INDIVIDUAL ---
