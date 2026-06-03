@@ -174,8 +174,9 @@ if "q" in query_params:
             </div>
             """, unsafe_allow_html=True)
             st.markdown("---")
-            nombre_asesor_cli = NOMBRES.get(propuesta_cliente.get('e',''), propuesta_cliente.get('e','EDF'))
-            st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {nombre_asesor_cli} | <b>Contacto:</b> {propuesta_cliente.get('cont','')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
+            asesor_key_av = propuesta_cliente.get('e', 'EDF')
+            asesor_nombre_av = NOMBRES.get(asesor_key_av, asesor_key_av)
+            st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {asesor_nombre_av} | <b>Contacto:</b> {propuesta_cliente.get('cont','')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
             st.stop()
 
         # --- VISTA FLOTA ---
@@ -291,7 +292,16 @@ if "historico_sheet_cargado" not in st.session_state:
                             elif tipo == "Flota" and len(row) >= 6:
                                 hist.append({"fecha": row[0], "n": row[1], "e": row[2], "e_nombre": row[3], "tipo": "Flota", "link": row[5] if len(row) > 5 else ""})
                             elif tipo == "Aeronave" and len(row) >= 12:
-                                hist.append({"fecha": row[0], "n": row[1], "aseguradora": row[2], "aeronave": row[3], "matricula": row[4], "alcance_geo": row[5], "destino": row[6], "e": row[7], "total": row[10], "tipo": "Aeronave", "link": row[11] if len(row) > 11 else ""})
+                                # Si existe columna JSON (col 12), reconstruimos el dict completo
+                                if len(row) > 12 and row[12]:
+                                    try:
+                                        datos_completos = json.loads(row[12])
+                                        datos_completos["link"] = row[11] if len(row) > 11 else ""
+                                        hist.append(datos_completos)
+                                    except:
+                                        hist.append({"fecha": row[0], "n": row[1], "aseguradora": row[2], "aeronave": row[3], "matricula": row[4], "alcance_geo": row[5], "destino": row[6], "e": row[7], "total": row[10], "tipo": "Aeronave", "link": row[11] if len(row) > 11 else ""})
+                                else:
+                                    hist.append({"fecha": row[0], "n": row[1], "aseguradora": row[2], "aeronave": row[3], "matricula": row[4], "alcance_geo": row[5], "destino": row[6], "e": row[7], "total": row[10], "tipo": "Aeronave", "link": row[11] if len(row) > 11 else ""})
                 except: pass
             st.session_state.historico = hist
     except: pass
@@ -315,15 +325,22 @@ USUARIOS = {"RDF": "Rockuda.4428", "JOE": "Joe2025", "ANDRE": "Andre2025", "AB":
 if 'usuario_actual' not in st.session_state: st.session_state['usuario_actual'] = "RDF"
 
 if 'logueado' not in st.session_state or not st.session_state['logueado']:
-    st.title("EDF SEGUROS")
-    u_sel = st.selectbox("Seleccione su Usuario:", list(USUARIOS.keys()))
-    p_in = st.text_input("Contrasena:", type="password")
-    if st.button("Ingresar", type="primary"):
-        if USUARIOS.get(u_sel) == p_in:
-            st.session_state['logueado'] = True
-            st.session_state['usuario_actual'] = u_sel
-            st.rerun()
-        else: st.error("Contrasena incorrecta.")
+    col_logo, col_form = st.columns([1, 1.6])
+    with col_logo:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.image("https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg", use_container_width=True)
+    with col_form:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.title("EDF SEGUROS")
+        st.markdown("##### Sistema de Gestión y Cotización")
+        u_sel = st.selectbox("Seleccione su Usuario:", list(USUARIOS.keys()))
+        p_in = st.text_input("Contrasena:", type="password")
+        if st.button("Ingresar", type="primary"):
+            if USUARIOS.get(u_sel) == p_in:
+                st.session_state['logueado'] = True
+                st.session_state['usuario_actual'] = u_sel
+                st.rerun()
+            else: st.error("Contrasena incorrecta.")
     st.stop()
 
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -554,6 +571,7 @@ with tab_cot:
     if st.button("💾 Guardar propuesta y Generar Link", type="primary", use_container_width=True, key="save_ind_btn"):
         datos_i = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": n_cot, "v": v_cot, "matricula": mat_cot, "cobertura_cot": cob_cot, "zona": zona_cot, "e": e_cot, "cont": cont_cot, "doc": doc_in, "tab": t_edit.to_dict(orient='records'), "ben": b_cot, "ch": c_h, "ca": c_a, "cb": c_b, "tipo": "Individual"}
         st.session_state.historico.append(datos_i)
+        st.session_state.edit_data = datos_i
         datos_b64 = base64.b64encode(json.dumps(datos_i).encode()).decode()
         link_cliente = f"https://dfseguros.streamlit.app/?q={datos_b64}"
         primera_aseg = t_edit.iloc[0] if not t_edit.empty else {}
@@ -627,13 +645,14 @@ with tab_aeronave:
         av_alcance_geo = av_r2c2.text_input("Alcance Geografico", key="av_alcance_geo")
 
         def actualizar_contacto_av():
-            st.session_state["av_contacto"] = CONTACTOS.get(st.session_state.get("av_asesor_sel", ""), "")
+            st.session_state["av_contacto"] = CONTACTOS.get(st.session_state.av_asesor_sel, "")
 
         av_asesor = av_r2c3.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="av_asesor_sel",
                                        index=sorted(list(USUARIOS.keys())).index(st.session_state.usuario_actual) if st.session_state.usuario_actual in sorted(list(USUARIOS.keys())) else 0,
                                        on_change=actualizar_contacto_av)
         if not edit_av:
-            st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
+            if "av_contacto" not in st.session_state or st.session_state.get("av_contacto") == "":
+                st.session_state["av_contacto"] = CONTACTOS.get(av_asesor, "")
         av_contacto = av_r2c4.text_input("Contacto", key="av_contacto")
 
     destinos = ["Privado / Otro", "Agricola", "Escuela e Instruccion"]
@@ -644,9 +663,8 @@ with tab_aeronave:
     st.markdown("**Coberturas y Tasas** *(las tasas no se muestran al cliente)*")
     tasas_dest = TASAS_AERONAVE[av_destino]
 
-    tab_princ_data = edit_av.get("tab_principales", []) if edit_av else []
-    if tab_princ_data:
-        df_princ_init = pd.DataFrame(tab_princ_data)
+    if edit_av and "tab_principales" in edit_av:
+        df_princ_init = pd.DataFrame(edit_av["tab_principales"])
     else:
         df_princ_init = pd.DataFrame(tasas_dest["principales"])
 
@@ -657,11 +675,10 @@ with tab_aeronave:
     t_acc = pd.DataFrame()
     if tasas_dest["accidentes"]:
         st.markdown("<small style='color:gray;'>Coberturas de Accidentes Personales</small>", unsafe_allow_html=True)
-        tab_acc_data = edit_av.get("tab_accidentes", []) if edit_av else []
-    if tab_acc_data:
-        df_acc_init = pd.DataFrame(tab_acc_data)
-    else:
-        df_acc_init = pd.DataFrame(tasas_dest["accidentes"]) if tasas_dest["accidentes"] else pd.DataFrame()
+        if edit_av and "tab_accidentes" in edit_av:
+            df_acc_init = pd.DataFrame(edit_av["tab_accidentes"])
+        else:
+            df_acc_init = pd.DataFrame(tasas_dest["accidentes"])
         t_acc = st.data_editor(df_acc_init, num_rows="dynamic", use_container_width=True, key="editor_av_accidentes",
             column_order=["Cobertura", "Tasa (%)", "Asientos", "Capital (USD)"],
             column_config={"Cobertura": st.column_config.TextColumn("Cobertura"), "Tasa (%)": st.column_config.NumberColumn("Tasa (%)", format="%.2f%%", min_value=0.0, step=0.01), "Asientos": st.column_config.NumberColumn("Asientos", format="%d", min_value=0), "Capital (USD)": st.column_config.NumberColumn("Capital (USD)", format="$ %,d")})
@@ -707,7 +724,7 @@ with tab_aeronave:
         st.session_state.edit_data = datos_av
         datos_b64 = base64.b64encode(json.dumps(datos_av).encode()).decode()
         link_av = f"https://dfseguros.streamlit.app/?q={datos_b64}"
-        guardar_en_sheet("Cotizaciones Aeronaves", [datos_av["fecha"], av_asegurado, av_aseguradora, av_aeronave, av_matricula, av_alcance_geo, av_destino, av_asesor, subtotal, cargos_emision, total_anual, link_av])
+        guardar_en_sheet("Cotizaciones Aeronaves", [datos_av["fecha"], av_asegurado, av_aseguradora, av_aeronave, av_matricula, av_alcance_geo, av_destino, av_asesor, subtotal, cargos_emision, total_anual, link_av, json.dumps(datos_av)])
         st.success("Cotizacion de Aeronave guardada!")
         st.text_input("🔗 Enlace para mandar al cliente:", value=link_av)
         st.components.v1.html(f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_av}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error\'); }})">📋 Copiar Link Aeronave</button>', height=60)
@@ -715,6 +732,32 @@ with tab_aeronave:
 # --- HISTORIAL ---
 with tab_historial:
     st.subheader("📜 Historial de Propuestas Guardadas")
+
+    # CSS para íconos compactos en el historial
+    st.markdown("""
+    <style>
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-child(2) div.stButton > button,
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-child(3) div.stButton > button {
+        padding: 2px 10px !important;
+        min-height: 0px !important;
+        height: 30px !important;
+        font-size: 16px !important;
+        line-height: 1 !important;
+        background: transparent !important;
+        border: 1px solid #ddd !important;
+        color: #333 !important;
+        border-radius: 6px !important;
+        transform: none !important;
+    }
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-child(2) div.stButton > button:hover,
+    div[data-testid="stHorizontalBlock"] div[data-testid="column"]:nth-child(3) div.stButton > button:hover {
+        background: #f5f5f5 !important;
+        border-color: #999 !important;
+        transform: none !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     if st.session_state.historico:
         hf1, hf2, hf3 = st.columns([2, 1, 1])
         busq_hist_nom = hf1.text_input("🔍 Buscar por asegurado:", key="busq_hist_nom")
@@ -730,7 +773,7 @@ with tab_historial:
             historico_filtrado = [r for r in historico_filtrado if r.get("tipo") == filtro_tipo]
         for i, reg in enumerate(reversed(historico_filtrado)):
             idx_real = st.session_state.historico.index(reg)
-            col_info, col_edit, col_del = st.columns([0.7, 0.15, 0.15])
+            col_info, col_edit, col_del = st.columns([0.78, 0.11, 0.11])
             with col_info:
                 if reg.get("tipo") == "Flota": icon = "🚚"
                 elif reg.get("tipo") == "Aeronave": icon = "✈️"
@@ -738,12 +781,11 @@ with tab_historial:
                 mat_hist = f" | {reg.get('matricula')}" if reg.get('matricula') else ""
                 st.write(f"📅 **{reg.get('fecha', '')[:10]}** | {icon} {reg.get('tipo')} | **{reg.get('n', 'Cliente')}**{mat_hist}")
             with col_edit:
-                if st.button("✏️ Cargar/Editar", key=f"edit_f_{i}_{idx_real}"):
+                if st.button("✏️", key=f"edit_f_{i}_{idx_real}", help="Cargar / Editar"):
                     st.session_state.edit_data = reg
-                    st.success("Cargada.")
                     st.rerun()
             with col_del:
-                if st.button("🗑️", key=f"del_f_{i}_{idx_real}"):
+                if st.button("🗑️", key=f"del_f_{i}_{idx_real}", help="Eliminar"):
                     st.session_state.historico.pop(idx_real)
                     st.rerun()
     else:
