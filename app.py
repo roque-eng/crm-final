@@ -420,9 +420,9 @@ with tab_car:
                     st.write(f"• **Detalle:** {fila_completa.get('Detalle', 'N/D')}")
                 with cx3:
                     st.markdown("**Gestion e Intermediacion:**")
-                    st.write(f"• **Fin de Vigencia:** ...")
-                    st.write(f"• **Ejecutivo:** ...")
-                    st.write(f"• **Corredor/Agente:** ...")
+                    st.write(f"• **Fin de Vigencia:** {fila_completa.get('Fin de Vigencia', 'N/D')}")
+                    st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
+                    st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
                 
                 # --- Historial (mismo nivel que with cx3, afuera) ---
                 nombre_cliente = fila_completa.get(c_asegurado, '')
