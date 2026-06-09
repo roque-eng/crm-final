@@ -444,7 +444,7 @@ with tab_car:
                                     c_adjunto: st.column_config.LinkColumn("Poliza", display_text="📎 Ver PDF"),
                                     "Fin de Vigencia": st.column_config.DateColumn("Vigencia", format="DD/MM/YYYY"),
                                     c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
-                                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d")
                                 })
     else:
         st.info("No se encontraron registros en la cartera.")
