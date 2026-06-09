@@ -435,17 +435,17 @@ with tab_car:
                         mask &= (df_raw['Matricula'].astype(str) == mat_actual)
                     df_historial_poliza = df_raw[mask].sort_values('Fin de Vigencia', ascending=False)
                     if len(df_historial_poliza) > 1:
-                col_hist, _ = st.columns([2, 1])
-                with col_hist:
-                    with st.expander(f"📋 Historial de renovaciones ({len(df_historial_poliza)} registros)"):
-                        cols_hist = [c for c in ['Fin de Vigencia', c_aseguradora, c_p_usd, c_p_uyu, c_adjunto] if c in df_historial_poliza.columns]
-                        st.dataframe(df_historial_poliza[cols_hist], use_container_width=True,
-                            column_config={
-                                c_adjunto: st.column_config.LinkColumn("Poliza", display_text="📎 Ver PDF"),
-                                "Fin de Vigencia": st.column_config.DateColumn("Vigencia", format="DD/MM/YYYY"),
-                                c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
-                                c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d")
-                            })
+                        col_hist, _ = st.columns([2, 1])
+                        with col_hist:
+                            with st.expander(f"📋 Historial de renovaciones ({len(df_historial_poliza)} registros)"):
+                                cols_hist = [c for c in ['Fin de Vigencia', c_aseguradora, c_p_usd, c_p_uyu, c_adjunto] if c in df_historial_poliza.columns]
+                                st.dataframe(df_historial_poliza[cols_hist], use_container_width=True,
+                                    column_config={
+                                        c_adjunto: st.column_config.LinkColumn("Poliza", display_text="📎 Ver PDF"),
+                                        "Fin de Vigencia": st.column_config.DateColumn("Vigencia", format="DD/MM/YYYY"),
+                                        c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
+                                        c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d")
+                                    })
     else:
         st.info("No se encontraron registros en la cartera.")
 
