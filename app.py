@@ -423,23 +423,27 @@ with tab_car:
                     st.write(f"• **Fin de Vigencia:** {fila_completa.get('Fin de Vigencia', 'N/D')}")
                     st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
                     st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
-                    # Historial de renovaciones
-                mask = (df_raw[c_documento].astype(str) == str(fila_completa.get(c_documento, '')))
-                mask &= (df_raw[c_ramo].astype(str) == str(fila_completa.get(c_ramo, '')))
-                mat_actual = str(fila_completa.get('Matricula', ''))
-                if mat_actual and mat_actual not in ['nan', 'N/D', '']:
-                    mask &= (df_raw['Matricula'].astype(str) == mat_actual)
-                df_historial_poliza = df_raw[mask].sort_values('Fin de Vigencia', ascending=False)
-                if len(df_historial_poliza) > 1:
-                    with st.expander(f"📋 Historial de renovaciones ({len(df_historial_poliza)} registros)"):
-                        cols_hist = [c for c in ['Fin de Vigencia', c_aseguradora, c_p_usd, c_p_uyu, c_adjunto] if c in df_historial_poliza.columns]
-                        st.dataframe(df_historial_poliza[cols_hist], use_container_width=True,
-                            column_config={
-                                c_adjunto: st.column_config.LinkColumn("Poliza", display_text="📎 Ver PDF"),
-                                "Fin de Vigencia": st.column_config.DateColumn("Vigencia", format="DD/MM/YYYY"),
-                                c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
-                                c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                            })
+                    doc_val = str(fila_completa.get(c_documento, ''))
+                    ramo_val = str(fila_completa.get(c_ramo, ''))
+                    mask = pd.Series([True] * len(df_raw), index=df_raw.index)
+                    if c_documento in df_raw.columns and doc_val not in ['', 'nan', 'N/D']:
+                        mask &= (df_raw[c_documento].astype(str) == doc_val)
+                    if c_ramo in df_raw.columns and ramo_val not in ['', 'nan', 'N/D']:
+                        mask &= (df_raw[c_ramo].astype(str) == ramo_val)
+                    mat_actual = str(fila_completa.get('Matricula', ''))
+                    if 'Matricula' in df_raw.columns and mat_actual not in ['', 'nan', 'N/D']:
+                        mask &= (df_raw['Matricula'].astype(str) == mat_actual)
+                    df_historial_poliza = df_raw[mask].sort_values('Fin de Vigencia', ascending=False)
+                    if len(df_historial_poliza) > 1:
+                        with st.expander(f"📋 Historial de renovaciones ({len(df_historial_poliza)} registros)"):
+                            cols_hist = [c for c in ['Fin de Vigencia', c_aseguradora, c_p_usd, c_p_uyu, c_adjunto] if c in df_historial_poliza.columns]
+                            st.dataframe(df_historial_poliza[cols_hist], use_container_width=True,
+                                column_config={
+                                    c_adjunto: st.column_config.LinkColumn("Poliza", display_text="📎 Ver PDF"),
+                                    "Fin de Vigencia": st.column_config.DateColumn("Vigencia", format="DD/MM/YYYY"),
+                                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
+                                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                                })
     else:
         st.info("No se encontraron registros en la cartera.")
 
