@@ -446,7 +446,6 @@ with tab_car:
                                     c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
                                     c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
                                 })
-                                })
     else:
         st.info("No se encontraron registros en la cartera.")
 
