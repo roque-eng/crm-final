@@ -420,26 +420,27 @@ with tab_car:
                     st.write(f"• **Detalle:** {fila_completa.get('Detalle', 'N/D')}")
                 with cx3:
                     st.markdown("**Gestion e Intermediacion:**")
-                    st.write(f"• **Fin de Vigencia:** {fila_completa.get('Fin de Vigencia', 'N/D')}")
-                    st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
-                    st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
-                    # --- Historial de renovaciones del cliente seleccionado ---
-                    nombre_cliente = fila_completa.get(c_asegurado, '')
-                    if nombre_cliente:
-                        df_historial_cliente = df_raw[df_raw[c_asegurado] == nombre_cliente].sort_values('Fin de Vigencia', ascending=False)
-                        if not df_historial_cliente.empty:
-                            st.markdown(f"#### 📋 Historial de renovaciones — {nombre_cliente} ({len(df_historial_cliente)} registros)")
-                            cols_hist = [c for c in [c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu] if c in df_historial_cliente.columns]
-                            st.dataframe(
-                                df_historial_cliente[cols_hist],
-                                use_container_width=True,
-                                hide_index=True,
-                                column_config={
-                                    'Fin de Vigencia': st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
-                                    c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
-                                    c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
-                                }
-                            )
+                    st.write(f"• **Fin de Vigencia:** ...")
+                    st.write(f"• **Ejecutivo:** ...")
+                    st.write(f"• **Corredor/Agente:** ...")
+                
+                # --- Historial (mismo nivel que with cx3, afuera) ---
+                nombre_cliente = fila_completa.get(c_asegurado, '')
+                if nombre_cliente:
+                    df_historial_cliente = df_raw[df_raw[c_asegurado] == nombre_cliente].sort_values('Fin de Vigencia', ascending=False)
+                    if not df_historial_cliente.empty:
+                        st.markdown(f"#### 📋 Historial de renovaciones — {nombre_cliente} ({len(df_historial_cliente)} registros)")
+                        cols_hist = [c for c in [c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu] if c in df_historial_cliente.columns]
+                        st.dataframe(
+                            df_historial_cliente[cols_hist],
+                            use_container_width=True,
+                            hide_index=True,
+                            column_config={
+                                'Fin de Vigencia': st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"),
+                                c_p_usd: st.column_config.NumberColumn("Premio USD", format="USD %,d"),
+                                c_p_uyu: st.column_config.NumberColumn("Premio UYU", format="$ %,d"),
+                            }
+                        )
     else:
         st.info("No se encontraron registros en la cartera.")
 
