@@ -407,7 +407,7 @@ with tab_car:
             column_config={"Poliza": st.column_config.LinkColumn("Poliza", display_text="📎 Ver PDF"), "Vencimiento": st.column_config.DateColumn("Vencimiento", format="DD/MM/YYYY"), "Premio USD": st.column_config.NumberColumn("Premio USD", format="USD %,d"), "Premio UYU": st.column_config.NumberColumn("Premio UYU", format="$ %,d"), "Premio Total (USD)": st.column_config.NumberColumn("Premio Total (USD)", format="USD %,d")})
         selection = st.session_state.get("grid_cartera_unica", {}).get("selection", {})
         filas_seleccionadas = selection.get("rows", [])
-        if filas_seleccionadas:
+        if filas_seleccionadas[0] < len(df_c):
             fila_completa = df_c.iloc[filas_seleccionadas[0]]
             st.write("")
             with st.container(border=True):
@@ -428,11 +428,10 @@ with tab_car:
                     st.write(f"• **Fin de Vigencia:** {fila_completa.get('Fin de Vigencia', 'N/D')}")
                     st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
                     st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
-
                 col_aseg_raw = 'Asegurado (Nombre/Razón Social)'
                 col_mat_raw = 'Detalle (Matricula o Referencia)'
                 col_ramo_raw = 'Ramo'
-                
+             
                 nombre_cliente = fila_completa.get(col_aseg_raw, '')
                 ramo_cliente = fila_completa.get(col_ramo_raw, '')
                 matricula_cliente = fila_completa.get(col_mat_raw, '')
