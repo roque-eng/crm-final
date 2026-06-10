@@ -431,9 +431,9 @@ with tab_car:
                 ramo_cliente = fila_completa.get(c_ramo, '')
                 matricula_cliente = fila_completa.get('Detalle (Matricula o Referencia)', '')
                 
-                mask = (df_raw[c_asegurado] == nombre_cliente) & (df_raw[c_ramo] == ramo_cliente)
-                if matricula_cliente and matricula_cliente != 'N/D':
-                    mask = mask & (df_raw['Detalle (Matricula o Referencia)'] == matricula_cliente)
+                mask = (df_raw[c_asegurado] == nombre_cliente)
+                if ramo_cliente and ramo_cliente != 'N/D' and c_ramo in df_raw.columns:
+                    mask = mask & (df_raw[c_ramo] == ramo_cliente)
                 
                 df_historial_cliente = df_raw[mask].sort_values('Fin de Vigencia', ascending=False)
                 
