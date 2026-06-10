@@ -427,20 +427,27 @@ with tab_car:
                     st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
                     st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
 
-                nombre_cliente = fila_completa.get(c_asegurado, '')
-                ramo_cliente = fila_completa.get(c_ramo, '')
-                matricula_cliente = fila_completa.get('Detalle (Matricula o Referencia)', '')
+                col_aseg_raw = 'Asegurado (Nombre/Razón Social)'
+                col_mat_raw = 'Detalle (Matricula o Referencia)'
+                col_ramo_raw = 'Ramo'
                 
-                mask = (df_raw[c_asegurado] == nombre_cliente)
-                if ramo_cliente and ramo_cliente != 'N/D' and c_ramo in df_raw.columns:
-                    mask = mask & (df_raw[c_ramo] == ramo_cliente)
+                nombre_cliente = fila_completa.get(col_aseg_raw, '')
+                ramo_cliente = fila_completa.get(col_ramo_raw, '')
+                matricula_cliente = fila_completa.get(col_mat_raw, '')
                 
-                df_historial_cliente = df_raw[mask].sort_values('Fin de Vigencia', ascending=False)
-                
-                if not df_historial_cliente.empty:
-                    st.markdown(f"#### 📋 Historial — {nombre_cliente} | {ramo_cliente} | {matricula_cliente} ({len(df_historial_cliente)} registros)")
-                    cols_hist = [c for c in [c_aseguradora, c_ramo, 'Detalle (Matricula o Referencia)', 'Fin de Vigencia', c_p_usd, c_p_uyu] if c in df_historial_cliente.columns]
-                    st.dataframe(df_historial_cliente[cols_hist], use_container_width=True, hide_index=True)
+                if nombre_cliente and col_aseg_raw in df_raw.columns:
+                    mask = (df_raw[col_aseg_raw] == nombre_cliente)
+                    if ramo_cliente and col_ramo_raw in df_raw.columns:
+                        mask = mask & (df_raw[col_ramo_raw] == ramo_cliente)
+                    if matricula_cliente and col_mat_raw in df_raw.columns:
+                        mask = mask & (df_raw[col_mat_raw] == matricula_cliente)
+                    
+                    df_historial_cliente = df_raw[mask].sort_values('Fin de Vigencia', ascending=False)
+                    
+                    if not df_historial_cliente.empty:
+                        st.markdown(f"#### 📋 Historial — {nombre_cliente} | {ramo_cliente} | {matricula_cliente} ({len(df_historial_cliente)} registros)")
+                        cols_hist = [c for c in [c_aseguradora, col_ramo_raw, col_mat_raw, 'Fin de Vigencia', c_p_usd, c_p_uyu] if c in df_historial_cliente.columns]
+                        st.dataframe(df_historial_cliente[cols_hist], use_container_width=True, hide_index=True)
     else:
         st.info("No se encontraron registros en la cartera.")
 
