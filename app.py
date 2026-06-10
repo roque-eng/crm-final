@@ -421,7 +421,7 @@ with tab_car:
                 with cx2:
                     st.markdown("**Detalles del Bien:**")
                     st.write(f"• **Ramo:** {fila_completa.get(c_ramo, 'N/D')}")
-                    st.write(f"• **Matrícula:** {fila_completa.get('Detalle (Matricula o Referencia)', 'N/D')}")
+                    st.write(f"• **Detalle:** {fila_completa.get('Detalle (Matricula o Referencia)', 'N/D')}")
                     st.write(f"• **Notas:** {fila_completa.get('Notas', 'N/D')}")
                 with cx3:
                     st.markdown("**Gestion e Intermediacion:**")
