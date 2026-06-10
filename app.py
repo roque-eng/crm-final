@@ -427,7 +427,7 @@ with tab_car:
                     st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
                     st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
 
-            nombre_cliente = fila_completa.get(c_asegurado, '')
+                nombre_cliente = fila_completa.get(c_asegurado, '')
                 ramo_cliente = fila_completa.get(c_ramo, '')
                 matricula_cliente = fila_completa.get('Detalle (Matricula o Referencia)', '')
                 
