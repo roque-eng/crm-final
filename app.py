@@ -428,7 +428,7 @@ with tab_car:
             nombre_cliente = fila_completa.get(c_asegurado, '')
             if nombre_cliente:
                 df_historial_cliente = df_raw[df_raw[c_asegurado] == nombre_cliente].sort_values('Fin de Vigencia', ascending=False)
-                  if not df_historial_cliente.empty:
+                if not df_historial_cliente.empty:
                     st.markdown(f"#### 📋 Historial de renovaciones — {nombre_cliente} ({len(df_historial_cliente)} registros)")
                     cols_hist = [c for c in [c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu] if c in df_historial_cliente.columns]
                     st.dataframe(
