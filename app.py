@@ -445,7 +445,7 @@ with tab_car:
                     df_historial_cliente = df_raw[mask].sort_values('Fin de Vigencia', ascending=False)
                     
                     if not df_historial_cliente.empty:
-                        st.markdown(f"#### 📋 Historial — {nombre_cliente} | {ramo_cliente} | {matricula_cliente} ({len(df_historial_cliente)} registros)")
+                        st.markdown(f"#### 📋 Historial ({len(df_historial_cliente)} registros)")
                         cols_hist = [c for c in [c_aseguradora, col_ramo_raw, col_mat_raw, 'Fin de Vigencia', c_p_usd, c_p_uyu] if c in df_historial_cliente.columns]
                         st.dataframe(df_historial_cliente[cols_hist], use_container_width=True, hide_index=True)
     else:
