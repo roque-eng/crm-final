@@ -382,6 +382,7 @@ if f_as != "Todos": df_f = df_f[df_f[c_aseguradora] == f_as]
 if f_ra != "Todos": df_f = df_f[df_f[c_ramo] == f_ra]
 if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
+
 if solo_vigentes:
     df_f = df_f[df_f['Fin de Vigencia'] >= date.today()]
 tab_car, tab_ven, tab_cot, tab_flota, tab_aeronave, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHICULOS", "🚛 FLOTAS", "✈️ AERONAVES", "📜 HISTORIAL", "📊 ANALISIS"])
