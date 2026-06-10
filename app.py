@@ -424,13 +424,13 @@ with tab_car:
                     st.write(f"• **Ejecutivo:** {fila_completa.get('Ejecutivo', 'N/D')}")
                     st.write(f"• **Corredor/Agente:** {fila_completa.get('Corredor', 'N/D')} / {fila_completa.get('Agente', 'N/D')}")
 
-        nombre_cliente = fila_completa.get(c_asegurado, '')
-        if nombre_cliente:
-            df_historial_cliente = df_raw[df_raw[c_asegurado] == nombre_cliente].sort_values('Fin de Vigencia', ascending=False)
-            if not df_historial_cliente.empty:
-                st.markdown(f"#### 📋 Historial — {nombre_cliente} ({len(df_historial_cliente)} registros)")
-                cols_hist = [c for c in [c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu] if c in df_historial_cliente.columns]
-                st.dataframe(df_historial_cliente[cols_hist], use_container_width=True, hide_index=True)
+            nombre_cliente = fila_completa.get(c_asegurado, '')
+            if nombre_cliente:
+                df_historial_cliente = df_raw[df_raw[c_asegurado] == nombre_cliente].sort_values('Fin de Vigencia', ascending=False)
+                if not df_historial_cliente.empty:
+                    st.markdown(f"#### 📋 Historial — {nombre_cliente} ({len(df_historial_cliente)} registros)")
+                    cols_hist = [c for c in [c_aseguradora, c_ramo, 'Fin de Vigencia', c_p_usd, c_p_uyu] if c in df_historial_cliente.columns]
+                    st.dataframe(df_historial_cliente[cols_hist], use_container_width=True, hide_index=True)
     else:
         st.info("No se encontraron registros en la cartera.")
 
