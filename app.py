@@ -371,10 +371,10 @@ with st.sidebar:
     f_ra = st.selectbox("Ramo", get_list(c_ramo))
     f_co = st.selectbox("Corredor", get_list('Corredor'))
     f_ag = st.selectbox("Agente", get_list('Agente'))
+    filtro_vigencia = st.selectbox("Estado de pólizas", ["Vigentes", "No vigentes", "Todas"], index=0)
     if st.button("Cerrar Sesion"):
         st.session_state['logueado'] = False
         st.rerun()
-    filtro_vigencia = st.selectbox("Estado de pólizas", ["Vigentes", "No vigentes", "Todas"], index=0)
 
 df_f = df_raw.copy()
 if f_ej != "Todos" and 'Ejecutivo' in df_f.columns: df_f = df_f[df_f['Ejecutivo'] == f_ej]
