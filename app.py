@@ -374,7 +374,7 @@ with st.sidebar:
     if st.button("Cerrar Sesion"):
         st.session_state['logueado'] = False
         st.rerun()
-    solo_vigentes = st.sidebar.checkbox("Solo pólizas vigentes", value=True)
+    filtro_vigencia = st.selectbox("Estado de pólizas", ["Vigentes", "No vigentes", "Todas"], index=0)
 
 df_f = df_raw.copy()
 if f_ej != "Todos" and 'Ejecutivo' in df_f.columns: df_f = df_f[df_f['Ejecutivo'] == f_ej]
@@ -383,8 +383,10 @@ if f_ra != "Todos": df_f = df_f[df_f[c_ramo] == f_ra]
 if f_co != "Todos" and 'Corredor' in df_f.columns: df_f = df_f[df_f['Corredor'] == f_co]
 if f_ag != "Todos" and 'Agente' in df_f.columns: df_f = df_f[df_f['Agente'] == f_ag]
 
-if solo_vigentes:
+if filtro_vigencia == "Vigentes":
     df_f = df_f[df_f['Fin de Vigencia'] >= date.today()]
+elif filtro_vigencia == "No vigentes":
+    df_f = df_f[df_f['Fin de Vigencia'] < date.today()]
 tab_car, tab_ven, tab_cot, tab_flota, tab_aeronave, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHICULOS", "🚛 FLOTAS", "✈️ AERONAVES", "📜 HISTORIAL", "📊 ANALISIS"])
 
 # --- CARTERA ---
