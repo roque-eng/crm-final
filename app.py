@@ -107,7 +107,63 @@ if "q" in query_params:
         """, unsafe_allow_html=True)
 
         st.image("https://raw.githubusercontent.com/roque-eng/crm-final/main/de-freitas-logo-01.jpg", width=150)
+        
+        if propuesta_cliente.get("tipo") == "RV":
+            st.markdown(f"""
+            <div style="font-family: sans-serif; padding-left: 5px; margin: 20px 0 15px 0;">
+                <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111;">{propuesta_cliente.get('tipo_seg', 'Riesgos Varios')} — {propuesta_cliente.get('n', 'Cliente')}</h2>
+                <p style="margin: 0; font-size: 16px; color: #555;"><b>Actividad:</b> {propuesta_cliente.get('act', '')} | <b>Aseguradora:</b> {propuesta_cliente.get('cia', '')} | <b>Vigencia:</b> {propuesta_cliente.get('vig', '')}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
+            st.markdown("### 📦 Coberturas Principales")
+            df_cob_cli = pd.DataFrame(propuesta_cliente.get("tab_cob", []))
+            if not df_cob_cli.empty:
+                df_cob_cli["Capital (USD)"] = pd.to_numeric(df_cob_cli["Capital (USD)"], errors='coerce').fillna(0)
+                st.dataframe(df_cob_cli, use_container_width=True, hide_index=True,
+                    column_config={"Capital (USD)": st.column_config.NumberColumn("CAPITAL (USD)", format="$ %,d")})
+            cme1, cme2 = st.columns(2)
+            cme1.metric("Capital Asegurado Total", f"USD {propuesta_cliente.get('cap_total', 0):,.0f}")
+            cme2.metric("Deducible General", f"USD {propuesta_cliente.get('ded', '')}")
+
+            st.markdown("### 📑 Sublímites de Cobertura")
+            df_sub_cli = pd.DataFrame(propuesta_cliente.get("tab_sub", []))
+            if not df_sub_cli.empty:
+                st.dataframe(df_sub_cli, use_container_width=True, hide_index=True)
+
+            if propuesta_cliente.get("ubi", "").strip():
+                st.markdown("### 📍 Ubicaciones de riesgo")
+                for u in propuesta_cliente.get("ubi", "").split('\n'):
+                    if u.strip() and u.strip() not in ("1)", "2)", "3)", "4)"): st.markdown(f'<div class="ben-fila">{u.strip()}</div>', unsafe_allow_html=True)
+
+            if propuesta_cliente.get("equ", "").strip():
+                st.markdown("### 🚜 Equipos a la intemperie")
+                for eq in propuesta_cliente.get("equ", "").split('\n'):
+                    if eq.strip() and eq.strip() not in ("1)", "2)", "3)", "4)"): st.markdown(f'<div class="ben-fila">{eq.strip()}</div>', unsafe_allow_html=True)
+
+            if propuesta_cliente.get("acl", "").strip():
+                st.markdown("### 📌 Aclaraciones en condiciones particulares")
+                for a in propuesta_cliente.get("acl", "").split('\n'):
+                    if a.strip(): st.markdown(f'<div class="ben-fila">{a.strip()}</div>', unsafe_allow_html=True)
+
+            st.markdown("---")
+            cco1, cco2 = st.columns(2)
+            cco1.markdown(f"### 💰 Costo Anual (sin IVA): USD {propuesta_cliente.get('costo', 0):,.2f}")
+            cco2.markdown(f"### 💳 Financiamiento: {propuesta_cliente.get('fin', '')}")
+
+            df_comp_cli = pd.DataFrame(propuesta_cliente.get("tab_comp", []))
+            df_comp_cli = df_comp_cli[df_comp_cli.get("Aseguradora", pd.Series(dtype=str)).astype(str).str.strip() != ""] if not df_comp_cli.empty else df_comp_cli
+            if not df_comp_cli.empty:
+                st.markdown("### ⚖️ Comparativos")
+                df_comp_cli["Premio (USD)"] = pd.to_numeric(df_comp_cli["Premio (USD)"], errors='coerce').fillna(0)
+                st.dataframe(df_comp_cli, use_container_width=True, hide_index=True,
+                    column_config={"Premio (USD)": st.column_config.NumberColumn("PREMIO (USD)", format="$ %,d")})
+
+            st.markdown("---")
+            st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont', '')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
+            st.stop()
+
+        
         # --- VISTA AERONAVE ---
         if propuesta_cliente.get("tipo") == "Aeronave":
             mat = propuesta_cliente.get('matricula', '')
@@ -387,7 +443,7 @@ if filtro_vigencia == "Vigentes":
     df_f = df_f[df_f['Fin de Vigencia'] >= date.today()]
 elif filtro_vigencia == "No vigentes":
     df_f = df_f[df_f['Fin de Vigencia'] < date.today()]
-tab_car, tab_ven, tab_cot, tab_flota, tab_aeronave, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHICULOS", "🚛 FLOTAS", "✈️ AERONAVES", "📜 HISTORIAL", "📊 ANALISIS"])
+tab_car, tab_ven, tab_cot, tab_flota, tab_aeronave, tab_rv, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHICULOS", "🚛 FLOTAS", "✈️ AERONAVES", "🏭 RIESGOS VARIOS", "📜 HISTORIAL", "📊 ANALISIS"])
 
 # --- CARTERA ---
 with tab_car:
@@ -650,6 +706,49 @@ with tab_flota:
         st.text_input("🔗 Enlace para mandar al cliente:", value=link_flota)
         st.components.v1.html(f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_flota}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error\'); }})">📋 Copiar Link de Flota</button>', height=60)
 
+# --- PLANTILLAS RIESGOS VARIOS (TODO RIESGO OPERATIVO) ---
+COBERTURAS_RV = [
+    {"Cobertura": "Edificios", "Capital (USD)": 0},
+    {"Cobertura": "Contenido General", "Capital (USD)": 0},
+    {"Cobertura": "Mercaderías", "Capital (USD)": 0},
+    {"Cobertura": "Perdida de Beneficio (12 meses de cobertura)", "Capital (USD)": 0},
+]
+
+SUBLIMITES_RV = [
+    {"Cobertura": "Huracán, vendaval y tornado", "Capital (USD)": "Incluido", "Deducible": "General"},
+    {"Cobertura": "Terremoto o Temblor", "Capital (USD)": "Incluido", "Deducible": "General"},
+    {"Cobertura": "Granizo", "Capital (USD)": "Incluido", "Deducible": "General"},
+    {"Cobertura": "Daños Materiales e Incendio por Tumultos Populares", "Capital (USD)": "Incluido", "Deducible": "General"},
+    {"Cobertura": "Cláusula de 72 horas por Ocurrencia", "Capital (USD)": "Incluido", "Deducible": "1 deducible"},
+    {"Cobertura": "Cristales", "Capital (USD)": "5000", "Deducible": "150"},
+    {"Cobertura": "Gastos de Limpieza y Remoción De Escombros", "Capital (USD)": "900000", "Deducible": "No aplica"},
+    {"Cobertura": "Hurto y/o Rapiña: Contenido General, Mercaderías, existencias.", "Capital (USD)": "200000", "Deducible": "1000"},
+    {"Cobertura": "Daños por agua e inundación", "Capital (USD)": "150000", "Deducible": "10% stro, mín USD 2.000"},
+    {"Cobertura": "Inclusión Automática De Bienes (60 días)", "Capital (USD)": "200000", "Deducible": "No aplica"},
+    {"Cobertura": "Honorarios Profesionales", "Capital (USD)": "50000", "Deducible": "No aplica"},
+    {"Cobertura": "Gastos Extraordinarios", "Capital (USD)": "100000", "Deducible": "10% stro, max USD 35.000"},
+    {"Cobertura": "Gastos De Extinción De Incendio", "Capital (USD)": "100000", "Deducible": "No aplica"},
+    {"Cobertura": "Costo De Reconstrucción De Documentos", "Capital (USD)": "40000", "Deducible": "No aplica"},
+    {"Cobertura": "Daños Eléctricos Equipos Electrónicos", "Capital (USD)": "50000", "Deducible": "10% stro, mín USD 2.000"},
+    {"Cobertura": "Objetos Personales", "Capital (USD)": "50000", "Deducible": "1000"},
+    {"Cobertura": "Bienes bajo cuidado, custodia y control", "Capital (USD)": "100000", "Deducible": "1000"},
+    {"Cobertura": "Daños por granizo - Vehículos y Maquinaria a la Intemperie", "Capital (USD)": "0", "Deducible": "5% Stro, mínimo USD 5.000"},
+    {"Cobertura": "Infidelidad de Dependientes", "Capital (USD)": "20000", "Deducible": "1000"},
+    {"Cobertura": "Valores en Caja y/o Tránsito", "Capital (USD)": "20000", "Deducible": "1000"},
+    {"Cobertura": "Bienes en proceso de Construcción y Montaje", "Capital (USD)": "100000", "Deducible": "5% Stro, mínimo USD 1.000"},
+    {"Cobertura": "Gastos de Alquiler - Periodo máximo: 6 meses", "Capital (USD)": "100000", "Deducible": "No aplica"},
+    {"Cobertura": "Gastos Extras (fletes, horas extras, trabajos nocturnos)", "Capital (USD)": "100000", "Deducible": "No aplica"},
+    {"Cobertura": "Gastos de Flete", "Capital (USD)": "100000", "Deducible": "No aplica"},
+    {"Cobertura": "Rotura de Maquinaria", "Capital (USD)": "100000", "Deducible": "10% del Stro, mín USD 2.000"},
+    {"Cobertura": "Mercaderías propias en Depósitos", "Capital (USD)": "100000", "Deducible": "2000"},
+    {"Cobertura": "Falta de Frío", "Capital (USD)": "50000", "Deducible": "5% Stro, mínimo USD 5.000"},
+    {"Cobertura": "No Aplica Infraseguros, Siniestros menores a:", "Capital (USD)": "200000", "Deducible": "General"},
+]
+
+txt_aclaraciones_rv = "1) Se incluye cobertura de Granizo"
+txt_ubicaciones_rv = "1)\n2)\n3)"
+txt_equipos_rv = "1)\n2)\n3)"
+
 # --- AERONAVES ---
 with tab_aeronave:
     st.subheader("✈️ Cotizador Seguros de Aeronaves")
@@ -754,6 +853,88 @@ with tab_aeronave:
         st.success("Cotizacion de Aeronave guardada!")
         st.text_input("🔗 Enlace para mandar al cliente:", value=link_av)
         st.components.v1.html(f'<button class="btn-copiar-edf" onclick="navigator.clipboard.writeText(\'{link_av}\').then(() => {{ this.innerText = \'📋 Link Copiado!\'; }}).catch(err => {{ alert(\'Error\'); }})">📋 Copiar Link Aeronave</button>', height=60)
+
+# ==========================================
+# 🏭 PESTAÑA RIESGOS VARIOS (TODO RIESGO OPERATIVO)
+# ==========================================
+with tab_rv:
+    st.subheader("🏭 Cotizador Riesgos Varios")
+    edit_rv = st.session_state.edit_data if st.session_state.edit_data and st.session_state.edit_data.get("tipo") == "RV" else {}
+
+    with st.container(border=True):
+        c_rv1, c_rv2, c_rv3 = st.columns([2, 2, 1.5])
+        rv_asegurado = c_rv1.text_input("Asegurado", value=edit_rv.get('n', ''), key="rv_nom")
+        rv_tipo_seg = c_rv2.text_input("Tipo de Seguro", value=edit_rv.get('tipo_seg', 'Todo Riesgo Operativo'), key="rv_tiposeg")
+        rv_cia = c_rv3.text_input("Aseguradora", value=edit_rv.get('cia', 'SBI'), key="rv_cia")
+        c_rv4, c_rv5, c_rv6 = st.columns([2, 2, 1.5])
+        rv_actividad = c_rv4.text_input("Actividad de la empresa", value=edit_rv.get('act', ''), key="rv_act")
+        rv_vigencia = c_rv5.text_input("Vigencia", value=edit_rv.get('vig', ''), placeholder="31-12-2025 AL 31-12-2026", key="rv_vig")
+        rv_asesor = c_rv6.selectbox("Asesor", sorted(list(USUARIOS.keys())), key="rv_ase")
+        rv_contacto = st.text_input("Contacto (cel / mail)", value=edit_rv.get('cont', '099 635 244'), key="rv_cont")
+
+    # --- COBERTURAS PRINCIPALES ---
+    st.markdown("**📦 Coberturas Principales**")
+    df_cob_init = pd.DataFrame(edit_rv["tab_cob"]) if edit_rv and "tab_cob" in edit_rv else pd.DataFrame(COBERTURAS_RV)
+    t_cob = st.data_editor(
+        df_cob_init, num_rows="dynamic", use_container_width=True, key="editor_rv_cob",
+        column_config={"Capital (USD)": st.column_config.NumberColumn("Capital (USD)", format="$ %,d")}
+    )
+    capital_total_rv = pd.to_numeric(t_cob["Capital (USD)"], errors='coerce').fillna(0).sum()
+
+    c_cap, c_ded = st.columns(2)
+    c_cap.metric("Capital Asegurado Total", f"USD {capital_total_rv:,.0f}")
+    rv_deducible_gral = c_ded.text_input("Deducible General (cualquier daño material)", value=edit_rv.get('ded', '15000'), key="rv_ded")
+
+    # --- SUBLIMITES ---
+    st.markdown("**📑 Sublímites de Cobertura**")
+    df_sub_init = pd.DataFrame(edit_rv["tab_sub"]) if edit_rv and "tab_sub" in edit_rv else pd.DataFrame(SUBLIMITES_RV)
+    t_sub = st.data_editor(df_sub_init, num_rows="dynamic", use_container_width=True, key="editor_rv_sub")
+
+    # --- UBICACIONES Y EQUIPOS ---
+    c_ub, c_eq = st.columns(2)
+    with c_ub:
+        rv_ubicaciones = st.text_area("📍 Ubicaciones de riesgo:", value=edit_rv.get('ubi', txt_ubicaciones_rv), height=100, key="rv_ubi")
+    with c_eq:
+        rv_equipos = st.text_area("🚜 Equipos a la intemperie (con valor USD):", value=edit_rv.get('equ', txt_equipos_rv), height=100, key="rv_equ")
+
+    rv_aclaraciones = st.text_area("📌 Aclaraciones en condiciones particulares:", value=edit_rv.get('acl', txt_aclaraciones_rv), height=80, key="rv_acl")
+
+    # --- COSTOS: TASA MANUAL ---
+    st.markdown("**💰 Costos** *(la tasa no se muestra al cliente)*")
+    c_t1, c_t2, c_t3 = st.columns(3)
+    rv_tasa = c_t1.number_input("Tasa (por mil)", min_value=0.0, value=float(edit_rv.get('tasa', 1.0)), step=0.01, format="%.2f", key="rv_tasa")
+    costo_rv = capital_total_rv * rv_tasa / 1000
+    c_t2.metric("Costo Anual (sin IVA)", f"USD {costo_rv:,.2f}")
+    rv_financiamiento = c_t3.text_input("Financiamiento", value=edit_rv.get('fin', '10 sin recargo'), key="rv_fin")
+
+    # --- COMPARATIVOS (OPCIONAL) ---
+    st.markdown("**⚖️ Comparativos con otras aseguradoras** *(opcional)*")
+    df_comp_init = pd.DataFrame(edit_rv["tab_comp"]) if edit_rv and "tab_comp" in edit_rv else pd.DataFrame([{"Aseguradora": "", "Premio (USD)": 0}])
+    t_comp = st.data_editor(
+        df_comp_init, num_rows="dynamic", use_container_width=True, key="editor_rv_comp",
+        column_config={"Premio (USD)": st.column_config.NumberColumn("Premio (USD)", format="$ %,d")}
+    )
+
+    if st.button("💾 Guardar propuesta de Riesgos Varios y Generar Link", key="btn_save_rv", use_container_width=True):
+        nueva_rv = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": rv_asegurado, "tipo_seg": rv_tipo_seg, "act": rv_actividad,
+                    "cia": rv_cia, "vig": rv_vigencia, "e": rv_asesor, "cont": rv_contacto,
+                    "tab_cob": t_cob.to_dict(orient='records'), "cap_total": float(capital_total_rv),
+                    "ded": rv_deducible_gral, "tab_sub": t_sub.to_dict(orient='records'),
+                    "ubi": rv_ubicaciones, "equ": rv_equipos, "acl": rv_aclaraciones,
+                    "tasa": float(rv_tasa), "costo": float(costo_rv), "fin": rv_financiamiento,
+                    "tab_comp": t_comp.to_dict(orient='records'), "tipo": "RV"}
+        st.session_state.historico.append(nueva_rv)
+        st.session_state.edit_data = nueva_rv
+
+        datos_b64 = base64.b64encode(json.dumps(nueva_rv).encode()).decode()
+        link_rv = f"https://dfseguros.streamlit.app/?q={datos_b64}"
+        st.success("✅ ¡Propuesta de Riesgos Varios guardada con éxito!")
+        st.text_input("🔗 Enlace para mandar al cliente:", value=link_rv)
+
+        componente_copiar_rv = f"""
+        <button class="btn-copiar-edf" onclick="navigator.clipboard.writeText('{link_rv}').then(() => {{ this.innerText = '📋 ¡Link Copiado!'; }}).catch(err => {{ alert('Error al copiar'); }})">📋 Copiar Link de Riesgos Varios</button>
+        """
+        st.components.v1.html(componente_copiar_rv, height=60)
 
 # --- HISTORIAL ---
 with tab_historial:
