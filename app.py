@@ -443,7 +443,111 @@ if filtro_vigencia == "Vigentes":
     df_f = df_f[df_f['Fin de Vigencia'] >= date.today()]
 elif filtro_vigencia == "No vigentes":
     df_f = df_f[df_f['Fin de Vigencia'] < date.today()]
-tab_car, tab_ven, tab_cot, tab_flota, tab_aeronave, tab_rv, tab_historial, tab_an = st.tabs(["👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHICULOS", "🚛 FLOTAS", "✈️ AERONAVES", "🏭 RIESGOS VARIOS", "📜 HISTORIAL", "📊 ANALISIS"])
+tab_carga, tab_car, tab_ven, tab_cot, tab_flota, tab_aeronave, tab_rv, tab_historial, tab_an = st.tabs(["📤 CARGAR PÓLIZA", "👥 CARTERA", "🔄 VENCIMIENTOS", "📝 VEHICULOS", "🚛 FLOTAS", "✈️ AERONAVES", "🏭 RIESGOS VARIOS", "📜 HISTORIAL", "📊 ANALISIS"])
+
+# ==========================================
+# 📤 PESTAÑA CARGAR PÓLIZA (PDF → CLAUDE → SHEET)
+# ==========================================
+with tab_carga:
+    st.subheader("📤 Cargar Póliza desde PDF")
+    st.markdown("<small style='color:gray;'>💡 Subí el PDF, revisá los datos extraídos, corregí lo que falte y guardá en el Sheet.</small>", unsafe_allow_html=True)
+
+    pdf_subido = st.file_uploader("Seleccioná la póliza en PDF", type=["pdf"], key="pdf_uploader_poliza")
+
+    if pdf_subido and st.button("🔍 Extraer datos con IA", key="btn_extraer_pdf", use_container_width=True):
+        try:
+            import anthropic
+            pdf_b64 = base64.standard_b64encode(pdf_subido.read()).decode("utf-8")
+
+            prompt_extraccion = """Extraé los datos de esta póliza de seguros uruguaya y respondé estrictamente en formato JSON con estos campos exactos:
+- asegurado (nombre o razón social del titular)
+- documento (RUT, cédula u otro número de identificación)
+- mail
+- celular
+- aseguradora (BSE, SURA, SBI, MAPFRE, SANCOR, BERKLEY, PORTO, BARBUSS, etc.)
+- ramo (tipo de seguro: VEHÍCULO, HOGAR, EMPRESA, RC, TRANSPORTE, etc.)
+- nro_poliza
+- detalle (matrícula del vehículo, o referencia del bien asegurado)
+- inicio_vigencia (formato DD/MM/YYYY)
+- fin_vigencia (formato DD/MM/YYYY)
+- moneda (USD o UYU)
+- premio_usd (solo el número, sin símbolos, si el premio está en dólares)
+- premio_uyu (solo el número, sin símbolos, si el premio está en pesos)
+
+Reglas:
+- Si un dato no aparece en la póliza, poné null.
+- Para los premios: poné el valor en el campo de su moneda y null en el otro.
+- Respondé ÚNICAMENTE con el objeto JSON. Sin introducciones, sin comentarios, sin delimitadores markdown. Empezá con { y terminá con }."""
+
+            client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+            with st.spinner("Leyendo la póliza con IA..."):
+                respuesta = client.messages.create(
+                    model="claude-sonnet-4-6",
+                    max_tokens=1024,
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": pdf_b64}},
+                            {"type": "text", "text": prompt_extraccion}
+                        ]
+                    }]
+                )
+            texto = respuesta.content[0].text.strip()
+            texto = texto.replace("```json", "").replace("```", "").strip()
+            datos_extraidos = json.loads(texto)
+            st.session_state["datos_pdf_extraidos"] = datos_extraidos
+            st.success("✅ Datos extraídos. Revisalos abajo antes de guardar.")
+        except Exception as e:
+            st.error(f"Error al extraer: {e}")
+
+    # --- Revisión y edición antes de guardar ---
+    if "datos_pdf_extraidos" in st.session_state:
+        d = st.session_state["datos_pdf_extraidos"]
+        st.markdown("---")
+        st.markdown("**📝 Revisá y completá los datos:**")
+        cg1, cg2, cg3 = st.columns(3)
+        with cg1:
+            g_aseg = st.text_input("Asegurado", value=d.get("asegurado") or "", key="g_aseg")
+            g_doc = st.text_input("Documento", value=d.get("documento") or "", key="g_doc")
+            g_mail = st.text_input("Mail", value=d.get("mail") or "", key="g_mail")
+            g_cel = st.text_input("Celular", value=d.get("celular") or "", key="g_cel")
+            g_aseguradora = st.text_input("Aseguradora", value=d.get("aseguradora") or "", key="g_aseguradora")
+        with cg2:
+            g_ramo = st.text_input("Ramo", value=d.get("ramo") or "", key="g_ramo")
+            g_poliza = st.text_input("N° de Póliza", value=d.get("nro_poliza") or "", key="g_poliza")
+            g_detalle = st.text_input("Detalle (Matrícula o Referencia)", value=d.get("detalle") or "", key="g_detalle")
+            g_ini = st.text_input("Inicio de Vigencia", value=d.get("inicio_vigencia") or "", key="g_ini")
+            g_fin = st.text_input("Fin de Vigencia", value=d.get("fin_vigencia") or "", key="g_fin")
+        with cg3:
+            g_pusd = st.text_input("Premio USD", value=str(d.get("premio_usd") or ""), key="g_pusd")
+            g_puyu = st.text_input("Premio UYU", value=str(d.get("premio_uyu") or ""), key="g_puyu")
+            g_corredor = st.text_input("Corredor", value="", key="g_corredor")
+            g_ejecutivo = st.text_input("Ejecutivo", value="", key="g_ejecutivo")
+            g_agente = st.text_input("Agente", value="", key="g_agente")
+        g_notas = st.text_area("Notas", value="", key="g_notas")
+
+        st.info("⚠️ Al guardar, esta fila se agrega al final del Sheet. Verificá los datos primero.")
+
+        if st.button("💾 Guardar en el Sheet (al final)", key="btn_guardar_poliza_sheet", use_container_width=True):
+            try:
+                info_sa = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
+                scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+                creds = Credentials.from_service_account_info(info_sa, scopes=scopes)
+                gc = gspread.authorize(creds)
+                sh = gc.open_by_key(SHEET_ID)
+                ws = sh.worksheet("Form_Responses2")
+                fila_nueva = [
+                    datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                    g_mail, g_aseg, g_doc, g_cel, g_aseguradora, g_ramo, g_poliza,
+                    g_detalle, g_ini, g_fin, g_corredor, g_ejecutivo, g_agente,
+                    g_pusd, g_puyu, "", g_notas, "",
+                ]
+                ws.append_row(fila_nueva, value_input_option="USER_ENTERED")
+                st.success(f"✅ ¡Póliza de {g_aseg} guardada al final del Sheet!")
+                st.balloons()
+                del st.session_state["datos_pdf_extraidos"]
+            except Exception as e:
+                st.error(f"Error al guardar en el Sheet: {e}")
 
 # --- CARTERA ---
 with tab_car:
