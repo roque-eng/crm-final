@@ -35,8 +35,8 @@ def guardar_en_sheet(hoja_nombre, fila):
         ws = sh.worksheet(hoja_nombre)
         ws.append_row(fila, value_input_option="USER_ENTERED")
         return True
-        except Exception as e:
-                st.error(f"Error al guardar en el Sheet: {repr(e)}")
+    except Exception as e:
+        st.error(f"Error al guardar en el Sheet: {repr(e)}")
         return False
 
 CONTACTOS = {
