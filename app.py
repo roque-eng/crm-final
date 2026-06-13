@@ -536,16 +536,23 @@ Reglas:
                 gc = gspread.authorize(creds)
                 sh = gc.open_by_key(SHEET_ID)
                 ws = sh.worksheet("Form_Responses2")
-                fila_nueva = [
-                    datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                    g_mail, g_aseg, g_doc, g_cel, g_aseguradora, g_ramo, g_poliza,
-                    g_detalle, g_ini, g_fin, g_corredor, g_ejecutivo, g_agente,
-                    g_pusd, g_puyu, "", g_notas, "",
-                ]
-                ws.append_row(fila_nueva, value_input_option="USER_ENTERED")
-                st.success(f"✅ ¡Póliza de {g_aseg} guardada al final del Sheet!")
-                st.balloons()
-                del st.session_state["datos_pdf_extraidos"]
+
+                # --- Chequeo de duplicados por N° de Póliza ---
+                polizas_existentes = ws.col_values(8)  # Columna H = N° de Póliza
+                polizas_norm = [str(p).strip() for p in polizas_existentes]
+                if g_poliza and str(g_poliza).strip() in polizas_norm:
+                    st.warning(f"⚠️ Esta póliza (N° {g_poliza}) ya fue cargada. No se guardó para evitar duplicados.")
+                else:
+                    fila_nueva = [
+                        datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                        g_mail, g_aseg, g_doc, g_cel, g_aseguradora, g_ramo, g_poliza,
+                        g_detalle, g_ini, g_fin, g_corredor, g_ejecutivo, g_agente,
+                        g_pusd, g_puyu, "", g_notas, "",
+                    ]
+                    ws.append_row(fila_nueva, value_input_option="USER_ENTERED")
+                    st.success(f"✅ ¡Póliza de {g_aseg} guardada al final del Sheet!")
+                    st.balloons()
+                    del st.session_state["datos_pdf_extraidos"]
             except Exception as e:
                 st.error(f"Error al guardar en el Sheet: {e}")
 
