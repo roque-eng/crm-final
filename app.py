@@ -537,21 +537,37 @@ Reglas:
                 scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
                 creds = Credentials.from_service_account_info(info_sa, scopes=scopes)
 
-                # --- Subir el PDF a la carpeta "Pólizas" en la Unidad Compartida ---
+                # --- Subir el PDF a "Pólizas" (o reusar si ya existe) ---
                 link_pdf = ""
                 try:
                     ID_CARPETA_POLIZAS = "0ALMblQ4PWOIPUk9PVA"
                     drive_service = build("drive", "v3", credentials=creds)
-                    pdf_subido.seek(0)
-                    media = MediaIoBaseUpload(pdf_subido, mimetype="application/pdf", resumable=True)
-                    archivo_meta = {"name": pdf_subido.name, "parents": [ID_CARPETA_POLIZAS]}
-                    archivo = drive_service.files().create(
-                        body=archivo_meta, media_body=media,
-                        fields="id, webViewLink", supportsAllDrives=True
-                    ).execute()
-                    link_pdf = archivo.get("webViewLink", "")
+
+                    # Buscar si ya existe un archivo con ese nombre en la carpeta
+                    nombre_archivo = pdf_subido.name.replace("'", "\\'")
+                    query = f"name = '{nombre_archivo}' and '{ID_CARPETA_POLIZAS}' in parents and trashed = false"
+                    existentes = drive_service.files().list(
+                        q=query, fields="files(id, webViewLink)",
+                        supportsAllDrives=True, includeItemsFromAllDrives=True,
+                        corpora="allDrives"
+                    ).execute().get("files", [])
+
+                    if existentes:
+                        # Ya existe: reusamos su link, no duplicamos
+                        link_pdf = existentes[0].get("webViewLink", "")
+                        st.info(f"📎 El PDF ya estaba en Drive. Se reutilizó el archivo existente.")
+                    else:
+                        # No existe: lo subimos
+                        pdf_subido.seek(0)
+                        media = MediaIoBaseUpload(pdf_subido, mimetype="application/pdf", resumable=True)
+                        archivo_meta = {"name": pdf_subido.name, "parents": [ID_CARPETA_POLIZAS]}
+                        archivo = drive_service.files().create(
+                            body=archivo_meta, media_body=media,
+                            fields="id, webViewLink", supportsAllDrives=True
+                        ).execute()
+                        link_pdf = archivo.get("webViewLink", "")
                 except Exception as e_drive:
-                    st.warning(f"⚠️ La fila se guardará pero no se pudo subir el PDF a Drive: {repr(e_drive)}")
+                    st.warning(f"⚠️ La fila se guardará pero hubo un problema con el PDF en Drive: {repr(e_drive)}")
 
                 # --- Guardar la fila en el Sheet ---
                 gc = gspread.authorize(creds)
