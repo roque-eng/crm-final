@@ -36,7 +36,7 @@ def guardar_en_sheet(hoja_nombre, fila):
         ws.append_row(fila, value_input_option="USER_ENTERED")
         return True
     except Exception as e:
-        st.warning(f"No se pudo guardar en el Sheet: {e}")
+                st.error(f"Error al guardar en el Sheet: {repr(e)}")
         return False
 
 CONTACTOS = {
@@ -449,7 +449,6 @@ tab_carga, tab_car, tab_ven, tab_cot, tab_flota, tab_aeronave, tab_rv, tab_histo
 # 📤 PESTAÑA CARGAR PÓLIZA (PDF → CLAUDE → SHEET)
 # ==========================================
 with tab_carga:
-    st.write("DEBUG - Keys disponibles:", list(st.secrets.keys()))
     st.subheader("📤 Cargar Póliza desde PDF")
     st.markdown("<small style='color:gray;'>💡 Subí el PDF, revisá los datos extraídos, corregí lo que falte y guardá en el Sheet.</small>", unsafe_allow_html=True)
 
