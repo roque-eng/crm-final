@@ -535,7 +535,7 @@ Reglas:
                 creds = Credentials.from_service_account_info(info_sa, scopes=scopes)
                 gc = gspread.authorize(creds)
                 sh = gc.open_by_key(SHEET_ID)
-                ws = sh.worksheet("Form_Responses2")
+                ws = sh.worksheet("Respuestas de formulario 2")
 
                 # --- Chequeo de duplicados por N° de Póliza ---
                 polizas_existentes = ws.col_values(8)  # Columna H = N° de Póliza
