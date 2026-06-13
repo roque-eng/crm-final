@@ -157,7 +157,7 @@ if "q" in query_params:
                 st.markdown("### ⚖️ Comparativos")
                 df_comp_cli["Premio (USD)"] = pd.to_numeric(df_comp_cli["Premio (USD)"], errors='coerce').fillna(0)
                 st.dataframe(df_comp_cli, use_container_width=True, hide_index=True,
-                    column_config={"Premio (USD)": st.column_config.NumberColumn("PREMIO (USD)", format="$ %,d")})
+                    column_config={"Premio (USD)": st.column_config.NumberColumn("PREMIO (USD)", format="USD %,d")})
 
             st.markdown("---")
             st.markdown(f"<div style='display:flex; justify-content:space-between; color:gray;'><div><b>Asesor:</b> {propuesta_cliente.get('e','EDF')} | <b>Contacto:</b> {propuesta_cliente.get('cont', '')}</div><div><b>Fecha:</b> {propuesta_cliente.get('fecha','')}</div></div>", unsafe_allow_html=True)
