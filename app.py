@@ -414,7 +414,7 @@ c_aseguradora = col_map.get("aseguradora", col_map.get("compania", "Aseguradora"
 c_ramo = col_map.get("ramo", "Ramo")
 c_p_usd = col_map.get("premio usd (iva inc)", "Premio USD (IVA inc)")
 c_p_uyu = col_map.get("premio uyu (iva inc)", "Premio UYU (IVA inc)")
-c_adjunto = col_map.get("adjunto (poliza)", col_map.get("adjunto (poliza)", "Adjunto (poliza)"))
+c_adjunto = col_map.get("adjunto (póliza)", "Adjunto (póliza)")
 
 df_raw['Premio_Total_USD'] = (pd.to_numeric(df_raw.get(c_p_usd, 0), errors='coerce').fillna(0) + (pd.to_numeric(df_raw.get(c_p_uyu, 0), errors='coerce').fillna(0) / TC_USD)).round(0)
 df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw.get('Fin de Vigencia', date.today()), dayfirst=True, errors='coerce').dt.date
