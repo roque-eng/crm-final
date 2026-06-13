@@ -1061,7 +1061,6 @@ with tab_rv:
     t_comp = st.data_editor(
         df_comp_init, num_rows="dynamic", use_container_width=True, key="editor_rv_comp",
         column_config={"Premio (USD)": st.column_config.NumberColumn("PREMIO (USD)", format="USD %,d")})
-    )
 
     if st.button("💾 Guardar propuesta de Riesgos Varios y Generar Link", key="btn_save_rv", use_container_width=True):
         nueva_rv = {"fecha": datetime.now().strftime("%d/%m/%Y %H:%M"), "n": rv_asegurado, "tipo_seg": rv_tipo_seg, "act": rv_actividad,
