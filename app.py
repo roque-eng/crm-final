@@ -1060,7 +1060,7 @@ with tab_rv:
     df_comp_init = pd.DataFrame(edit_rv["tab_comp"]) if edit_rv and "tab_comp" in edit_rv else pd.DataFrame([{"Aseguradora": "", "Premio (USD)": 0}])
     t_comp = st.data_editor(
         df_comp_init, num_rows="dynamic", use_container_width=True, key="editor_rv_comp",
-        column_config={"Premio (USD)": st.column_config.NumberColumn("Premio (USD)", format="$ %,d")}
+        column_config={"Premio (USD)": st.column_config.NumberColumn("PREMIO (USD)", format="USD %,d")})
     )
 
     if st.button("💾 Guardar propuesta de Riesgos Varios y Generar Link", key="btn_save_rv", use_container_width=True):
