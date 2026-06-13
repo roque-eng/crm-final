@@ -19,7 +19,7 @@ def f_num(val):
 
 def get_gspread_client():
     try:
-        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         service_account_info = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
         creds = Credentials.from_service_account_info(service_account_info, scopes=scopes)
         return gspread.authorize(creds)
@@ -530,31 +530,52 @@ Reglas:
 
         if st.button("💾 Guardar en el Sheet (al final)", key="btn_guardar_poliza_sheet", use_container_width=True):
             try:
+                from googleapiclient.discovery import build
+                from googleapiclient.http import MediaIoBaseUpload
+
                 info_sa = json.loads(st.secrets["connections"]["gsheets"]["service_account"])
-                scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+                scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
                 creds = Credentials.from_service_account_info(info_sa, scopes=scopes)
+
+                # --- Subir el PDF a la carpeta "Pólizas" en la Unidad Compartida ---
+                link_pdf = ""
+                try:
+                    ID_CARPETA_POLIZAS = "0ALMblQ4PWOIPUk9PVA"
+                    drive_service = build("drive", "v3", credentials=creds)
+                    pdf_subido.seek(0)
+                    media = MediaIoBaseUpload(pdf_subido, mimetype="application/pdf", resumable=True)
+                    archivo_meta = {"name": pdf_subido.name, "parents": [ID_CARPETA_POLIZAS]}
+                    archivo = drive_service.files().create(
+                        body=archivo_meta, media_body=media,
+                        fields="id, webViewLink", supportsAllDrives=True
+                    ).execute()
+                    link_pdf = archivo.get("webViewLink", "")
+                except Exception as e_drive:
+                    st.warning(f"⚠️ La fila se guardará pero no se pudo subir el PDF a Drive: {repr(e_drive)}")
+
+                # --- Guardar la fila en el Sheet ---
                 gc = gspread.authorize(creds)
                 sh = gc.open_by_key(SHEET_ID)
                 ws = sh.worksheet("Respuestas de formulario 2")
 
-                # --- Chequeo de duplicados por N° de Póliza ---
-                polizas_existentes = ws.col_values(8)  # Columna H = N° de Póliza
-                polizas_norm = [str(p).strip() for p in polizas_existentes]
-                if g_poliza and str(g_poliza).strip() in polizas_norm:
+                polizas_existentes = [str(p).strip() for p in ws.col_values(8)]
+                if g_poliza and str(g_poliza).strip() in polizas_existentes:
                     st.warning(f"⚠️ Esta póliza (N° {g_poliza}) ya fue cargada. No se guardó para evitar duplicados.")
                 else:
                     fila_nueva = [
                         datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                         g_mail, g_aseg, g_doc, g_cel, g_aseguradora, g_ramo, g_poliza,
                         g_detalle, g_ini, g_fin, g_corredor, g_ejecutivo, g_agente,
-                        g_pusd, g_puyu, "", g_notas, "",
+                        g_pusd, g_puyu, link_pdf, g_notas, "",
                     ]
                     ws.append_row(fila_nueva, value_input_option="USER_ENTERED")
                     st.success(f"✅ ¡Póliza de {g_aseg} guardada al final del Sheet!")
+                    if link_pdf:
+                        st.success(f"📎 PDF subido a Drive: [Ver póliza]({link_pdf})")
                     st.balloons()
                     del st.session_state["datos_pdf_extraidos"]
             except Exception as e:
-                st.error(f"Error al guardar en el Sheet: {e}")
+                st.error(f"Error al guardar en el Sheet: {repr(e)}")
 
 # --- CARTERA ---
 with tab_car:
