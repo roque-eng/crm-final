@@ -580,9 +580,24 @@ Reglas:
                 else:
                     fila_nueva = [
                         datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                        g_mail, g_aseg, g_doc, g_cel, g_aseguradora, g_ramo, g_poliza,
-                        g_detalle, g_ini, g_fin, g_corredor, g_ejecutivo, g_agente,
-                        g_pusd, g_puyu, link_pdf, g_notas, "",
+                        st.session_state.get("g_mail", ""),
+                        st.session_state.get("g_aseg", ""),
+                        st.session_state.get("g_doc", ""),
+                        st.session_state.get("g_cel", ""),
+                        st.session_state.get("g_aseguradora", ""),
+                        st.session_state.get("g_ramo", ""),
+                        st.session_state.get("g_poliza", ""),
+                        st.session_state.get("g_detalle", ""),
+                        st.session_state.get("g_ini", ""),
+                        st.session_state.get("g_fin", ""),
+                        st.session_state.get("g_corredor", ""),
+                        st.session_state.get("g_ejecutivo", ""),
+                        st.session_state.get("g_agente", ""),
+                        st.session_state.get("g_pusd", ""),
+                        st.session_state.get("g_puyu", ""),
+                        link_pdf,
+                        st.session_state.get("g_notas", ""),
+                        "",
                     ]
                     ws.append_row(fila_nueva, value_input_option="USER_ENTERED")
                     st.success(f"✅ ¡Póliza de {g_aseg} guardada al final del Sheet!")
