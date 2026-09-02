@@ -403,8 +403,20 @@ if 'logueado' not in st.session_state or not st.session_state['logueado']:
             else: st.error("Contrasena incorrecta.")
     st.stop()
 
-conn = st.connection("gsheets", type=GSheetsConnection)
-df_raw = conn.read(spreadsheet=URL_HOJA, ttl=0)
+@st.cache_data(ttl=300)
+def cargar_datos_sheet():
+    gc = get_gspread_client()
+    if gc is None:
+        return pd.DataFrame()
+    sh = gc.open_by_key(SHEET_ID)
+    ws = sh.worksheet("Respuestas de formulario 2")
+    datos = ws.get_all_values()
+    if not datos:
+        return pd.DataFrame()
+    df = pd.DataFrame(datos[1:], columns=datos[0])
+    return df
+
+df_raw = cargar_datos_sheet()
 df_raw.columns = df_raw.columns.str.strip()
 
 col_map = {c.lower(): c for c in df_raw.columns}
