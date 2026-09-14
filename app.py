@@ -413,7 +413,18 @@ def cargar_datos_sheet():
     datos = ws.get_all_values()
     if not datos:
         return pd.DataFrame()
-    df = pd.DataFrame(datos[1:], columns=datos[0])
+    encabezados = [h.strip() for h in datos[0]]
+    # Eliminar columnas con encabezado duplicado (deja la primera)
+    vistos = set()
+    indices_unicos = []
+    cols_finales = []
+    for i, h in enumerate(encabezados):
+        if h and h not in vistos:
+            vistos.add(h)
+            indices_unicos.append(i)
+            cols_finales.append(h)
+    filas_limpias = [[fila[i] if i < len(fila) else "" for i in indices_unicos] for fila in datos[1:]]
+    df = pd.DataFrame(filas_limpias, columns=cols_finales)
     return df
 
 df_raw = cargar_datos_sheet()
