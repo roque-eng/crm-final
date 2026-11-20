@@ -444,7 +444,7 @@ df_raw['Fin de Vigencia'] = pd.to_datetime(df_raw.get('Fin de Vigencia', date.to
 
 with st.sidebar:
     st.title(f"👤 {NOMBRES.get(st.session_state.usuario_actual, st.session_state.usuario_actual)}")
-    def get_list(col): return ["Todos"] + sorted(df_raw[col].dropna().unique().tolist()) if col in df_raw.columns else ["Todos"]
+    def get_list(col): return ["Todos"] + sorted([x for x in df_raw[col].dropna().unique().tolist() if str(x).strip() != ""]) if col in df_raw.columns else ["Todos"]
     f_ej = st.selectbox("Ejecutivo", get_list('Ejecutivo'))
     f_as = st.selectbox("Aseguradora", get_list(c_aseguradora))
     f_ra = st.selectbox("Ramo", get_list(c_ramo))
