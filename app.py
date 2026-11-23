@@ -884,7 +884,12 @@ Los valores de Contado, 10 Cuotas y Deducible deben ser numeros enteros en pesos
         df_p_init = pd.DataFrame(st.session_state["_tabla_wink"])
         st.session_state["_tabla_wink"] = []
     else:
-        df_p_init = pd.DataFrame([{"Aseguradora": "BSE", ...}])
+        df_p_init = pd.DataFrame([
+            {"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+            {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+            {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+            {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}
+        ])
     with col_a:
         b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_ben_veh), height=150, key="ben_v_final")
     with col_b:
