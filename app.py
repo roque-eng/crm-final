@@ -890,7 +890,7 @@ Los valores de Contado, 10 Cuotas y Deducible deben ser numeros enteros en pesos
             {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
             {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}
         ])
-            col_a, col_b = st.columns(2)
+    col_a, col_b = st.columns(2)
     with col_a:
         b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_ben_veh), height=150, key="ben_v_final")
     with col_b:
