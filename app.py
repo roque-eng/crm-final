@@ -807,6 +807,62 @@ with tab_cot:
         st.session_state["mat_v_final"] = edit_ind.get("matricula", "")
         st.session_state["cob_v_final"] = edit_ind.get("cobertura_cot", "")
         st.session_state["zona_v_final"] = edit_ind.get("zona", "")
+            # --- LECTOR PDF WINK ---
+    import anthropic
+    import base64 as b64
+
+    pdf_wink = st.file_uploader("📄 Subí el PDF de Wink para autocompletar", type="pdf", key="pdf_wink_uploader")
+    if pdf_wink is not None:
+        with st.spinner("Leyendo cotización de Wink..."):
+            try:
+                pdf_bytes = pdf_wink.read()
+                pdf_b64 = b64.b64encode(pdf_bytes).decode()
+                client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+                msg = client.messages.create(
+                    model="claude-opus-4-5",
+                    max_tokens=1024,
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": pdf_b64}},
+                            {"type": "text", "text": """Extraé los datos de esta cotización de seguros de autos uruguaya. Devolvé SOLO un JSON con exactamente estas claves:
+{
+  "nombre": "nombre del cliente",
+  "documento": "numero de documento",
+  "marca": "marca del vehiculo",
+  "modelo": "modelo del vehiculo",
+  "anio": "año",
+  "matricula": "",
+  "zona": "ciudad o departamento de circulacion",
+  "cobertura": "nombre de la cobertura (ej: COBERTURA TOTAL)",
+  "tabla": [
+    {"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+    {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0},
+    {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}
+  ]
+}
+Los valores de Contado, 10 Cuotas y Deducible deben ser numeros enteros en pesos uruguayos (sin simbolos). Si el deducible esta en USD convertilo multiplicando por 40. Pone solo las aseguradoras que aparecen en el PDF. Si hay varias coberturas, usa la primera."""}
+                        ]
+                    }]
+                )
+                import json as json_mod
+                txt = msg.content[0].text.strip()
+                if txt.startswith("```"):
+                    txt = txt.split("```")[1]
+                    if txt.startswith("json"):
+                        txt = txt[4:]
+                datos_wink = json_mod.loads(txt)
+                st.session_state["nom_v_final"] = datos_wink.get("nombre", "")
+                st.session_state["ci_v_final"] = datos_wink.get("documento", "")
+                st.session_state["veh_v_final"] = f"{datos_wink.get('marca','')} {datos_wink.get('modelo','')} {datos_wink.get('anio','')}".strip()
+                st.session_state["mat_v_final"] = datos_wink.get("matricula", "")
+                st.session_state["zona_v_final"] = datos_wink.get("zona", "")
+                st.session_state["cob_v_final"] = datos_wink.get("cobertura", "")
+                st.session_state["_tabla_wink"] = datos_wink.get("tabla", [])
+                st.success("✅ Datos extraídos! Revisá y completá lo que falte.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"No se pudo leer el PDF: {e}")
     with st.container(border=True):
         c_doc, c_nom, c_veh, c_mat = st.columns([1.5, 2, 2, 1.5])
         doc_in = c_doc.text_input("CI/RUT", key="ci_v_final")
@@ -824,11 +880,11 @@ with tab_cot:
     cols_individual = ["Aseguradora", "Contado", "10 Cuotas", "Deducible"]
     if edit_ind and "tab" in edit_ind:
         df_p_init = pd.DataFrame(edit_ind["tab"])
+    elif st.session_state.get("_tabla_wink"):
+        df_p_init = pd.DataFrame(st.session_state["_tabla_wink"])
+        st.session_state["_tabla_wink"] = []
     else:
-        df_p_init = pd.DataFrame([{"Aseguradora": "BSE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SURA", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "MAPFRE", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}, {"Aseguradora": "SANCOR", "Contado": 0, "10 Cuotas": 0, "Deducible": 0}])
-    t_edit = st.data_editor(df_p_init, num_rows="dynamic", use_container_width=True, column_order=cols_individual, key="editor_individual_completo",
-        column_config={"Contado": st.column_config.NumberColumn("Contado", format="$ %,d"), "10 Cuotas": st.column_config.NumberColumn("10 Cuotas", format="$ %,d"), "Deducible": st.column_config.NumberColumn("Deducible", format="$ %,d")})
-    col_a, col_b = st.columns(2)
+        df_p_init = pd.DataFrame([{"Aseguradora": "BSE", ...}])
     with col_a:
         b_cot = st.text_area("Beneficios:", value=edit_ind.get("ben", txt_ben_veh), height=150, key="ben_v_final")
     with col_b:
