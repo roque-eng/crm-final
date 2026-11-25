@@ -819,7 +819,7 @@ with tab_cot:
                 pdf_b64 = b64.b64encode(pdf_bytes).decode()
                 client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
                 msg = client.messages.create(
-                    model="claude-opus-4-5",
+                    model="claude-haiku-5-5",
                     max_tokens=1024,
                     messages=[{
                         "role": "user",
