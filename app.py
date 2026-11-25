@@ -846,7 +846,7 @@ Los valores de Contado, 10 Cuotas y Deducible deben ser numeros enteros en pesos
                     }]
                 )
                 import json as json_mod
-                txt = msg.content[0].text.strip()
+                txt = next(block.text for block in msg.content if hasattr(block, 'text')).strip()
                 if txt.startswith("```"):
                     txt = txt.split("```")[1]
                     if txt.startswith("json"):
